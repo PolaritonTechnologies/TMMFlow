@@ -91,7 +91,7 @@ def performCalculation(calculation_info, temp_info):
 
             else:
 
-                X, Y, Zs = local_operator.calculateRsAndRpForAllAngles()
+                X, Y, Zs, we_dont_know_what_for_variable = local_operator.calculateRsAndRpForAllAngles()
 
                 # if np.size(calculationInfo.azimuthalAngles) == 1:
 

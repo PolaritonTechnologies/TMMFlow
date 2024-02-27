@@ -3,22 +3,23 @@ import scipy as sp
 z0 = sp.constants.value('characteristic impedance of vacuum')
 
 #modified for signs mistakes -- Florian Le Roux 02/11/2018
-#modified for azimuthal threatment -- Florian Le Roux 01/10/2019
+#modified for azimuthal treatment -- Florian Le Roux 01/10/2019
+"""
+# We probably dont need it
 def rot_ell(m_rt_ps):
-    '''Utility to compute rotation and ellipticity
-       starting from reflection and transmission matrix
+    # Utility to compute rotation and ellipticity
+    #    starting from reflection and transmission matrix
 
-    Parameters
-    ----------
-    'm_RTsp' = sp reflection and transmission matrix
+    # Parameters
+    # ----------
+    # 'm_RTsp' = sp reflection and transmission matrix
 
-    Returns
-    -------
-    'a dictionary' = {'theta_p':theta_p,
-                      'eps_p':eps_p,
-                      'theta_s':theta_s,
-                      'eps_s':eps_s}
-    '''
+    # Returns
+    # -------
+    # 'a dictionary' = {'theta_p':theta_p,
+    #                   'eps_p':eps_p,
+    #                   'theta_s':theta_s,
+    #                   'eps_s':eps_s}
 
     # extracting values from the matrix
     rt_pp = m_rt_ps[0,0]
@@ -38,11 +39,14 @@ def rot_ell(m_rt_ps):
                 'eps_s':eps_s}
 
     return out_dict
+"""
 
 
 def R_ps_rl(m_r_ps):
     '''Utility to compute reflectance for p,s and right,left
     circular polarization
+    m_r_ps = array([[-0.86308751-0.3615758j ,  0.        +0.j        ],
+       [ 0.        +0.j        , -0.86216249-0.37338276j]])
 
     Parameters
     ----------
@@ -91,6 +95,11 @@ def R_ps_rl(m_r_ps):
 def T_ps_rl(m_t_ps,theta_0,n_0,n_s):
     '''Utility to compute transmittance for p,s and right.left
     circular polarization
+    m_t_ps = array([[-5.08256779e-05+4.8402379e-05j,  0.00000000e+00+0.0000000e+00j],
+       [ 0.00000000e+00+0.0000000e+00j, -1.51900814e-05-4.6948622e-06j]])
+    theta_0 = 0.0017453292519943296
+    n_0 = 1.0
+    n_s = 1.5
 
     Parameters
     ----------
@@ -141,39 +150,40 @@ def T_ps_rl(m_t_ps,theta_0,n_0,n_s):
     return out_dict
 
 
+"""
+# Might need it later on
 def field(m_K,m_E,m_H,e_list_3x3,d_list,x,y,z,pol):
-    '''Starting from field amplitudes and wavevectors in each layer, and from
-    the multilayer structure (e_list_3x3,d_list), calculates the complex
-    electric and magnetic field, and along with that the Poynting vector and
-    energy absorption at the location (x,y,z) in the multilayer
+    # Starting from field amplitudes and wavevectors in each layer, and from
+    # the multilayer structure (e_list_3x3,d_list), calculates the complex
+    # electric and magnetic field, and along with that the Poynting vector and
+    # energy absorption at the location (x,y,z) in the multilayer
 
-    Parameters
-    ----------
-    'm_K' = wavevectors shape = (n_layers,n_k=4,n_xyz=3)
-    'm_E,m_H' = field amplitudes shape = (n_layers,n_k=4,n_xyz=3,n_pol=2)
-    'e_list_3x3'= [n_layer+2,3,3] numpy array: it contains n_layers+2 3x3
-                  dielectric tensors:
-    e_list_3x3[0]= 3x3 incident medium dielectric tensor: must be real,diagonal
-                   and isotropic,
-    e_list_3x3[n_layers+1] = 3x3 substrate dielectric tensor: must be real,
-                             diagonal and isotropic,
-    e_list_3x3[n]=3x3 dielectric tensor of the n_th layers: arbitrary
-    'd_list'= n_layers+2 numpy array: contains layer thinknesses:
-    d_list[0]=d_list[n_layers+1]=0: for the incident medium and substrate
-    d_list[n]=d_n n_th layer thickness in nm
-    x,y,z = coordinates in nm
-    pol = 'TE' or 'TM', polarization state
+    # Parameters
+    # ----------
+    # 'm_K' = wavevectors shape = (n_layers,n_k=4,n_xyz=3)
+    # 'm_E,m_H' = field amplitudes shape = (n_layers,n_k=4,n_xyz=3,n_pol=2)
+    # 'e_list_3x3'= [n_layer+2,3,3] numpy array: it contains n_layers+2 3x3
+    #               dielectric tensors:
+    # e_list_3x3[0]= 3x3 incident medium dielectric tensor: must be real,diagonal
+    #                and isotropic,
+    # e_list_3x3[n_layers+1] = 3x3 substrate dielectric tensor: must be real,
+    #                          diagonal and isotropic,
+    # e_list_3x3[n]=3x3 dielectric tensor of the n_th layers: arbitrary
+    # 'd_list'= n_layers+2 numpy array: contains layer thinknesses:
+    # d_list[0]=d_list[n_layers+1]=0: for the incident medium and substrate
+    # d_list[n]=d_n n_th layer thickness in nm
+    # x,y,z = coordinates in nm
+    # pol = 'TE' or 'TM', polarization state
 
-    Returns
-    -------
-    'a dictionary'= {'E': v_E,  # electric field vector
-                     'H': v_H,  # magnetic field vector
-                     'S': v_S,  # Poynting vector
-                     'normE': np.linalg.norm(v_E),  # normalized E
-                     'normH': np.linalg.norm(v_H),  # normalized H
-                     'normS': np.linalg.norm(v_S),  # normalized S
-                     'absor':absor}  # absorption at (x,y,z)
-'''
+    # Returns
+    # -------
+    # 'a dictionary'= {'E': v_E,  # electric field vector
+    #                  'H': v_H,  # magnetic field vector
+    #                  'S': v_S,  # Poynting vector
+    #                  'normE': np.linalg.norm(v_E),  # normalized E
+    #                  'normH': np.linalg.norm(v_H),  # normalized H
+    #                  'normS': np.linalg.norm(v_S),  # normalized S
+    #                  'absor':absor}  # absorption at (x,y,z)
     # auxiliary computations
     n_layers = len(e_list_3x3)-2  # recovering number of layers
     v_z = np.cumsum(d_list)[:-1]  # starting coordinate of each layers (except inc)
@@ -218,3 +228,4 @@ def field(m_K,m_E,m_H,e_list_3x3,d_list,x,y,z,pol):
              0.5*np.real(np.cross(v_E,np.conj(v_dH/z0)))[2])
 
     return {'E': v_E, 'H': v_H,'S': v_S,'normE': np.linalg.norm(v_E), 'normH': np.linalg.norm(v_H),'normS': np.linalg.norm(v_S),'abs':I_abs}
+"""

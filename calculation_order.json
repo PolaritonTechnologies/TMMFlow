@@ -1,5 +1,5 @@
 {
-    "intransmission": true,
+    "intransmission": false,
     "angleMin": 0,
     "angleMax": 80,
     "angleStep": 10,

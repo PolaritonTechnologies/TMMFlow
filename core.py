@@ -27,6 +27,13 @@ import scipy.linalg as sp_la
 def nullspace(A, atol=1e-9):
     """Compute an approximate basis for the nullspace of A using the singular
     value decomposition of `A`.
+    A = [[-1.41965504e+00-3.98478163e+00j,  0.00000000e+00+0.00000000e+00j,
+         4.05773850e-03+1.81320587e-03j],
+       [ 0.00000000e+00+0.00000000e+00j, -3.55271368e-15+1.77635684e-15j,
+         0.00000000e+00+0.00000000e+00j],
+       [ 4.05773850e-03+1.81320587e-03j,  0.00000000e+00+0.00000000e+00j,
+         2.98285002e+00+1.06542853e+00j]]
+    atol = 1e-07
 
     Parameters
     ----------
@@ -62,6 +69,15 @@ def nullspace(A, atol=1e-9):
 def kz_eigenvalues(k0, kx, ky, m_eps):
     """Calculates the kz from the characteristic equation using a companion
     matrix method.
+    k0 = 0.015707963267948967 
+    kx = (-2.741555386204003e-05+0j) 
+    ky = (-0+0j)
+    m_eps = [[-23.38459267+4.76594931j,   0.        +0.j        ,
+          0.        +0.j        ],
+       [  0.        +0.j        , -23.38459267+4.76594931j,
+          0.        +0.j        ],
+       [  0.        +0.j        ,   0.        +0.j        ,
+        -23.38459267+4.76594931j]]
 
     Parameters
     ----------
@@ -178,6 +194,14 @@ def kz_eigenvalues(k0, kx, ky, m_eps):
 def kz_eigenvectors(k0, kx, ky, v_kz, m_eps):
     """Calculates the kz field eigenvectors from the characteristic equation.
 
+    k0 = 0.015707963267948967
+    kx = (-2.741555386204003e-05+0j)
+    ky = (-0+0j)
+    v_kz = array([-0.01570794-0.j, -0.01570794-0.j,  0.01570794+0.j,  0.01570794+0.j])
+    m_eps = array([[1.+0.j, 0.+0.j, 0.+0.j],
+       [0.+0.j, 1.+0.j, 0.+0.j],
+       [0.+0.j, 0.+0.j, 1.+0.j]])
+
     Parameters
     ----------
     'ko'= vacuum wavevector
@@ -291,6 +315,16 @@ def kz_eigenvectors(k0, kx, ky, v_kz, m_eps):
 def m_abc(k0, kx, ky, v_kz, v_e, d):
     """Calculates layer by layer boundary and propagation matrixes
         to solve the transfer matrix problem
+    
+    k0 = 0.015707963267948967
+    kx = (-0.002427175521633375+0j)
+    ky = (-0+0j)
+    v_kz = array([-0.01551931-0.j, -0.01551931-0.j,  0.01551931+0.j,  0.01551931+0.j])
+    v_e = array([[ 0.98798985+0.j,  0.        +0.j, -0.15451879+0.j],
+       [ 0.        +0.j,  1.        +0.j,  0.        +0.j],
+       [-0.98798985+0.j,  0.        +0.j, -0.15451879+0.j],
+       [ 0.        +0.j,  1.        +0.j,  0.        +0.j]])
+    d = 0.0
 
     Parameters
     ----------
@@ -361,7 +395,25 @@ def m_abc(k0, kx, ky, v_kz, v_e, d):
 
 
 def rt(wl, theta_0, phi_0, e_list_3x3, d_list):
-    """Calculates reflection matrix, transmission matrix and field amplitudes for a
+    """
+    wl = 400
+    theta_0 = 0.0017453292519943296
+    phi_0 = 0
+    e_list_3x3 = [
+        [
+            [-23.38459267 + 4.76594931j, 0.0 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, -23.38459267 + 4.76594931j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.0 + 0.0j, -23.38459267 + 4.76594931j],
+        ],
+        [
+            [2.25 + 0.0j, 0.0 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 2.25 + 0.0j, 0.0 + 0.0j],
+            [0.0 + 0.0j, 0.0 + 0.0j, 2.25 + 0.0j],
+        ],
+    ]
+    d_list = [  0.,  20., 105., 100.,   0.] 
+    
+    Calculates reflection matrix, transmission matrix and field amplitudes for a
        multilayer structure with a general dielectric tensors
 
     Parameters
@@ -630,48 +682,49 @@ def rt(wl, theta_0, phi_0, e_list_3x3, d_list):
     }
 
 
+"""
+# commented out because only needed for off-diagonal components 
 def mo_rt(wl, theta_0, phi_0, e_list, e_list_off, d_list, mo_flag):
-    """Calculates reflection and transmission matrix for an isotropic multilayer
-       with off diagonal components corresponding to:
-       e_xy=-e_yx!=0        Polar Kerr or Faraday effect (mo_flag='pp')
-       e_xz=-e_zx!=0        Transverse Kerr or Faraday effect (mo_flag='tt')
-       e_yz=-e_zy!=0        Longitudinal  Kerr or Faraday effect (mo_flag='ll')
+    # Calculates reflection and transmission matrix for an isotropic multilayer
+    #    with off diagonal components corresponding to:
+    #    e_xy=-e_yx!=0        Polar Kerr or Faraday effect (mo_flag='pp')
+    #    e_xz=-e_zx!=0        Transverse Kerr or Faraday effect (mo_flag='tt')
+    #    e_yz=-e_zy!=0        Longitudinal  Kerr or Faraday effect (mo_flag='ll')
 
-    Parameters
-    ----------
-    'wl'= vacuum incident wavelength in nm
-    'theta_0,phi_0'= polar and azimuth angles as defined in Mansuripur
-                     JAP 67(10)
-    'e_list' =
-            [n_layer+2] numpy array: contains n_layers+2 dielectric constants:
-            e_list[0] = incident medium dielectric constant: must be real
-            e_list[n_layers+1]=substrate dielectric constant: must be real
-            e_list[n]=dielectric tensor of the n_th layer: can be complex
-    'e_list_off' =
-            [n_layer+2] numpy array: it contains n_layers+2 off diagonal
-                        dielectric constants:
-            e_list_off[0] = must be 0: incident medium is diagonal
-            e_list_off[n_layers+1] = must be 0: substrate is diagonal
-            e_list_off[n] = off diagonal dielectric constant of the n_th layer:
-                            can be complex
-    'd_list' =
-            n_layers+2 numpy array: contains layer thinknesses:
-            d_list[0]=d_list[n_layers+1]=0: incident medium and substrate
-            d_list[n]=d_n n_th layer thickness in nm
-    'mo_flag' =
-            'pp' e_xy=-e_yx!=0  Polar Kerr or Faraday effect
-            'tt' e_xz=-e_zx!=0  Transverse Kerr or Faraday effect
-            'll' e_yz=-e_zy!=0  Longitudinal  Kerr or Faraday effect
+    # Parameters
+    # ----------
+    # 'wl'= vacuum incident wavelength in nm
+    # 'theta_0,phi_0'= polar and azimuth angles as defined in Mansuripur
+    #                  JAP 67(10)
+    # 'e_list' =
+    #         [n_layer+2] numpy array: contains n_layers+2 dielectric constants:
+    #         e_list[0] = incident medium dielectric constant: must be real
+    #         e_list[n_layers+1]=substrate dielectric constant: must be real
+    #         e_list[n]=dielectric tensor of the n_th layer: can be complex
+    # 'e_list_off' =
+    #         [n_layer+2] numpy array: it contains n_layers+2 off diagonal
+    #                     dielectric constants:
+    #         e_list_off[0] = must be 0: incident medium is diagonal
+    #         e_list_off[n_layers+1] = must be 0: substrate is diagonal
+    #         e_list_off[n] = off diagonal dielectric constant of the n_th layer:
+    #                         can be complex
+    # 'd_list' =
+    #         n_layers+2 numpy array: contains layer thinknesses:
+    #         d_list[0]=d_list[n_layers+1]=0: incident medium and substrate
+    #         d_list[n]=d_n n_th layer thickness in nm
+    # 'mo_flag' =
+    #         'pp' e_xy=-e_yx!=0  Polar Kerr or Faraday effect
+    #         'tt' e_xz=-e_zx!=0  Transverse Kerr or Faraday effect
+    #         'll' e_yz=-e_zy!=0  Longitudinal  Kerr or Faraday effect
 
-    Returns
-    -------
-    'a dictionary'= {'m_r_ps':m_r_ps,          #reflection matrix
-                     'm_t_ps':m_t_ps,          #transmission matrix
-                     'wl': wl,'theta_0': theta_0,'phi_0': phi_0,#inputs
-                     'e_list': e_list,'e_list_off': e_list_off, #inputs
-                     'e_list_3x3': e_list_3x3, #full dielectric tensor
-                     'd_list': d_list}         #layer thicknesses
-    """
+    # Returns
+    # -------
+    # 'a dictionary'= {'m_r_ps':m_r_ps,          #reflection matrix
+    #                  'm_t_ps':m_t_ps,          #transmission matrix
+    #                  'wl': wl,'theta_0': theta_0,'phi_0': phi_0,#inputs
+    #                  'e_list': e_list,'e_list_off': e_list_off, #inputs
+    #                  'e_list_3x3': e_list_3x3, #full dielectric tensor
+    #                  'd_list': d_list}         #layer thicknesses
 
     # filling the dielectric tensor depending on mo_flag
     e_list_3x3 = np.zeros((len(e_list), 3, 3), dtype=np.complex128)
@@ -708,8 +761,17 @@ def mo_rt(wl, theta_0, phi_0, e_list, e_list_off, d_list, mo_flag):
         "d_list": d_list,
     }
 
+"""
+
 
 def azimuthalCalculation(e_s_y, e_s_x, cosphiSquared, sinphiSquared, sinphiS2D2):
+    """
+    e_s_y = (-1.5190081436892855e-05-4.6948622023882075e-06j)
+    e_s_x = (-5.082514751739978e-05+4.840250961008275e-05j)
+    cosphiSquared = 0.8830222215594891 
+    sinphiSquared = 0.11697777844051097
+    sinphiS2D2 = 0.3213938048432696
+    """
 
     # see Experimental notes for calculation, values are passed to reduce calculation time
 
