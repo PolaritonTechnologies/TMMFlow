@@ -74,6 +74,7 @@ MatrixXcd nullspace(MatrixXcd A, double atol = 1e-9)
     */
 }
 
+/*
 // Assuming the nullspace function is defined here...
 int main()
 {
@@ -94,3 +95,4 @@ int main()
 
     return 0;
 }
+*/
