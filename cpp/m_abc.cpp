@@ -60,6 +60,7 @@ std::tuple<Eigen::Vector4cd, Eigen::Vector4cd, Eigen::Matrix2cd, Eigen::Matrix2c
     return {v_a, v_b, m_a12, m_a34, m_b12, m_b34, m_c12, m_c34};
 }
 
+/*
 int main()
 {
     // Define test values
@@ -127,3 +128,4 @@ int main()
 
     return 0;
 }
+*/

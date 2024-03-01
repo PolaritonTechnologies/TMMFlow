@@ -127,6 +127,7 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
     return {v_e, v_kz};
 }
 
+/*
 // Assuming the nullspace function is defined here...
 int main()
 {
@@ -155,3 +156,4 @@ int main()
 
     return 0;
 }
+*/
