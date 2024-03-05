@@ -15,13 +15,17 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
     Matrix3cd m_k = Matrix3cd::Zero();
     Matrix3cd m_char = Matrix3cd::Zero();
 
+    // std::cout << v_e << std::endl;
+
     // Are we diagonal and isotropic?
     bool diag_flag = m_eps.isApprox(m_eps.diagonal().asDiagonal().toDenseMatrix());
     bool iso_flag = (m_eps(0, 0) == m_eps(1, 1)) && (m_eps(1, 1) == m_eps(2, 2));
+    // std::cout << "Here-1" << std::endl;
 
     // Diagonal isotropic material
     if (diag_flag && iso_flag)
     {
+        // std::cout << "Here-2" << std::endl;
         if (kx == std::complex<double>(0.0) && ky == std::complex<double>(0.0))
         {
             v_e.row(0) = Vector3cd(1.0, 0.0, 0.0);
@@ -58,8 +62,10 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
     // General material
     else
     {
+        // std::cout << "Here-3" << std::endl;
         for (int m = 0; m < 4; ++m)
         {
+            // std::cout << m << std::endl;
 
             // k matrix
             m_k(0, 0) = 0.0;
@@ -71,17 +77,27 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
             m_k(2, 0) = -ky;
             m_k(2, 1) = kx;
             m_k(2, 2) = 0.0;
+            // std::cout << "Here-3a" << std::endl;
 
             // Characteristic matrix
             m_char = m_k * m_k / (k0 * k0);
             m_char = m_char + m_eps;
+            // std::cout << "Here-3b" << std::endl;
 
             // Calculating the null space
             MatrixXcd null_space = nullspace(m_char, 1e-7);
+            // std::cout << "Here-3c" << std::endl;
 
+            // std::cout << v_e.row(m) << std::endl;
+            // std::cout << null_space.col(0) << std::endl;
+            // std::cout << null_space.row(0) << std::endl;
+            // std::cout << null_space.transpose().col(0) << std::endl;
+            // v_e.row(m) = null_space.col(0);
             v_e.row(m) = null_space.col(0);
+            // std::cout << "Here-3d" << std::endl;
         }
 
+        // std::cout << "Here-4" << std::endl;
         // c    leaning small elements from the eigenvectors
         for (int m = 0; m < 4; ++m)
         {
@@ -99,6 +115,8 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
         // e    igenvector swapping to get appropriate polarization states
         if (std::abs(v_e(0, 0)) == 0.0)
         {
+
+            // std::cout << "Here-5" << std::endl;
             Vector3cd swap_e = v_e.row(0);
             v_e.row(0) = v_e.row(1);
             v_e.row(1) = swap_e;
@@ -109,6 +127,7 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
 
         if (std::abs(v_e(2, 0)) == 0.0)
         {
+            // std::cout << "Here-6" << std::endl;
             Vector3cd swap_e = v_e.row(2);
             v_e.row(2) = v_e.row(3);
             v_e.row(3) = swap_e;

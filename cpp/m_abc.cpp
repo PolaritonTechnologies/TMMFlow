@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-std::tuple<Eigen::Vector4cd, Eigen::Vector4cd, Eigen::Matrix2cd, Eigen::Matrix2cd, Eigen::Matrix2cd, Eigen::Matrix2cd, Eigen::Matrix2cd, Eigen::Matrix2cd> m_abc(std::complex<double> k0, std::complex<double> kx, std::complex<double> ky, Eigen::Vector4cd v_kz, Eigen::Matrix4cd v_e, double d)
+std::tuple<Eigen::Vector4cd, Eigen::Vector4cd, Eigen::Matrix2cd, Eigen::Matrix2cd, Eigen::Matrix2cd, Eigen::Matrix2cd, Eigen::Matrix2cd, Eigen::Matrix2cd> m_abc(std::complex<double> k0, std::complex<double> kx, std::complex<double> ky, Eigen::Vector4cd v_kz, Eigen::MatrixXcd v_e, double d)
 {
     // matrix allocation
     Eigen::Matrix2cd m_a12 = Eigen::Matrix2cd::Identity();

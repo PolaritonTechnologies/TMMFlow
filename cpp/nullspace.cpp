@@ -14,12 +14,14 @@ MatrixXcd nullspace(MatrixXcd A, double atol = 1e-9)
     // Get the singular values
     VectorXd singular_values = svd.singularValues();
 
+    /*
     std::cout << "singular values: " << std::endl
               << singular_values << std::endl;
     std::cout << "Its right singular vectors are the columns of the thin V matrix:" << std::endl
               << svd.matrixU() << std::endl;
     std::cout << "Its right singular vectors are the columns of the thin V matrix:" << std::endl
               << svd.matrixV() << std::endl;
+    */
     // singular values: 4.23012 3.16742 3.97205e-15
     // Its right singular vectors are the columns of the thin V matrix:
     // (0.910642,-0.413193)     (-0.000661001,0.00145366)       (-0,0)
@@ -51,7 +53,7 @@ MatrixXcd nullspace(MatrixXcd A, double atol = 1e-9)
     // Only get the columns of V that are not masked
     MatrixXcd null_space = svd.matrixV()(Eigen::all, mask);
 
-    return null_space.transpose();
+    return null_space;
 
     /*
     Initial stuff that copilot suggested
