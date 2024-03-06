@@ -13,7 +13,7 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
     // Initializing vector and matrix
     MatrixXcd v_e = MatrixXcd::Zero(4, 3);
     Matrix3cd m_k = Matrix3cd::Zero();
-    Matrix3cd m_char = Matrix3cd::Zero();
+    MatrixXcd m_char = MatrixXcd::Zero(3, 3);
 
     // std::cout << v_e << std::endl;
 
@@ -83,16 +83,17 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
             m_char = m_k * m_k / (k0 * k0);
             m_char = m_char + m_eps;
             // std::cout << "Here-3b" << std::endl;
+            std::cout << m_char << std::endl;
 
             // Calculating the null space
-            MatrixXcd null_space = nullspace(m_char, 1e-7);
+            // This here is the problem as it becomes empty when it shouldnt.
+            // The tolerances in C++ somehow seem to be lower for the nullspace
+            // stuff
+            MatrixXcd null_space = nullspace(m_char, 1e-5);
             // std::cout << "Here-3c" << std::endl;
 
             // std::cout << v_e.row(m) << std::endl;
-            // std::cout << null_space.col(0) << std::endl;
-            // std::cout << null_space.row(0) << std::endl;
-            // std::cout << null_space.transpose().col(0) << std::endl;
-            // v_e.row(m) = null_space.col(0);
+
             v_e.row(m) = null_space.col(0);
             // std::cout << "Here-3d" << std::endl;
         }

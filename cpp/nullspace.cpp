@@ -6,31 +6,31 @@
 // using namespace std;
 using namespace Eigen;
 
-MatrixXcd nullspace(MatrixXcd A, double atol = 1e-9)
+MatrixXcd nullspace(MatrixXcd A, double atol = 1e-5)
 {
     // Compute the singular value decomposition
     JacobiSVD<MatrixXcd> svd(A, ComputeThinU | ComputeThinV);
 
     // Get the singular values
+    // Singular values are fine, however, the tolerances seem to be different in C++ than in Python
     VectorXd singular_values = svd.singularValues();
 
-    /*
     std::cout << "singular values: " << std::endl
               << singular_values << std::endl;
     std::cout << "Its right singular vectors are the columns of the thin V matrix:" << std::endl
               << svd.matrixU() << std::endl;
     std::cout << "Its right singular vectors are the columns of the thin V matrix:" << std::endl
               << svd.matrixV() << std::endl;
-    */
+
     // singular values: 4.23012 3.16742 3.97205e-15
-    // Its right singular vectors are the columns of the thin V matrix:
+    // Its right singular vectors are the columns of the thin U matrix:
     // (0.910642,-0.413193)     (-0.000661001,0.00145366)       (-0,0)
     // (0,0)                    (0,-0)                          (-0.894427,0.447214)
     // (0.000779099,0.00139393) (0.941729,0.336369)             (-0,0)
     // Its right singular vectors are the columns of the thin V matrix:
     // (0.0836123,0.996497)     (-0.000133519,-0.00159129)      (0,0)
     // (0,0)                    (0,0)                           (1,0)
-    // (0.00159688,0)               (0.999999,0)                      (0,0)
+    // (0.00159688,0)           (0.999999,0)                    (0,0)
 
     // Define a mask that cuts off all values that are smaller than atol
     std::vector<int> mask;
@@ -44,14 +44,17 @@ MatrixXcd nullspace(MatrixXcd A, double atol = 1e-9)
             mask.insert(std::end(mask), i);
         }
     }
-    // for (int i = 0; i < mask.size(); i++)
-    // {
-    //     std::cout << "mask: " << std::endl
-    //               << mask[i] << std::endl;
-    // }
+    for (int i = 0; i < mask.size(); i++)
+    {
+        std::cout << mask[i] << std::endl;
+    }
 
-    // Only get the columns of V that are not masked
+    // Take care here! In the python code it says that we only want to select
+    // specific columns of V.
     MatrixXcd null_space = svd.matrixV()(Eigen::all, mask);
+
+    std::cout << "Nullspace: " << std::endl
+              << null_space << std::endl;
 
     return null_space;
 

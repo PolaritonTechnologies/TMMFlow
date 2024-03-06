@@ -10,30 +10,39 @@ Eigen::Vector4cd kz_eigenvalues(std::complex<double> k0, std::complex<double> kx
 {
 
     Eigen::Vector4cd v_kz;
+    // Define accuracy of floating point comparisons
+    double epsilon = 1e-9;
+
+    bool diag_flag = m_eps.isApprox(m_eps.diagonal().asDiagonal().toDenseMatrix());
+    bool iso_flag = (m_eps(0, 0) == m_eps(1, 1)) && (m_eps(1, 1) == m_eps(2, 2));
 
     // Are we diagonal and isotropic?
 
+    /*
     // Create a diagonal matrix from the diagonal of the input matrix
     Eigen::MatrixXcd diagonalMatrix = m_eps.diagonal().asDiagonal();
 
-    bool diag_flag = false;
+    bool diag_flag = true;
     // Check if the input matrix is equal to its diagonal matrix
     // The norm of their difference should be close to zero for them to be considered equal
-    if ((m_eps - diagonalMatrix).norm() > 1e-10)
+    if ((m_eps - diagonalMatrix).norm() > epsilon)
     {
-        bool diag_flag = false;
+        diag_flag = false;
     }
 
-    std::complex<double> firstElement = diagonalMatrix(0);
+    std::complex<double> firstElement = m_eps.diagonal()(0);
     bool iso_flag = true;
-    // Check if all elements of the diagonal are equal to the first element
-    for (int i = 1; i < diagonalMatrix.size(); ++i)
+
+    // Check if all elements of the diagonal of m_eps are close to the first element
+    for (int i = 1; i < m_eps.diagonal().size(); ++i)
     {
-        if (diagonalMatrix(i) != firstElement)
+        if (std::abs(m_eps.diagonal()(i) - firstElement) > epsilon)
         {
-            bool iso_flag = false;
+            iso_flag = false;
+            break; // No need to check further if we found a non-equal element
         }
     }
+    */
 
     // diagonal isotropic material
     if (diag_flag && iso_flag)
@@ -84,9 +93,22 @@ Eigen::Vector4cd kz_eigenvalues(std::complex<double> k0, std::complex<double> kx
         }
     }
 
-    // output sorted by imaginary part
+    // We should first round the numbers as otherwise the sorting is
+    // meaningless. If the numbers are close to zero, they shouldn't be sorted
+    // (in this case I chose 1e-6 as a threshold)
+    // Round the real and imaginary parts of each complex number
+    for (auto &kz : v_kz)
+    {
+        kz = std::complex<double>(std::round(kz.real() / epsilon) * epsilon, std::round(kz.imag() / epsilon) * epsilon);
+    }
+
+    // Sort the complex numbers by their imaginary parts
     std::sort(v_kz.begin(), v_kz.end(), [](std::complex<double> a, std::complex<double> b)
               { return std::imag(a) < std::imag(b); });
+
+    // output sorted by imaginary part
+    // std::sort(v_kz.begin(), v_kz.end(), [](std::complex<double> a, std::complex<double> b)
+    //   { return std::imag(a) < std::imag(b); });
 
     // for (const auto &element : v_kz)
     // {

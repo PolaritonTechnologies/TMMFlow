@@ -139,7 +139,7 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, 
     // MatrixXcd v_e = result.first;
     // tor4cd v_kz = result.second;
 
-    auto [v_a_np1, v_b_np1, m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1, m_c12_np1, m_c34_np1] = m_abc(k0, kx, ky, v_kz, v_e, d_list.back());
+    auto [m_a_np1, m_b_np1, m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1, m_c12_np1, m_c34_np1] = m_abc(k0, kx, ky, v_kz, v_e, d_list.back());
 
     Matrix2cd m_T = Matrix2cd::Identity();
     Matrix2cd m_R_np1 = Matrix2cd::Zero();
@@ -161,7 +161,7 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, 
         // v_e = result.first;
         // v_kz = result.second;
 
-        auto [v_a, v_b, m_a12, m_a34, m_b12, m_b34, m_c12, m_c34] = m_abc(k0, kx, ky, v_kz, v_e, d_list[i]);
+        auto [m_a, m_b, m_a12, m_a34, m_b12, m_b34, m_c12, m_c34] = m_abc(k0, kx, ky, v_kz, v_e, d_list[i]);
 
         // std::cout << v_a << std::endl;
         // std::cout << v_b << std::endl;

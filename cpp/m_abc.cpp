@@ -14,6 +14,11 @@ std::tuple<Eigen::Vector4cd, Eigen::Vector4cd, Eigen::Matrix2cd, Eigen::Matrix2c
     Eigen::Matrix2cd m_c12 = Eigen::Matrix2cd::Zero();
     Eigen::Matrix2cd m_c34 = Eigen::Matrix2cd::Zero();
 
+    for (int i = 0; i < 4; i++)
+    {
+        std::cout << v_e.row(i) << std::endl;
+    };
+
     std::complex<double> a1 = v_e(0, 1) / v_e(0, 0);
     std::complex<double> a2 = v_e(1, 0) / v_e(1, 1);
 
@@ -37,10 +42,14 @@ std::tuple<Eigen::Vector4cd, Eigen::Vector4cd, Eigen::Matrix2cd, Eigen::Matrix2c
     std::complex<double> b3 = v_e(2, 2) / v_e(2, 0);
     std::complex<double> b4 = v_e(3, 2) / v_e(3, 1);
 
+    // Something is wrong here! It might be that the order of indices is wrong (0,1) --> (1,0) or something is odd with the minus sign
     m_b34(0, 0) = -v_kz[2] * a3 + ky * b3;
     m_b34(0, 1) = -v_kz[3] + ky * b4;
     m_b34(1, 0) = v_kz[2] - kx * b3;
     m_b34(1, 1) = v_kz[3] * a4 - kx * b4;
+
+    std::cout << "m_b34: " << std::endl
+              << m_b34 << std::endl;
 
     // c12 matrix
     m_c12(0, 0) = std::exp(std::complex<double>(0, 1) * v_kz[0] * d);
