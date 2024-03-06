@@ -1,15 +1,7 @@
 #include <iostream>
-#include <map>
 #include <vector>
 #include <complex>
 #include "Eigen/Dense"
-#include <unordered_map>
-#include <variant>
-// #include "nullspace.cpp"
-// #include "kz_eigenvectors.cpp"
-// #include "kz_eigenvalues.cpp"
-// #include "m_abc.cpp"
-// #include "json.hpp"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -17,6 +9,16 @@
 
 using namespace Eigen;
 
+/**
+ * @brief Function that returns the kernel (or nullspace) that is the linear
+ * maps that are mapped on the null vector
+ *
+ * @param A Matrix we want to calculate the kernel for
+ * @param atol Tolerance to what is regarded as zero from the singular value
+ * decomposition. Here the results from Eigen in C++ are very different from the
+ * results from scipy and python
+ * @return Returns the kernel of the matrix
+ */
 MatrixXcd nullspace(MatrixXcd A, double atol = 1e-5)
 {
     // Compute the singular value decomposition
@@ -25,13 +27,6 @@ MatrixXcd nullspace(MatrixXcd A, double atol = 1e-5)
     // Get the singular values
     // Singular values are fine, however, the tolerances seem to be different in C++ than in Python
     VectorXd singular_values = svd.singularValues();
-
-    // std::cout << "singular values: " << std::endl
-    //           << singular_values << std::endl;
-    // std::cout << "Its right singular vectors are the columns of the thin V matrix:" << std::endl
-    //           << svd.matrixU() << std::endl;
-    // std::cout << "Its right singular vectors are the columns of the thin V matrix:" << std::endl
-    //           << svd.matrixV() << std::endl;
 
     // Define a mask that cuts off all values that are smaller than atol
     std::vector<int> mask;
@@ -45,21 +40,21 @@ MatrixXcd nullspace(MatrixXcd A, double atol = 1e-5)
             mask.insert(std::end(mask), i);
         }
     }
-    for (int i = 0; i < mask.size(); i++)
-    {
-        std::cout << mask[i] << std::endl;
-    }
 
     // Take care here! In the python code it says that we only want to select
     // specific columns of V.
     MatrixXcd null_space = svd.matrixV()(Eigen::all, mask);
 
-    std::cout << "Nullspace: " << std::endl
-              << null_space << std::endl;
-
     return null_space;
 }
 
+/**
+ * @brief Function that returns the eigenvalues of the wavevector in the z
+ *
+ * @param k0, kx, ky The wavevector modulus and in plane components
+ * @param m_eps The dielectric tensor of the material
+ * @return Returns eigenvalues
+ */
 Vector4cd kz_eigenvalues(std::complex<double> k0, std::complex<double> kx, std::complex<double> ky, Matrix3cd m_eps)
 {
 
@@ -67,36 +62,9 @@ Vector4cd kz_eigenvalues(std::complex<double> k0, std::complex<double> kx, std::
     // Define accuracy of floating point comparisons
     double epsilon = 1e-9;
 
+    // Are we diagonal and isotropic?
     bool diag_flag = m_eps.isApprox(m_eps.diagonal().asDiagonal().toDenseMatrix());
     bool iso_flag = (m_eps(0, 0) == m_eps(1, 1)) && (m_eps(1, 1) == m_eps(2, 2));
-
-    // Are we diagonal and isotropic?
-
-    /*
-    // Create a diagonal matrix from the diagonal of the input matrix
-    Eigen::MatrixXcd diagonalMatrix = m_eps.diagonal().asDiagonal();
-
-    bool diag_flag = true;
-    // Check if the input matrix is equal to its diagonal matrix
-    // The norm of their difference should be close to zero for them to be considered equal
-    if ((m_eps - diagonalMatrix).norm() > epsilon)
-    {
-        diag_flag = false;
-    }
-
-    std::complex<double> firstElement = m_eps.diagonal()(0);
-    bool iso_flag = true;
-
-    // Check if all elements of the diagonal of m_eps are close to the first element
-    for (int i = 1; i < m_eps.diagonal().size(); ++i)
-    {
-        if (std::abs(m_eps.diagonal()(i) - firstElement) > epsilon)
-        {
-            iso_flag = false;
-            break; // No need to check further if we found a non-equal element
-        }
-    }
-    */
 
     // diagonal isotropic material
     if (diag_flag && iso_flag)
@@ -160,18 +128,16 @@ Vector4cd kz_eigenvalues(std::complex<double> k0, std::complex<double> kx, std::
     std::sort(v_kz.begin(), v_kz.end(), [](std::complex<double> a, std::complex<double> b)
               { return std::imag(a) < std::imag(b); });
 
-    // output sorted by imaginary part
-    // std::sort(v_kz.begin(), v_kz.end(), [](std::complex<double> a, std::complex<double> b)
-    //   { return std::imag(a) < std::imag(b); });
-
-    // for (const auto &element : v_kz)
-    // {
-    // std::cout << element << std::endl;
-    // }
-
     return v_kz;
 }
-
+/**
+ * @brief Function that returns the eigenvectors of the wavevector in the z
+ *
+ * @param k0, kx, ky The wavevector modulus and in plane components
+ * @param v_kz The eigenvalues of the wavevector in the z direction
+ * @param m_eps The dielectric tensor of the material
+ * @return Returns eigenvectors and again the eigenvalues
+ */
 std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::complex<double> kx, std::complex<double> ky, Vector4cd v_kz, Matrix3cd m_eps)
 {
     // Initializing vector and matrix
@@ -179,17 +145,13 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
     Matrix3cd m_k = Matrix3cd::Zero();
     MatrixXcd m_char = MatrixXcd::Zero(3, 3);
 
-    // std::cout << v_e << std::endl;
-
     // Are we diagonal and isotropic?
     bool diag_flag = m_eps.isApprox(m_eps.diagonal().asDiagonal().toDenseMatrix());
     bool iso_flag = (m_eps(0, 0) == m_eps(1, 1)) && (m_eps(1, 1) == m_eps(2, 2));
-    // std::cout << "Here-1" << std::endl;
 
     // Diagonal isotropic material
     if (diag_flag && iso_flag)
     {
-        // std::cout << "Here-2" << std::endl;
         if (kx == std::complex<double>(0.0) && ky == std::complex<double>(0.0))
         {
             v_e.row(0) = Vector3cd(1.0, 0.0, 0.0);
@@ -226,11 +188,8 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
     // General material
     else
     {
-        // std::cout << "Here-3" << std::endl;
         for (int m = 0; m < 4; ++m)
         {
-            // std::cout << m << std::endl;
-
             // k matrix
             m_k(0, 0) = 0.0;
             m_k(0, 1) = -v_kz[m];
@@ -241,29 +200,19 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
             m_k(2, 0) = -ky;
             m_k(2, 1) = kx;
             m_k(2, 2) = 0.0;
-            // std::cout << "Here-3a" << std::endl;
 
             // Characteristic matrix
             m_char = m_k * m_k / (k0 * k0);
             m_char = m_char + m_eps;
-            // std::cout << "Here-3b" << std::endl;
-            std::cout << m_char << std::endl;
 
-            // Calculating the null space
-            // This here is the problem as it becomes empty when it shouldnt.
-            // The tolerances in C++ somehow seem to be lower for the nullspace
-            // stuff
-            MatrixXcd null_space = nullspace(m_char, 1e-5);
-            // std::cout << "Here-3c" << std::endl;
-
-            // std::cout << v_e.row(m) << std::endl;
+            // Calculating the null space. The tolerances in C++ somehow
+            // seem to be lower for the nullspace stuff
+            MatrixXcd null_space = nullspace(m_char);
 
             v_e.row(m) = null_space.col(0);
-            // std::cout << "Here-3d" << std::endl;
         }
 
-        // std::cout << "Here-4" << std::endl;
-        // c    leaning small elements from the eigenvectors
+        // cleaning small elements from the eigenvectors
         for (int m = 0; m < 4; ++m)
         {
             std::complex<double> max_e = v_e.row(m).cwiseAbs().maxCoeff();
@@ -277,11 +226,10 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
             }
         }
 
-        // e    igenvector swapping to get appropriate polarization states
+        // eigenvector swapping to get appropriate polarization states
         if (std::abs(v_e(0, 0)) == 0.0)
         {
 
-            // std::cout << "Here-5" << std::endl;
             Vector3cd swap_e = v_e.row(0);
             v_e.row(0) = v_e.row(1);
             v_e.row(1) = swap_e;
@@ -292,7 +240,6 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
 
         if (std::abs(v_e(2, 0)) == 0.0)
         {
-            // std::cout << "Here-6" << std::endl;
             Vector3cd swap_e = v_e.row(2);
             v_e.row(2) = v_e.row(3);
             v_e.row(3) = swap_e;
@@ -311,6 +258,16 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
     return {v_e, v_kz};
 }
 
+/**
+ * @brief Function to calculate matrix elements of the current layer from
+ * incident wave vectors and eigenvalues and vectors
+ *
+ * @param k0, kx, ky The wavevector modulus and in plane components
+ * @param v_kz The eigenvalues of the wavevector in the z direction
+ * @param v_e The eigenvectors of the wavevector in the z direction
+ * @param d Thickness of the layer
+ * @return Returns a whole number of matrices for the TMM
+ */
 std::tuple<Vector4cd, Vector4cd, Matrix2cd, Matrix2cd, Matrix2cd, Matrix2cd, Matrix2cd, Matrix2cd> m_abc(std::complex<double> k0, std::complex<double> kx, std::complex<double> ky, Vector4cd v_kz, MatrixXcd v_e, double d)
 {
     // matrix allocation
@@ -320,11 +277,6 @@ std::tuple<Vector4cd, Vector4cd, Matrix2cd, Matrix2cd, Matrix2cd, Matrix2cd, Mat
     Matrix2cd m_b34 = Matrix2cd::Zero();
     Matrix2cd m_c12 = Matrix2cd::Zero();
     Matrix2cd m_c34 = Matrix2cd::Zero();
-
-    for (int i = 0; i < 4; i++)
-    {
-        std::cout << v_e.row(i) << std::endl;
-    };
 
     std::complex<double> a1 = v_e(0, 1) / v_e(0, 0);
     std::complex<double> a2 = v_e(1, 0) / v_e(1, 1);
@@ -349,14 +301,10 @@ std::tuple<Vector4cd, Vector4cd, Matrix2cd, Matrix2cd, Matrix2cd, Matrix2cd, Mat
     std::complex<double> b3 = v_e(2, 2) / v_e(2, 0);
     std::complex<double> b4 = v_e(3, 2) / v_e(3, 1);
 
-    // Something is wrong here! It might be that the order of indices is wrong (0,1) --> (1,0) or something is odd with the minus sign
     m_b34(0, 0) = -v_kz[2] * a3 + ky * b3;
     m_b34(0, 1) = -v_kz[3] + ky * b4;
     m_b34(1, 0) = v_kz[2] - kx * b3;
     m_b34(1, 1) = v_kz[3] * a4 - kx * b4;
-
-    std::cout << "m_b34: " << std::endl
-              << m_b34 << std::endl;
 
     // c12 matrix
     m_c12(0, 0) = std::exp(std::complex<double>(0, 1) * v_kz[0] * d);
@@ -376,6 +324,19 @@ std::tuple<Vector4cd, Vector4cd, Matrix2cd, Matrix2cd, Matrix2cd, Matrix2cd, Mat
     return {v_a, v_b, m_a12, m_a34, m_b12, m_b34, m_c12, m_c34};
 }
 
+/**
+ * @brief Function to calculate transmisison and reflection matrices for each
+ * layer (which needs the next layers matrices as well). It can be recursively
+ * called to calculate the total transmission and reflection matrices of layered
+ * stacks. The function is a bit messy but allows for recursive calculations and
+ * thereby circumvents the need of weird data structures.
+ *
+ * @param m_a12, m_a34, m_b12, m_b34 Matrices for the current layer
+ * @param m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1 Matrices for the next layer
+ * @param m_R_np1 The reflection matrix for the next layer
+ * @param m_T The total transmission matrix
+ * @return Total reflection and transmission matrices
+ */
 std::pair<Matrix2cd, Matrix2cd> calculate_tr_per_layer(
     Matrix2cd m_a12,
     Matrix2cd m_a34,
@@ -390,11 +351,7 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr_per_layer(
     Matrix2cd m_R_np1,
     Matrix2cd m_T)
 {
-    /*
-    This function is supposed to be used recursively to calculate the reflection
-    and transmission matrices for each layer. The iteration over each layer
-    happens in another function, however.
-    */
+
     // Define matrix R and T for this iteration
     Matrix2cd m_R = Matrix2cd::Zero();
     Matrix2cd m_Tn = Matrix2cd::Zero();
@@ -403,26 +360,10 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr_per_layer(
     Matrix2cd f2_inv = m_a12_np1 * m_c12_np1 + (m_a34_np1 * m_c34_np1) * m_R_np1;
     Matrix2cd f2 = f2_inv.inverse();
 
-    // There is a sign issue in f1 for the bottom left entry
-    std::cout << m_b12_np1 << std::endl;
-    std::cout << m_c12_np1 << std::endl;
-    std::cout << m_b34_np1 << std::endl;
-    std::cout << m_c34_np1 << std::endl;
-    std::cout << m_R_np1 << std::endl;
-    // std::cout << f2 << std::endl;
-
     Matrix2cd f_np1 = f1 * f2;
     Matrix2cd r1_inv = f_np1 * m_a34 - m_b34;
     Matrix2cd r1 = r1_inv.inverse();
     Matrix2cd r2 = m_b12 - f_np1 * m_a12;
-
-    // std::cout << f_np1 << std::endl;
-    // std::cout << m_a34 << std::endl;
-    // std::cout << m_b34 << std::endl;
-    // std::cout << r1_inv << std::endl;
-
-    // std::cout << r1 << std::endl;
-    // std::cout << r2 << std::endl;
 
     // Calculate the reflection for this iteration
     m_R = r1 * r2;
@@ -439,7 +380,13 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr_per_layer(
     return {m_R, m_T};
 }
 
-// Function to replace the numpy real_if_close
+/**
+ * @brief Function to replace the numpy real_if_close
+ *
+ * @param c The complex number to check
+ * @param tol Tolerance to check for
+ * @return The real part of the complex number
+ */
 double real_if_close(std::complex<double> c, double tol = 1e-7)
 {
     if (std::abs(c.imag()) < tol)
@@ -452,24 +399,49 @@ double real_if_close(std::complex<double> c, double tol = 1e-7)
     }
 };
 
-std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0)
-// void calculate_tr(std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0)
+/**
+ * @brief Checks if a matrix is real, diagonal, and isotropic.
+ *
+ * @param matrix The matrix to check.
+ * @return true if the matrix is real, diagonal, and isotropic; false otherwise.
+ */
+bool isRealDiagonalIsotropic(const MatrixXcd &matrix)
 {
-    // Assuming e_list_3x3 is a std::vector<Eigen::Matrix3cd>
-    std::complex<double> n_0 = std::sqrt(e_list_3x3[0](0, 0));
-    std::complex<double> n_s = std::sqrt(e_list_3x3[e_list_3x3.size() - 1](0, 0));
+    bool diag_flag = matrix.isApprox(matrix.diagonal().asDiagonal().toDenseMatrix());
+    bool iso_flag = (matrix(0, 0) == matrix(1, 1)) && (matrix(0, 0) == matrix(2, 2));
+    bool real_flag = std::abs(matrix(0, 0)) == std::real(matrix(0, 0));
+
+    return diag_flag && iso_flag && real_flag;
+}
+
+std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0)
+{
+    // Incident medium and substrate hva to be real, diagonal and isotropic
+    // incident medium check
+    MatrixXcd firstMatrix = e_list_3x3[0];
+    if (!isRealDiagonalIsotropic(firstMatrix))
+    {
+        throw std::runtime_error("Incident medium must be real, diagonal and isotropic");
+    }
+
+    std::complex<double> n_0 = std::sqrt(firstMatrix(0, 0));
+
+    // substrate check
+    MatrixXcd lastMatrix = e_list_3x3[e_list_3x3.size() - 1];
+    if (!isRealDiagonalIsotropic(lastMatrix))
+    {
+        throw std::runtime_error("Substrate must be real, diagonal and isotropic");
+    }
+
+    std::complex<double> n_s = std::sqrt(lastMatrix(0, 0));
 
     // wavevector modulus and in plane components
     std::complex<double> k0 = 2.0 * M_PI / wavelength;
     std::complex<double> kx = -k0 * n_0.real() * sin(theta_0) * cos(phi_0);
     std::complex<double> ky = -k0 * n_0.real() * sin(theta_0) * sin(phi_0);
 
-    // m_a_np1, m_b_np1, m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1, m_c12_np1, m_c34_np1, m_K_np1 = chunk_1(wavelength, theta_0, phi_0, e_list_3x3[-1], d_list[-1], n_0, n_s)
     Vector4cd v_kz1 = kz_eigenvalues(k0, kx, ky, e_list_3x3.back());
     auto [v_e, v_kz] = kz_eigenvectors(k0, kx, ky, v_kz1, e_list_3x3.back());
-
-    // MatrixXcd v_e = result.first;
-    // tor4cd v_kz = result.second;
 
     auto [m_a_np1, m_b_np1, m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1, m_c12_np1, m_c34_np1] = m_abc(k0, kx, ky, v_kz, v_e, d_list.back());
 
@@ -481,28 +453,11 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, 
     // Now iterate over all layers starting from the second last going backwards
     for (int i = d_list.size() - 2; i >= 0; --i)
     {
-        std::cout << "i: " << i << std::endl;
-
         v_kz1 = kz_eigenvalues(k0, kx, ky, e_list_3x3[i]);
-
-        // std::cout << "v_kz1: " << v_kz1 << std::endl;
-        // std::cout << "e_list_3x3: " << e_list_3x3[i] << std::endl;
 
         auto [v_e, v_kz] = kz_eigenvectors(k0, kx, ky, v_kz1, e_list_3x3[i]);
 
-        // v_e = result.first;
-        // v_kz = result.second;
-
         auto [m_a, m_b, m_a12, m_a34, m_b12, m_b34, m_c12, m_c34] = m_abc(k0, kx, ky, v_kz, v_e, d_list[i]);
-
-        // std::cout << v_a << std::endl;
-        // std::cout << v_b << std::endl;
-        // std::cout << m_a12 << std::endl;
-        // std::cout << m_a34 << std::endl;
-        // std::cout << m_b12 << std::endl;
-        // std::cout << m_b34 << std::endl;
-        // std::cout << m_c12 << std::endl;
-        // std::cout << m_c34 << std::endl;
 
         std::pair<Matrix2cd, Matrix2cd> result3 = calculate_tr_per_layer(m_a12, m_a34, m_b12, m_b34, m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1, m_c12_np1, m_c34_np1, m_R_np1, m_T);
 
@@ -513,8 +468,6 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, 
         {
             m_R_0 = m_R;
         }
-        // std::cout << "m_R" << m_R << std::endl;
-        // std::cout << "m_T " << m_T << std::endl;
 
         // In the next iteration m_a12 --> m_a12_np1, similarly m_R --> m_R_np1.
         m_a12_np1 = m_a12;
@@ -535,7 +488,7 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, 
     p_inc(1, 1) = cos(phi_0);
     Matrix2cd p_inc_inv = p_inc.inverse();
 
-    // Finally the  R matrix output...
+    // The reflection matrix
     Matrix2cd m_r_ps = p_inc_inv * m_R_0 * p_inc;
 
     // rotating m_T to the s,p states
@@ -547,7 +500,7 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, 
     p_sub(1, 1) = cos(phi_0);
     Matrix2cd p_sub_inv = p_sub.inverse();
 
-    // Finally the  T matrix output...
+    // The transmission matrix
     Matrix2cd m_t_ps = p_sub_inv * m_T * p_inc;
 
     return {m_r_ps, m_t_ps};
@@ -555,7 +508,6 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, 
 
 int main()
 {
-    /*  Example input  */
     double wavelength = 400;
     double theta_0 = 0.0017453292519943296;
     double phi_0 = 0;
@@ -588,7 +540,6 @@ int main()
 
     std::vector<double> d_list = {0, 20, 105, 100, 0};
 
-    // calculate_tr(e_list_3x3, d_list, wavelength, theta_0, phi_0);
     auto [m_r_ps, m_t_ps] = calculate_tr(e_list_3x3, d_list, wavelength, theta_0, phi_0);
     std::cout << "reflection matrix: " << m_r_ps << std::endl;
     std::cout << "transmission matrix: " << m_t_ps << std::endl;
