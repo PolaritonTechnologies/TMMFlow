@@ -1,0 +1,241 @@
+#include <fstream>
+#include "json.hpp"
+#include <iostream>
+#include <vector>
+#include <set>
+#include <string>
+#include <cmath>
+#include <complex>
+#include "Eigen\Dense"
+#include "spline.h"
+#include "csvparser.cpp"
+#include "core.cpp"
+
+using namespace Eigen;
+using json = nlohmann::json;
+
+struct CalculationInfo {
+    bool transmission;
+    double angleMin;
+    double angleMax;
+    double angleStep;
+    double wavelengthMin;
+    double wavelengthMax;
+    double wavelengthStep;
+    std::vector<std::string> structure_materials;
+    std::vector<double> structure_thicknesses;
+    std::string polarization;
+    std::vector<double> azimuthalAngles;
+    bool inEnergy;
+    double Zmin;
+    double Zmax;
+
+    CalculationInfo(
+        bool transmission,
+        double angleMin,
+        double angleMax,
+        double angleStep,
+        double wavelengthMin,
+        double wavelengthMax,
+        double wavelengthStep,
+        std::vector<std::string> structure_materials,
+        std::vector<double> structure_thicknesses,
+        std::string polarization,
+        std::vector<double> azimuthalAngles,
+        bool inEnergy,
+        double Zmin,
+        double Zmax
+    ) : transmission(transmission),
+        angleMin(angleMin),
+        angleMax(angleMax),
+        angleStep(angleStep),
+        wavelengthMin(wavelengthMin),
+        wavelengthMax(wavelengthMax),
+        wavelengthStep(wavelengthStep),
+        structure_materials(structure_materials),
+        structure_thicknesses(structure_thicknesses),
+        polarization(polarization),
+        azimuthalAngles(azimuthalAngles),
+        inEnergy(inEnergy),
+        Zmin(Zmin),
+        Zmax(Zmax) {}
+};
+
+CalculationInfo loadCalculationInfo(const std::filesystem::path filepath) {
+    std::ifstream file(filepath);
+    json calculation_order;
+    file >> calculation_order;
+
+    CalculationInfo calculation_info(
+        calculation_order["transmission"],
+        calculation_order["angleMin"],
+        calculation_order["angleMax"],
+        calculation_order["angleStep"],
+        calculation_order["wavelengthMin"],
+        calculation_order["wavelengthMax"],
+        calculation_order["wavelengthStep"],
+        calculation_order["structure_materials"],
+        calculation_order["structure_thicknesses"],
+        calculation_order["polarization"],
+        calculation_order["azimuthalAngles"],
+        calculation_order["inEnergy"],
+        calculation_order["Zmin"],
+        calculation_order["Zmax"]
+    );
+
+    return calculation_info;
+}
+
+std::vector<std::string> getUniqueMembers(const std::vector<std::string>& inputArray) {
+    std::set<std::string> uniqueSet(inputArray.begin(), inputArray.end());
+    std::vector<std::string> uniqueVector(uniqueSet.begin(), uniqueSet.end());
+    return uniqueVector;
+}
+
+std::vector<Matrix3cd> reverseVector(const std::vector<Matrix3cd>& vec) {
+    std::vector<Matrix3cd> reversedVec(vec.rbegin(), vec.rend());
+    return reversedVec;
+}
+
+std::array<std::map<std::pair<double, double>, std::complex<double>>, 4> perform_calculation() {
+    std::string filename = "calculation_order.json";
+    std::filesystem::path fullPath = std::filesystem::current_path() / filename;
+    std::cout <<  fullPath << std::endl;
+    CalculationInfo calculation_order = loadCalculationInfo(fullPath);
+
+    std::vector<std::complex<double>> e_listx_wvl, e_listy_wvl, e_listz_wvl;
+
+    double theta_min = calculation_order.angleMin * M_PI / 180.0;
+    double theta_max = calculation_order.angleMax * M_PI / 180.0;
+    double theta_stepInRadians = calculation_order.angleStep * M_PI / 180.0;
+    int theta_steps = (theta_max - theta_min) / theta_stepInRadians + 1;
+    VectorXd v_theta = VectorXd::LinSpaced(theta_steps, theta_min, theta_max);
+
+    double wvl_min = calculation_order.wavelengthMin;
+    double wvl_max = calculation_order.wavelengthMax;
+    int wvl_steps = (wvl_max - wvl_min) / calculation_order.wavelengthStep + 1;
+    VectorXd wavelength = VectorXd::LinSpaced(wvl_steps, wvl_min, wvl_max);
+
+    // Phi initially kept at 0 for now
+    double phi_0 = 0;
+
+    std::vector<double> d_list = calculation_order.structure_thicknesses;
+
+    std::vector<std::string> unique_materials = getUniqueMembers(calculation_order.structure_materials);
+    CSVParser parser;
+    std::map<std::string, std::vector<tk::spline>> materialSplines;
+
+    for (const auto& material : unique_materials) {
+        std::vector<tk::spline> splines = parser.importIndexFromFile(material);
+        materialSplines[material] = splines;
+    }
+
+    std::map<std::pair<double, double>, std::complex<double>> resultDictionary_reflection_s;
+    std::map<std::pair<double, double>, std::complex<double>> resultDictionary_reflection_p;
+    std::map<std::pair<double, double>, std::complex<double>> resultDictionary_transmission_s;
+    std::map<std::pair<double, double>, std::complex<double>> resultDictionary_transmission_p;
+
+    for (int p = 0; p < v_theta.size(); p++) {
+        for (int i = 0; i < wavelength.size(); i++) {
+
+            std::pair<double, double> key = std::make_pair(v_theta[p] * 180.0 / M_PI, wavelength[i]);
+
+            std::vector<Matrix3cd> e_list_3x3;
+
+            //substrate: quartz/glass
+            Matrix3cd substrate_layer_tensor = 
+                (Matrix3cd(3, 3) << std::complex<double>(1.5, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+                std::complex<double>(0.0, 0.0), std::complex<double>(1.5, 0), std::complex<double>(0.0, 0.0),
+                std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1.5, 0)).finished();
+            e_list_3x3.push_back(substrate_layer_tensor);
+
+            for (const auto& material : calculation_order.structure_materials) {
+                    Matrix3cd next_layer_tensor = 
+                        (Matrix3cd(3, 3) << std::complex<double>(materialSplines[material][0](wavelength[i]), materialSplines[material][1](wavelength[i])), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+                        std::complex<double>(0.0, 0.0), std::complex<double>(materialSplines[material][2](wavelength[i]), materialSplines[material][3](wavelength[i])), std::complex<double>(0.0, 0.0),
+                        std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(materialSplines[material][4](wavelength[i]), materialSplines[material][5](wavelength[i]))).finished();
+                    e_list_3x3.push_back(next_layer_tensor);
+                }
+
+            //out medium: air
+            Matrix3cd incident_layer_tensor = 
+                (Matrix3cd(3, 3) << std::complex<double>(1, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+                std::complex<double>(0.0, 0.0), std::complex<double>(1, 0), std::complex<double>(0.0, 0.0),
+                std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1, 0)).finished();
+            e_list_3x3.push_back(incident_layer_tensor);
+
+            auto [m_r_ps, m_t_ps] = calculate_tr(e_list_3x3, d_list, wavelength[i], v_theta[p], phi_0);
+
+            resultDictionary_reflection_p[key] = m_r_ps.cwiseAbs2()(0,0);
+            resultDictionary_reflection_s[key] = m_r_ps.cwiseAbs2()(1,1);
+            resultDictionary_transmission_p[key] = m_t_ps.cwiseAbs2()(0,0);
+            resultDictionary_transmission_s[key] = m_t_ps.cwiseAbs2()(1,1);
+
+            //std::cout << "reflection matrix: " << m_r_ps << std::endl;
+            //std::cout << "transmission matrix: " << m_t_ps << std::endl;
+        }
+    }
+
+    std::array<std::map<std::pair<double, double>, std::complex<double>>, 4> resultArray = {resultDictionary_reflection_p, resultDictionary_reflection_s, resultDictionary_transmission_p, resultDictionary_transmission_s};
+    
+    return resultArray;
+}
+
+void dump_to_file(const std::map<std::pair<double, double>, std::complex<double>>& dictionary, const std::string& filename) {
+    std::ofstream file(filename);
+
+    // Create maps of unique angles and wavelengths to indices
+    std::map<double, int> angleIndices;
+    std::map<double, int> wavelengthIndices;
+    for (const auto& [key, value] : dictionary) {
+        angleIndices[key.first] = 0;
+        wavelengthIndices[key.second] = 0;
+    }
+
+    // Assign indices to unique angles and wavelengths
+    int index = 0;
+    for (auto& [angle, angleIndex] : angleIndices) {
+        angleIndex = index++;
+    }
+    index = 0;
+    for (auto& [wavelength, wavelengthIndex] : wavelengthIndices) {
+        wavelengthIndex = index++;
+    }
+
+    // Create 2D grid
+    std::vector<std::vector<std::complex<double>>> grid(wavelengthIndices.size(), std::vector<std::complex<double>>(angleIndices.size()));
+
+    // Fill grid with values from dictionary
+    for (const auto& [key, value] : dictionary) {
+        int rowIndex = wavelengthIndices[key.second];
+        int columnIndex = angleIndices[key.first];
+        grid[rowIndex][columnIndex] = value.real();
+    }
+
+    // Write the first line (list of unique angles)
+    for (const auto& [angle, angleIndex] : angleIndices) {
+        file << "," << angle;
+    }
+    file << "\n";
+
+    // Write the remaining lines (wavelength and corresponding values)
+    for (const auto& [wavelength, rowIndex] : wavelengthIndices) {
+        file << wavelength;
+        for (const auto& value : grid[rowIndex]) {
+            file << "," << value.real();
+        }
+        file << "\n";
+    }
+
+    file.close();
+}
+
+int main() 
+{
+    std::array<std::map<std::pair<double, double>, std::complex<double>>, 4> resultArray = perform_calculation();
+    dump_to_file(resultArray[0], "R_p.txt");
+    dump_to_file(resultArray[1], "R_s.txt");
+    dump_to_file(resultArray[2], "T_p.txt");
+    dump_to_file(resultArray[3], "T_s.txt");
+    return 0;
+};
