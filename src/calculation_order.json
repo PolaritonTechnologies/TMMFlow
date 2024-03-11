@@ -1,0 +1,18 @@
+{
+    "transmission": false,
+    "angleMin": 0,
+    "angleMax": 89,
+    "angleStep": 1,
+    "wavelengthMin": 250,
+    "wavelengthMax": 1000,
+    "wavelengthStep": 1,
+    "structure_materials": ["Al","AlignedPFOGlassy","Al"],
+    "structure_thicknesses": [100, 105, 20],
+    "polarization": "TE",
+    "azimuthalAngles": [0, 20, 40],
+    "inEnergy": true,
+    "EMin": 1.77,
+    "EMax": 3.1,
+    "Zmin": 0,
+    "Zmax": 1
+}
