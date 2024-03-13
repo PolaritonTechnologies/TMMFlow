@@ -7,8 +7,6 @@
 #include <cmath>
 #include <complex>
 #include "Eigen/Dense"
-#include "core.h"
-#include "spline.h"
 #include "spline.h"
 
 using namespace Eigen;
@@ -250,6 +248,7 @@ std::vector<Matrix3cd> reverseVector(const std::vector<Matrix3cd> &vec)
     return reversedVec;
 }
 
+/*
 std::array<std::map<std::pair<double, double>, std::complex<double>>, 4> perform_calculation()
 {
     std::string filename = "calculation_order.json";
@@ -341,6 +340,7 @@ std::array<std::map<std::pair<double, double>, std::complex<double>>, 4> perform
 
     return resultArray;
 }
+*/
 
 void dump_to_file(const std::map<std::pair<double, double>, std::complex<double>> &dictionary, const std::string &filename)
 {
@@ -399,6 +399,7 @@ void dump_to_file(const std::map<std::pair<double, double>, std::complex<double>
     file.close();
 }
 
+/*
 int execute()
 {
     std::array<std::map<std::pair<double, double>, std::complex<double>>, 4> resultArray = perform_calculation();
@@ -408,3 +409,4 @@ int execute()
     dump_to_file(resultArray[3], "T_s.txt");
     return 0;
 };
+*/

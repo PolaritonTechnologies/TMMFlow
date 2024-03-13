@@ -2,7 +2,7 @@ import ctypes
 import numpy as np
 
 # Load the shared library
-example = ctypes.CDLL('./src/main.so')
+example = ctypes.CDLL('./src/run.so')
 
 # Define the argument types and return type of the function
 example.run_function.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_double]
