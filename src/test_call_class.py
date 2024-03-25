@@ -2,6 +2,7 @@ import ctypes
 import numpy as np
 import time
 import pandas as pd
+import json
 
 import matplotlib.pylab as plt
 
@@ -17,46 +18,90 @@ lib.createFilterStack.restype = FilterStack
 
 lib.destroyFilterStack.argtypes = [FilterStack]
 
-lib.calculate_reflection.argtypes = [
+lib.calculate_reflection_transmission_absorption.argtypes = [
     FilterStack,
+    ctypes.c_char_p,
+    ctypes.c_char_p,
     ctypes.c_double,
     ctypes.c_double,
     ctypes.c_double,
     c_double_array,
     ctypes.c_size_t,
 ]
-lib.calculate_reflection.restype = ctypes.c_double
-
+lib.calculate_reflection_transmission_absorption.restype = ctypes.c_double
 
 file_name = "calculation_order.json"
 
 my_filter = lib.createFilterStack(file_name.encode("utf-8"))
 
 wavelength = 400
-theta_0 = 0.0017453292519943296
+theta_0 = 0.0
 phi_0 = 0.0
 
-initial_thicknesses = np.array([100, 105, 20], dtype=np.float64)
+with open("calculation_order.json") as f:
+    data_order = json.load(f)
+
+initial_thicknesses = np.array(data_order["structure_thicknesses"])[::-1]
 
 
-def merit_function(thicknesses, target, target_wavelength, tolerance):
+def merit_function(
+    thicknesses,
+    target_type,
+    target_polarization,
+    target_value,
+    target_condition,
+    target_angle,
+    target_wavelength,
+    target_tolerance,
+):
     """
     Function that adds up all the computed values and computes a merit from the
     results
     """
     merit = 0
-    for i in range(0, np.size(target)):
-        reflectivity = lib.calculate_reflection(
+
+    for i in range(0, np.size(target_value)):
+
+        # print("my_filter: ", my_filter)
+        # print("target_wavelength[i]: ", target_wavelength[i])
+        # print("target_angle[i]: ", target_angle[i])
+        # print("phi_0: ", phi_0)
+        # print("thicknesses: ", thicknesses)
+        # print("np.size(thicknesses): ", np.size(thicknesses))
+
+        target_calculated = lib.calculate_reflection_transmission_absorption(
             my_filter,
-            target_wavelength[i],
-            theta_0,
+            target_type[i].encode("utf-8"),
+            target_polarization[i].encode("utf-8"),
+            float(target_wavelength[i]),
+            float(target_angle[i]),
             phi_0,
             thicknesses,
             np.size(thicknesses),
         )
-        merit += ((reflectivity - target[i]) / tolerance[i]) ** 2
 
-    print(merit)
+        if target_condition[i] == "=" and target_calculated != float(target_value[i]):
+
+            merit += (
+                (target_calculated - float(target_value[i]))
+                / float(target_tolerance[i])
+            ) ** 2
+
+        if target_condition[i] == ">" and target_calculated < float(target_value[i]):
+
+            merit += (
+                (target_calculated - float(target_value[i]))
+                / float(target_tolerance[i])
+            ) ** 2
+
+        if target_condition[i] == "<" and target_calculated > float(target_value[i]):
+
+            merit += (
+                (target_calculated - float(target_value[i]))
+                / float(target_tolerance[i])
+            ) ** 2
+    print("merit: ", merit)
+    print("thicknesses: ", thicknesses)
     return merit
 
 
@@ -64,55 +109,96 @@ def optimization_function(thicknesses):
     """
     Simple optimization function to optimize for a single target
     """
-    reflectivity = lib.calculate_reflection(
+    reflectivity = lib.calculate_reflection_transmission_absorption(
         my_filter, wavelength, theta_0, phi_0, thicknesses, np.size(thicknesses)
     )
     return reflectivity
 
 
-target_wavelength = np.array([400, 500, 600])
-target = np.array([0.8, 0.6, 0.8])
-tolerance = np.array([1e-3, 1e-3, 1e-3])
+# Test set for position the reflection dip at 450 nm
+# target_wavelength = np.array([420,450])
+# target = np.array([0.8, 0.6, 0.8])
+# tolerance = np.array([1e-3, 1e-3, 1e-3])
+
+with open("optimisation_order.json") as f:
+    data_optim = json.load(f)
+
+target_type = np.array(data_optim["targets_type"])
+target_polarization = np.array(data_optim["targets_polarization"])
+target_value = np.array(data_optim["targets_value"])
+target_condition = np.array(data_optim["targets_condition"])
+target_angle = np.array(data_optim["targets_angle"])
+target_wavelength = np.array(data_optim["targets_wavelengths"])
+target_tolerance = np.array(data_optim["targets_tolerance"])
 
 # ret = dual_annealing(merit_function, args = (target, target_wavelength, tolerance), bounds=[(0, 1000), (0, 1000), (0, 1000)])
-# ret = differential_evolution(merit_function, args = (target, target_wavelength, tolerance), bounds=[(0, 1000), (0, 1000), (0, 1000)])
+ret = differential_evolution(
+    merit_function,
+    args=(
+        target_type,
+        target_polarization,
+        target_value,
+        target_condition,
+        target_angle,
+        target_wavelength,
+        target_tolerance,
+    ),
+    bounds=[(0, 1000), (0, 1000), (0, 1000)],
+)
 # ret = minimize(merit_function, x0 = initial_thicknesses, args = (target, target_wavelength, tolerance), bounds=[(0, 1000), (0, 1000), (0, 1000)], method = "Nelder-Mead")
 
-# print(ret)
+print(ret.x[::-1])
 
-initial_time = time.time()
-angles = np.arange(0, 89, 1)
-wavelength = np.arange(250, 1000, 1)
-stored_reflectivity = pd.DataFrame(columns = angles.astype("U"), index = wavelength)
+if False:
 
-for theta in angles:
-    print("Angle: ", theta)
-    for wavelength in stored_reflectivity.index:
-        stored_reflectivity.loc[stored_reflectivity.index == wavelength, str(theta)] = lib.calculate_reflection(
-            my_filter,
-            wavelength,
-            theta,
-            phi_0,
-            initial_thicknesses,
-            np.size(initial_thicknesses),
-        )
+    initial_time = time.time()
+    angles = np.linspace(1, 89, 89)
 
-print(stored_reflectivity)
-print(time.time() - initial_time)
-plt.close()
-X, Y = np.meshgrid(stored_reflectivity.columns.astype(float), stored_reflectivity.index.astype(float))
-# Prepare data for 3D plot where each column contains the same data for the different angles
-Z = stored_reflectivity.to_numpy(float) 
-plt.pcolormesh(X, Y,Z , shading="auto")
+    # temporary fix for 0 which creates a null kz
+    if angles[0] == 0:
+        angles[0] = 0.1
 
-# Add a colorbar
-plt.colorbar(label = "Reflectivity (%)")
+    wavelength = np.linspace(400, 700, 301)
+    stored_reflectivity = pd.DataFrame(columns=angles.astype("U"), index=wavelength)
 
-# Visuals
-plt.xlabel("Angle (°)")
-plt.ylabel("Wavelength (nm)")
-# plt.ylim(300, 2000)
+    for theta in angles:
+        print("Angle: ", theta)
+        for wavelength in stored_reflectivity.index:
+            stored_reflectivity.loc[
+                stored_reflectivity.index == wavelength, str(theta)
+            ] = lib.calculate_reflection(
+                my_filter,
+                wavelength,
+                theta,
+                phi_0,
+                np.ascontiguousarray(initial_thicknesses),
+                np.size(initial_thicknesses),
+            )
 
-plt.show()
+    print(stored_reflectivity)
+    print(time.time() - initial_time)
+    plt.close()
+    X, Y = np.meshgrid(
+        stored_reflectivity.columns.astype(float),
+        stored_reflectivity.index.astype(float),
+    )
+    # Prepare data for 3D plot where each column contains the same data for the different angles
+    Z = stored_reflectivity.to_numpy(float)
+    plt.pcolormesh(X, Y, Z, shading="auto")
+    # Save X, Y, Z to csv files
+    np.savetxt("X.csv", X, delimiter=",")
+    np.savetxt("Y.csv", Y, delimiter=",")
+    np.savetxt("Z.csv", Z, delimiter=",")
 
-lib.destroyFilterStack(my_filter)
+    # Add a colorbar
+    plt.colorbar(label="Reflectivity (%)")
+
+    # Visuals
+    plt.xlabel("Angle (°)")
+    plt.ylabel("Wavelength (nm)")
+
+    # Save the figure before showing it
+    plt.savefig("my_plot.png", format="png", dpi=300)
+    plt.show()
+
+    lib.destroyFilterStack(my_filter)

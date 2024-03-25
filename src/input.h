@@ -15,6 +15,27 @@ using json = nlohmann::json;
 class CSVParser
 {
 public:
+
+    std::vector<tk::spline> permittivityFromIndex(const tk::spline& real_index_spline, const tk::spline& imag_index_spline, const std::vector<double>& wavelength)
+    {
+        std::vector<double> real_values, imag_values;
+
+        for (double w : wavelength) {
+            double n = real_index_spline(w);
+            double k = imag_index_spline(w);
+
+            real_values.push_back(n*n - k*k);
+            imag_values.push_back(2*n*k);
+        }
+
+        // Create the new splines
+        tk::spline real_spline(wavelength, real_values);
+        tk::spline imag_spline(wavelength, imag_values);
+
+        std::vector<tk::spline> permittivity_splines = {real_spline, imag_spline};
+        return permittivity_splines;
+    }
+
     std::vector<tk::spline> importIndexFromFile(const std::string &filename)
     {
 
@@ -69,6 +90,7 @@ public:
                 std::getline(ss, field, ',');
                 kz.push_back(std::stod(field));
             }
+
             tk::spline nx_spline(wavelength, nx);
             tk::spline ny_spline(wavelength, ny);
             tk::spline nz_spline(wavelength, nz);
@@ -77,8 +99,26 @@ public:
             tk::spline ky_spline(wavelength, ky);
             tk::spline kz_spline(wavelength, kz);
 
-            std::vector<tk::spline> splines = {nx_spline, ny_spline, nz_spline, kx_spline, ky_spline, kz_spline};
-            return splines;
+            std::vector<tk::spline> indices_splines = {nx_spline, ny_spline, nz_spline, kx_spline, ky_spline, kz_spline};
+
+            // Create the permittivity splines
+            std::vector<tk::spline> permittivities_x_spline = permittivityFromIndex(nx_spline, kx_spline, wavelength);
+            tk::spline real_x_spline = permittivities_x_spline[0];
+            tk::spline imag_x_spline = permittivities_x_spline[1];
+
+            std::vector<tk::spline> permittivities_y_spline = permittivityFromIndex(ny_spline, ky_spline, wavelength);
+            tk::spline real_y_spline = permittivities_y_spline[0];
+            tk::spline imag_y_spline = permittivities_y_spline[1];
+
+            std::vector<tk::spline> permittivities_z_spline = permittivityFromIndex(nz_spline, kz_spline, wavelength);          
+            tk::spline real_z_spline = permittivities_z_spline[0];
+            tk::spline imag_z_spline = permittivities_z_spline[1];
+
+            std::vector<tk::spline> permittivity_splines = {real_x_spline, imag_x_spline, real_y_spline, imag_y_spline, real_z_spline, imag_z_spline};
+
+            //returns the permittivity tensors and not the refractive indices
+            
+            return permittivity_splines;
         }
 
         if (columnCount == 5)
@@ -94,14 +134,23 @@ public:
                 std::getline(ss, field, ',');
                 kx.push_back(std::stod(field));
                 std::getline(ss, field, ',');
-                ny.push_back(std::stod(field));
-                std::getline(ss, field, ',');
-                ky.push_back(std::stod(field));
-                std::getline(ss, field, ',');
                 nz.push_back(std::stod(field));
                 std::getline(ss, field, ',');
                 kz.push_back(std::stod(field));
             }
+
+            std::ofstream filen("nz.csv");
+            for(const auto& n : nz) {
+                filen << n << "\n";
+            }
+            filen.close();
+
+            std::ofstream filek("kz.csv");
+            for(const auto& k : kz) {
+                filek << k << "\n";
+            }
+            filek.close();
+
             tk::spline nx_spline(wavelength, nx); // ordinary extraordinary only
             tk::spline ny_spline(wavelength, nx);
             tk::spline nz_spline(wavelength, nz);
@@ -110,8 +159,22 @@ public:
             tk::spline ky_spline(wavelength, kx);
             tk::spline kz_spline(wavelength, kz);
 
-            std::vector<tk::spline> splines = {nx_spline, ny_spline, nz_spline, kx_spline, ky_spline, kz_spline};
-            return splines;
+            std::vector<tk::spline> indices_splines = {nx_spline, ny_spline, nz_spline, kx_spline, ky_spline, kz_spline};
+
+            // Create the permittivity splines
+            std::vector<tk::spline> permittivities_x_spline = permittivityFromIndex(nx_spline, kx_spline, wavelength);
+            tk::spline real_x_spline = permittivities_x_spline[0];
+            tk::spline imag_x_spline = permittivities_x_spline[1];
+
+            std::vector<tk::spline> permittivities_z_spline = permittivityFromIndex(nz_spline, kz_spline, wavelength);          
+            tk::spline real_z_spline = permittivities_z_spline[0];
+            tk::spline imag_z_spline = permittivities_z_spline[1];
+
+            std::vector<tk::spline> permittivity_splines = {real_x_spline, imag_x_spline, real_x_spline, imag_x_spline, real_z_spline, imag_z_spline};
+
+            //returns the permittivity tensors and not the refractive indices
+            
+            return permittivity_splines;
         }
 
         if (columnCount == 3)
@@ -136,28 +199,34 @@ public:
                 kz.push_back(std::stod(field));
             }
             tk::spline nx_spline(wavelength, nx); // isotropic
-            tk::spline ny_spline(wavelength, nx);
-            tk::spline nz_spline(wavelength, nx);
 
             tk::spline kx_spline(wavelength, kx); // isotropic
-            tk::spline ky_spline(wavelength, kx);
-            tk::spline kz_spline(wavelength, kx);
 
-            std::vector<tk::spline> splines = {nx_spline, ny_spline, nz_spline, kx_spline, ky_spline, kz_spline};
-            return splines;
+            std::vector<tk::spline> indices_splines = {nx_spline, nx_spline, nx_spline, kx_spline, kx_spline, kx_spline};
+
+            // Create the permittivity splines
+            std::vector<tk::spline> permittivities_x_spline = permittivityFromIndex(nx_spline, kx_spline, wavelength);
+            tk::spline real_x_spline = permittivities_x_spline[0];
+            tk::spline imag_x_spline = permittivities_x_spline[1];
+
+            tk::spline real_y_spline = permittivities_x_spline[0];
+            tk::spline imag_y_spline = permittivities_x_spline[1];
+          
+            tk::spline real_z_spline = permittivities_x_spline[0];
+            tk::spline imag_z_spline = permittivities_x_spline[1];
+
+            std::vector<tk::spline> permittivity_splines = {real_x_spline, imag_x_spline, real_y_spline, imag_y_spline, real_z_spline, imag_z_spline};
+
+            //returns the permittivity tensors and not the refractive indices
+            
+            return permittivity_splines;
         }
 
-        tk::spline nx_spline({0}, {0}); // isotropic
-        tk::spline ny_spline({0}, {0});
-        tk::spline nz_spline({0}, {0});
-
-        tk::spline kx_spline({0}, {0}); // isotropic
-        tk::spline ky_spline({0}, {0});
-        tk::spline kz_spline({0}, {0});
-
-        std::vector<tk::spline> splines = {nx_spline, ny_spline, nz_spline, kx_spline, ky_spline, kz_spline};
-        return splines;
+        tk::spline default_spline({0},{0});
+        return {default_spline};
+            
     }
+        
 };
 
 struct CalculationInfo
@@ -216,6 +285,13 @@ CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
     json calculation_order;
     file >> calculation_order;
 
+    // Reverse "structure_materials" and "structure_thicknesses"
+    std::vector<std::string> structure_materials = calculation_order["structure_materials"];
+    std::reverse(structure_materials.begin(), structure_materials.end());
+
+    std::vector<double> structure_thicknesses = calculation_order["structure_thicknesses"];
+    std::reverse(structure_thicknesses.begin(), structure_thicknesses.end());
+
     CalculationInfo calculation_info(
         calculation_order["transmission"],
         calculation_order["angleMin"],
@@ -224,8 +300,8 @@ CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
         calculation_order["wavelengthMin"],
         calculation_order["wavelengthMax"],
         calculation_order["wavelengthStep"],
-        calculation_order["structure_materials"],
-        calculation_order["structure_thicknesses"],
+        structure_materials,
+        structure_thicknesses,
         calculation_order["polarization"],
         calculation_order["azimuthalAngles"],
         calculation_order["inEnergy"],

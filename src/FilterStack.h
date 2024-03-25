@@ -1,6 +1,6 @@
-// g++ -shared -o FilterStack.so FilterStack.cpp -fPIC
 #include "core.h"
 #include "input.h"
+#include <cstring>
 
 /*
  * Class to represent a filter stack defined by a an input file
@@ -16,7 +16,7 @@ public:
 
     // Public methods
     std::pair<Matrix2cd, Matrix2cd> calculate_transmission_reflection_matrices(double wavelength, double theta_0, double phi_0);
-    double calculate_reflection(double wavelength, double theta_0, double phi_0, std::vector<double> d_list);
+    double calculate_reflection_transmission_absorption(const char* type, const char* polarization, double wavelength, double theta_0, double phi_0, std::vector<double> d_list);
     void calculate_and_save_ar_reflection();
 
     // Default constructor
@@ -30,7 +30,7 @@ public:
         material_splines = assemble_materials(filename);
         calculation_order = loadCalculationInfo(full_path);
         std::vector<double> d_list_initial = calculation_order.structure_thicknesses;
-    }
+  }
 
     // The destructor should probably be populated more
     ~FilterStack() = default;
@@ -54,20 +54,68 @@ std::pair<Matrix2cd, Matrix2cd> FilterStack::calculate_transmission_reflection_m
     return {m_r_ps, m_t_ps};
 }
 
-double FilterStack::calculate_reflection(double wavelength, double theta_0, double phi_0, std::vector<double> d_list = FilterStack::d_list_initial)
+double FilterStack::calculate_reflection_transmission_absorption(const char* type, const char* polarization, double wavelength, double theta_0, double phi_0, std::vector<double> d_list = FilterStack::d_list_initial)
 {
+
+    d_list.insert(d_list.begin(), 0.0); // Add 0 to the beginning - substrate
+    d_list.push_back(0.0); // Add 0 to the end - incident medium
+    theta_0 = theta_0 * M_PI / 180.0;
     auto [m_r_ps, m_t_ps] = calculate_tr(assemble_e_list_3x3(material_splines, wavelength), d_list, wavelength, theta_0, phi_0);
 
-    double reflection = std::sqrt(std::pow(m_r_ps(0, 0).real(), 2) + std::pow(m_r_ps(1, 1).real(), 2));
-    // double transmission = std::sqrt(std::pow(m_t_ps(0, 0).real(), 2) + std::pow(m_t_ps(1, 1).real(), 2));
-    return reflection;
+    //for(const auto& d : d_list) {
+    //    std::cout << d << " ";
+    //}
+    //std::cout << std::endl;
+    //std::cout << theta_0 << " ";
+    //std::cout << wavelength << " ";
+    
+    double reflectivity_s = m_r_ps.cwiseAbs2()(0, 0);
+    double transmissivity_s = m_t_ps.cwiseAbs2()(0, 0);
+    double reflectivity_p = m_r_ps.cwiseAbs2()(1, 1);
+    double transmissivity_p = m_t_ps.cwiseAbs2()(1, 1);
+    double absorption_s = 1 - reflectivity_s - transmissivity_s;
+    double absorption_p = 1 - reflectivity_p - transmissivity_p;
+
+    // To implement: azimuthal angle phi_0
+    double reflectivity = (reflectivity_s + reflectivity_p)/2;
+    double transmissivity = (transmissivity_s + transmissivity_p)/2;
+    double absorption = 1 - reflectivity - transmissivity;
+    
+    //std::cout << type << " ";
+    //std::cout << polarization << " ";   
+
+    if (strcmp(type, "r") == 0) {
+        if(strcmp(polarization, "s") == 0)
+            return transmissivity_s;
+        else if(strcmp(polarization, "p") == 0)
+            return transmissivity_p;
+        else
+            return transmissivity;
+    } else if (strcmp(type, "r") == 0) {
+        if(strcmp(polarization, "s") == 0)
+            return reflectivity_s;
+        else if(strcmp(polarization, "p") == 0)
+            return reflectivity_p;
+        else
+            return reflectivity;
+    } else if (strcmp(type, "a") == 0) {
+        if(strcmp(polarization, "s") == 0)
+            return absorption_s;
+        else if(strcmp(polarization, "p") == 0)
+            return absorption_p;
+        else
+            return absorption;
+    } else {
+        throw std::invalid_argument("Invalid type argument. Please use 'r', 't', or 'a'.");
+    }
 }
 
 void FilterStack::calculate_and_save_ar_reflection()
 {
     std::vector<std::complex<double>> e_listx_wvl, e_listy_wvl, e_listz_wvl;
     std::vector<double> d_list = calculation_order.structure_thicknesses;
-
+    d_list.insert(d_list.begin(), 0.0); // Add 0 to the beginning - substrate
+    d_list.push_back(0.0); // Add 0 to the end - incident medium
     double theta_min = calculation_order.angleMin * M_PI / 180.0;
     double theta_max = calculation_order.angleMax * M_PI / 180.0;
     double theta_stepInRadians = calculation_order.angleStep * M_PI / 180.0;
@@ -106,13 +154,13 @@ void FilterStack::calculate_and_save_ar_reflection()
 
             std::vector<Matrix3cd> e_list_3x3;
 
-            // substrate: quartz/glass
-            Matrix3cd substrate_layer_tensor =
-                (Matrix3cd(3, 3) << std::complex<double>(1.5, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
-                 std::complex<double>(0.0, 0.0), std::complex<double>(1.5, 0), std::complex<double>(0.0, 0.0),
-                 std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1.5, 0))
+            // out medium: air
+            Matrix3cd incident_layer_tensor =
+                (Matrix3cd(3, 3) << std::complex<double>(1, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+                 std::complex<double>(0.0, 0.0), std::complex<double>(1, 0), std::complex<double>(0.0, 0.0),
+                 std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1, 0))
                     .finished();
-            e_list_3x3.push_back(substrate_layer_tensor);
+            e_list_3x3.push_back(incident_layer_tensor);
 
             for (const auto &material : calculation_order.structure_materials)
             {
@@ -124,13 +172,13 @@ void FilterStack::calculate_and_save_ar_reflection()
                 e_list_3x3.push_back(next_layer_tensor);
             }
 
-            // out medium: air
-            Matrix3cd incident_layer_tensor =
-                (Matrix3cd(3, 3) << std::complex<double>(1, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
-                 std::complex<double>(0.0, 0.0), std::complex<double>(1, 0), std::complex<double>(0.0, 0.0),
-                 std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1, 0))
+            // substrate: quartz/glass
+            Matrix3cd substrate_layer_tensor =
+                (Matrix3cd(3, 3) << std::complex<double>(1.5, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+                 std::complex<double>(0.0, 0.0), std::complex<double>(1.5, 0), std::complex<double>(0.0, 0.0),
+                 std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1.5, 0))
                     .finished();
-            e_list_3x3.push_back(incident_layer_tensor);
+            e_list_3x3.push_back(substrate_layer_tensor);
 
             auto [m_r_ps, m_t_ps] = calculate_tr(e_list_3x3, d_list, wavelength[i], v_theta[p], phi_0);
 
@@ -175,24 +223,6 @@ std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, st
 {
     std::vector<Matrix3cd> e_list_3x3;
 
-    // substrate: quartz/glass
-    Matrix3cd substrate_layer_tensor =
-        (Matrix3cd(3, 3) << std::complex<double>(1.5, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(1.5, 0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1.5, 0))
-            .finished();
-    e_list_3x3.push_back(substrate_layer_tensor);
-
-    for (const auto &material : calculation_order.structure_materials)
-    {
-        Matrix3cd next_layer_tensor =
-            (Matrix3cd(3, 3) << std::complex<double>(material_splines[material][0](wavelength), material_splines[material][1](wavelength)), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
-             std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[material][2](wavelength), material_splines[material][3](wavelength)), std::complex<double>(0.0, 0.0),
-             std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[material][4](wavelength), material_splines[material][5](wavelength)))
-                .finished();
-        e_list_3x3.push_back(next_layer_tensor);
-    }
-
     // out medium: air
     Matrix3cd incident_layer_tensor =
         (Matrix3cd(3, 3) << std::complex<double>(1, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
@@ -201,5 +231,33 @@ std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, st
             .finished();
     e_list_3x3.push_back(incident_layer_tensor);
 
+    for (const auto &material : calculation_order.structure_materials)
+    {
+        Matrix3cd next_layer_tensor =
+            (Matrix3cd(3, 3) << std::complex<double>(material_splines[material][0](wavelength), material_splines[material][1](wavelength)), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+            std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[material][2](wavelength), material_splines[material][3](wavelength)), std::complex<double>(0.0, 0.0),
+            std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[material][4](wavelength), (material_splines[material][5](wavelength)))).finished();
+        e_list_3x3.push_back(next_layer_tensor);
+    }
+
+    // substrate: quartz/glass
+    Matrix3cd substrate_layer_tensor =
+        (Matrix3cd(3, 3) << std::complex<double>(2.25, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(2.25, 0), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(2.25, 0))
+            .finished();
+    e_list_3x3.push_back(substrate_layer_tensor);
+
+    // After the line where e_list_3x3 is defined or updated
+    //for (const auto &matrix : e_list_3x3) {
+    //    for (int i = 0; i < matrix.rows(); ++i) {
+    //        for (int j = 0; j < matrix.cols(); ++j) {
+    //            std::cout << matrix(i, j) << " ";
+    //        }
+    //        std::cout << std::endl;
+    //    }
+    //    std::cout << std::endl;
+    //}
+    
     return e_list_3x3;
 }

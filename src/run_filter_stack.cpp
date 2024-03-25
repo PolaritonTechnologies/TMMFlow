@@ -15,13 +15,12 @@ extern "C"
 		delete filter_stack;
 	}
 
-	double calculate_reflection(FilterStack *filter_stack, double wavelength, double theta_0, double phi_0, double *d_list, size_t size_d_list)
+	double calculate_reflection_transmission_absorption(FilterStack *filter_stack, const char* type, const char* polarization, double wavelength, double theta_0, double phi_0, double *d_list, size_t size_d_list)
 	{
-		// Convert double* to std::vector<double>
 		std::vector<double> d_list_vector(d_list, d_list + size_d_list);
 
-		double reflection = filter_stack->calculate_reflection(wavelength, theta_0, phi_0, d_list_vector);
-		// double reflection = 1.0;
+		double reflection = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0, d_list_vector);
+
 		return reflection;
 	}
 };
