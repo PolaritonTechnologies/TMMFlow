@@ -1,9 +1,9 @@
-# tests.py performs basic unit testing for the optimisation module
-# command is pytest tests.py
-
-from optim_module import OptimModule
 import ctypes
 import numpy as np
+
+from optim_module import OptimModule 
+from plotting_module import PlottingModule
+
 
 #########################
 # Input parameters
@@ -46,13 +46,19 @@ my_filter = lib.createFilterStack(
     optimisation_order_file.encode("utf-8")
 )
 
-optimization = OptimModule(optimisation_order_file, my_filter, lib)
+#########################
+# Optimization
+# optimization = OptimModule(optimisation_order_file, my_filter, lib)
+# thicknesses = optimization.perform_optimisation("minimize")
+#########################
 
-def cavity_optimisation():
 
-    thicknesses = optimization.perform_optimisation("minimize")
-    return thicknesses
+#########################
+# Plotting
+plotting = PlottingModule(my_filter, lib)
 
+wavelength = np.linspace(400, 700, 301)
+angles = np.linspace(1, 89, 89)
 
-def test():
-    assert optimization.check_targets(cavity_optimisation())
+plotting.plot_reflectivity(wavelength, angles, "r", "s", save=False)
+#########################

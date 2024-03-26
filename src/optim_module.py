@@ -1,48 +1,46 @@
-import ctypes
+# import ctypes
 import numpy as np
-import time
-import pandas as pd
 import json
-import matplotlib.pylab as plt
-import time
 from scipy.optimize import dual_annealing, minimize, differential_evolution
 
 
 class OptimModule:
-    def __init__(self, optimisation_order_file):
+    def __init__(self, optimisation_order_file, my_filter, ctypes_lib):
 
-        self.lib = ctypes.CDLL("./run_filter_stack.so")
-        FilterStack = ctypes.POINTER(ctypes.c_char)
+        # self.lib = ctypes.CDLL("./run_filter_stack.so")
+        # FilterStack = ctypes.POINTER(ctypes.c_char)
 
-        c_double_array = np.ctypeslib.ndpointer(
-            dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"
-        )
+        # c_double_array = np.ctypeslib.ndpointer(
+        #     dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"
+        # )
 
-        c_int_array = np.ctypeslib.ndpointer(
-            dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"
-        )
+        # c_int_array = np.ctypeslib.ndpointer(
+        #     dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"
+        # )
 
-        self.lib.createFilterStack.argtypes = [ctypes.c_char_p]
-        self.lib.createFilterStack.restype = FilterStack
+        # # self.lib.createFilterStack.argtypes = [ctypes.c_char_p]
+        # # self.lib.createFilterStack.restype = FilterStack
 
-        self.lib.destroyFilterStack.argtypes = [FilterStack]
+        # # self.lib.destroyFilterStack.argtypes = [FilterStack]
 
-        self.lib.calculate_reflection_transmission_absorption.argtypes = [
-            FilterStack,
-            ctypes.c_char_p,
-            ctypes.c_char_p,
-            ctypes.c_double,
-            ctypes.c_double,
-            ctypes.c_double,
-        ]
-        self.lib.calculate_reflection_transmission_absorption.restype = ctypes.c_double
+        # self.lib.calculate_reflection_transmission_absorption.argtypes = [
+        #     FilterStack,
+        #     ctypes.c_char_p,
+        #     ctypes.c_char_p,
+        #     ctypes.c_double,
+        #     ctypes.c_double,
+        #     ctypes.c_double,
+        # ]
+        # self.lib.calculate_reflection_transmission_absorption.restype = ctypes.c_double
 
-        self.lib.change_material_thickness.argtypes = [FilterStack, c_double_array, ctypes.c_size_t]
-        self.lib.change_material_order.argtypes = [FilterStack, c_int_array, ctypes.c_size_t]
+        # self.lib.change_material_thickness.argtypes = [FilterStack, c_double_array, ctypes.c_size_t]
+        # self.lib.change_material_order.argtypes = [FilterStack, c_int_array, ctypes.c_size_t]
 
-        self.my_filter = self.lib.createFilterStack(
-            optimisation_order_file.encode("utf-8")
-        )
+        # self.my_filter = self.lib.createFilterStack(
+        #     optimisation_order_file.encode("utf-8")
+        # )
+        self.lib = ctypes_lib
+        self.my_filter = my_filter
 
         with open(optimisation_order_file) as f:
             self.data_order = json.load(f)
