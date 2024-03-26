@@ -11,7 +11,7 @@
     "polarization": "s",
     "azimuthalAngles": [0, 20, 40],
     "targets_type": ["r","r","r"],
-	"targets_polarization": ["","",""],
+    "targets_polarization": ["","",""],
     "targets_condition": [">","<",">"],
     "targets_value": ["0.9","0.6","0.9"],
     "targets_angle": ["5.0","5.0","5.0"],
