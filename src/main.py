@@ -4,14 +4,14 @@ import numpy as np
 from optim_module import OptimModule 
 from plotting_module import PlottingModule
 
-
 #########################
 # Input parameters
 optimisation_order_file = "test_optimisation.json"
 
 #########################
 
-
+#########################
+# Link C++ functions and create filter 
 lib = ctypes.CDLL("./run_filter_stack.so")
 
 FilterStack = ctypes.POINTER(ctypes.c_char)
@@ -45,13 +45,13 @@ lib.change_material_order.argtypes = [FilterStack, c_int_array, ctypes.c_size_t]
 my_filter = lib.createFilterStack(
     optimisation_order_file.encode("utf-8")
 )
+#########################
 
 #########################
 # Optimization
-# optimization = OptimModule(optimisation_order_file, my_filter, lib)
-# thicknesses = optimization.perform_optimisation("minimize")
+optimization = OptimModule(optimisation_order_file, my_filter, lib)
+thicknesses = optimization.perform_optimisation("minimize")
 #########################
-
 
 #########################
 # Plotting
@@ -60,5 +60,5 @@ plotting = PlottingModule(my_filter, lib)
 wavelength = np.linspace(400, 700, 301)
 angles = np.linspace(1, 89, 89)
 
-plotting.plot_reflectivity(wavelength, angles, "r", "s", save=False)
+plotting.plot_ar_data(wavelength, angles, "r", "s", save=False)
 #########################
