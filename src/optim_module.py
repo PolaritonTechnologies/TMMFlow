@@ -18,6 +18,10 @@ class OptimModule:
             dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"
         )
 
+        c_int_array = np.ctypeslib.ndpointer(
+            dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"
+        )
+
         self.lib.createFilterStack.argtypes = [ctypes.c_char_p]
         self.lib.createFilterStack.restype = FilterStack
 
@@ -30,27 +34,28 @@ class OptimModule:
             ctypes.c_double,
             ctypes.c_double,
             ctypes.c_double,
-            c_double_array,
-            ctypes.c_size_t,
         ]
         self.lib.calculate_reflection_transmission_absorption.restype = ctypes.c_double
+
+        self.lib.change_material_thickness.argtypes = [FilterStack, c_double_array, ctypes.c_size_t]
+        self.lib.change_material_order.argtypes = [FilterStack, c_int_array, ctypes.c_size_t]
 
         self.my_filter = self.lib.createFilterStack(
             optimisation_order_file.encode("utf-8")
         )
 
         with open(optimisation_order_file) as f:
-            data_order = json.load(f)
+            self.data_order = json.load(f)
 
-        self.initial_thicknesses = np.array(data_order["structure_thicknesses"])[::-1]
-        self.target_type = np.array(data_order["targets_type"])
-        self.target_polarization = np.array(data_order["targets_polarization"])
-        self.target_value = np.array(data_order["targets_value"])
-        self.target_condition = np.array(data_order["targets_condition"])
-        self.target_angle = np.array(data_order["targets_angle"])
-        self.target_wavelength = np.array(data_order["targets_wavelengths"])
-        self.target_tolerance = np.array(data_order["targets_tolerance"])
-        self.bounds = [tuple(x) for x in data_order["bounds"]]
+        self.initial_thicknesses = np.array(self.data_order["structure_thicknesses"])[::-1]
+        self.target_type = np.array(self.data_order["targets_type"])
+        self.target_polarization = np.array(self.data_order["targets_polarization"])
+        self.target_value = np.array(self.data_order["targets_value"])
+        self.target_condition = np.array(self.data_order["targets_condition"])
+        self.target_angle = np.array(self.data_order["targets_angle"])
+        self.target_wavelength = np.array(self.data_order["targets_wavelengths"])
+        self.target_tolerance = np.array(self.data_order["targets_tolerance"])
+        self.bounds = [tuple(x) for x in self.data_order["bounds"]]
 
     def merit_function(self, thicknesses):
         """
@@ -61,6 +66,9 @@ class OptimModule:
 
         for i in range(0, np.size(self.target_value)):
 
+            self.lib.change_material_thickness(
+                self.my_filter, thicknesses, np.size(thicknesses)
+            )
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,
                 self.target_type[i].encode("utf-8"),
@@ -68,8 +76,6 @@ class OptimModule:
                 float(self.target_wavelength[i]),
                 float(self.target_angle[i]),
                 0,
-                thicknesses,
-                np.size(thicknesses),
             )
 
             print(self.target_wavelength[i], target_calculated)
@@ -126,6 +132,8 @@ class OptimModule:
 
         for i in range(0, np.size(self.target_value)):
 
+            self.lib.change_material_thickness(self.my_filter, thicknesses, np.size(thicknesses))
+
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,
                 self.target_type[i].encode("utf-8"),
@@ -133,8 +141,6 @@ class OptimModule:
                 float(self.target_wavelength[i]),
                 float(self.target_angle[i]),
                 0,
-                thicknesses,
-                np.size(thicknesses),
             )
 
             if self.target_condition[i] == "=" and target_calculated != float(
@@ -183,8 +189,7 @@ class OptimModule:
 
     def perform_optimisation(self, optimisation_type):
 
-        with open("optimisation_order.json") as f:
-            data_optim = json.load(f)
+        data_optim = self.data_order
 
         if optimisation_type == "differential_evolution":
             ret = differential_evolution(
