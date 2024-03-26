@@ -231,7 +231,7 @@ public:
 
 struct CalculationInfo
 {
-    bool transmission;
+    std::string calculation_type;
     double angleMin;
     double angleMax;
     double angleStep;
@@ -242,15 +242,12 @@ struct CalculationInfo
     std::vector<double> structure_thicknesses;
     std::string polarization;
     std::vector<double> azimuthalAngles;
-    bool inEnergy;
-    double Zmin;
-    double Zmax;
 
     // Default constructor
     CalculationInfo() = default;
 
     CalculationInfo(
-        bool transmission,
+        std::string calculation_type,
         double angleMin,
         double angleMax,
         double angleStep,
@@ -260,10 +257,7 @@ struct CalculationInfo
         std::vector<std::string> structure_materials,
         std::vector<double> structure_thicknesses,
         std::string polarization,
-        std::vector<double> azimuthalAngles,
-        bool inEnergy,
-        double Zmin,
-        double Zmax) : transmission(transmission),
+        std::vector<double> azimuthalAngles) : calculation_type(calculation_type),
                        angleMin(angleMin),
                        angleMax(angleMax),
                        angleStep(angleStep),
@@ -273,10 +267,7 @@ struct CalculationInfo
                        structure_materials(structure_materials),
                        structure_thicknesses(structure_thicknesses),
                        polarization(polarization),
-                       azimuthalAngles(azimuthalAngles),
-                       inEnergy(inEnergy),
-                       Zmin(Zmin),
-                       Zmax(Zmax) {}
+                       azimuthalAngles(azimuthalAngles) {}
 };
 
 CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
@@ -293,7 +284,7 @@ CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
     std::reverse(structure_thicknesses.begin(), structure_thicknesses.end());
 
     CalculationInfo calculation_info(
-        calculation_order["transmission"],
+        calculation_order["calculation_type"],
         calculation_order["angleMin"],
         calculation_order["angleMax"],
         calculation_order["angleStep"],
@@ -303,10 +294,8 @@ CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
         structure_materials,
         structure_thicknesses,
         calculation_order["polarization"],
-        calculation_order["azimuthalAngles"],
-        calculation_order["inEnergy"],
-        calculation_order["Zmin"],
-        calculation_order["Zmax"]);
+        calculation_order["azimuthalAngles"]
+        );
 
     return calculation_info;
 }

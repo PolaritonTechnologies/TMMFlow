@@ -62,17 +62,10 @@ double FilterStack::calculate_reflection_transmission_absorption(const char* typ
     theta_0 = theta_0 * M_PI / 180.0;
     auto [m_r_ps, m_t_ps] = calculate_tr(assemble_e_list_3x3(material_splines, wavelength), d_list, wavelength, theta_0, phi_0);
 
-    //for(const auto& d : d_list) {
-    //    std::cout << d << " ";
-    //}
-    //std::cout << std::endl;
-    //std::cout << theta_0 << " ";
-    //std::cout << wavelength << " ";
-    
-    double reflectivity_s = m_r_ps.cwiseAbs2()(0, 0);
-    double transmissivity_s = m_t_ps.cwiseAbs2()(0, 0);
-    double reflectivity_p = m_r_ps.cwiseAbs2()(1, 1);
-    double transmissivity_p = m_t_ps.cwiseAbs2()(1, 1);
+    double reflectivity_s = m_r_ps.cwiseAbs2()(1, 1);
+    double transmissivity_s = m_t_ps.cwiseAbs2()(1, 1);
+    double reflectivity_p = m_r_ps.cwiseAbs2()(0, 0);
+    double transmissivity_p = m_t_ps.cwiseAbs2()(0, 0);
     double absorption_s = 1 - reflectivity_s - transmissivity_s;
     double absorption_p = 1 - reflectivity_p - transmissivity_p;
 
@@ -80,11 +73,23 @@ double FilterStack::calculate_reflection_transmission_absorption(const char* typ
     double reflectivity = (reflectivity_s + reflectivity_p)/2;
     double transmissivity = (transmissivity_s + transmissivity_p)/2;
     double absorption = 1 - reflectivity - transmissivity;
-    
-    //std::cout << type << " ";
-    //std::cout << polarization << " ";   
+ 
+    // for(const auto& d : d_list) {
+    //     std::cout << d << " ";
+    // }
+    // std::cout << theta_0 << " ";
+    // std::cout << wavelength << " ";  
+    // std::cout << "reflectivity_s: " << reflectivity_s << std::endl;
+    // std::cout << "transmissivity_s: " << transmissivity_s << std::endl;
+    // std::cout << "reflectivity_p: " << reflectivity_p << std::endl;
+    // std::cout << "transmissivity_p: " << transmissivity_p << std::endl;
+    // std::cout << "absorption_s: " << absorption_s << std::endl;
+    // std::cout << "absorption_p: " << absorption_p << std::endl;
+    // std::cout << "reflectivity: " << reflectivity << std::endl;
+    // std::cout << "transmissivity: " << transmissivity << std::endl;
+    // std::cout << "absorption: " << absorption << std::endl;
 
-    if (strcmp(type, "r") == 0) {
+    if (strcmp(type, "t") == 0) {
         if(strcmp(polarization, "s") == 0)
             return transmissivity_s;
         else if(strcmp(polarization, "p") == 0)
@@ -236,7 +241,7 @@ std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, st
         Matrix3cd next_layer_tensor =
             (Matrix3cd(3, 3) << std::complex<double>(material_splines[material][0](wavelength), material_splines[material][1](wavelength)), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
             std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[material][2](wavelength), material_splines[material][3](wavelength)), std::complex<double>(0.0, 0.0),
-            std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[material][4](wavelength), (material_splines[material][5](wavelength)))).finished();
+            std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[material][4](wavelength), (std::max(material_splines[material][5](wavelength), 1e-3)))).finished();
         e_list_3x3.push_back(next_layer_tensor);
     }
 

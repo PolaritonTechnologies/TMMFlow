@@ -4,6 +4,7 @@ import time
 import pandas as pd
 import json
 import matplotlib.pylab as plt
+import time
 from scipy.optimize import dual_annealing, minimize, differential_evolution
 
 
@@ -71,6 +72,8 @@ class OptimModule:
                 np.size(thicknesses),
             )
 
+            print(self.target_wavelength[i], target_calculated)
+
             if self.target_condition[i] == "=" and target_calculated != float(
                 self.target_value[i]
             ):
@@ -83,6 +86,12 @@ class OptimModule:
             if self.target_condition[i] == ">" and target_calculated < float(
                 self.target_value[i]
             ):
+                print(
+                    self.target_wavelength[i],
+                    "> : ",
+                    target_calculated,
+                    float(self.target_value[i]),
+                )
 
                 merit += (
                     (target_calculated - float(self.target_value[i]))
@@ -92,14 +101,20 @@ class OptimModule:
             if self.target_condition[i] == "<" and target_calculated > float(
                 self.target_value[i]
             ):
+                print(
+                    self.target_wavelength[i],
+                    "< : ",
+                    target_calculated,
+                    float(self.target_value[i]),
+                )
 
                 merit += (
                     (target_calculated - float(self.target_value[i]))
                     / float(self.target_tolerance[i])
                 ) ** 2
 
-        # print("merit: ", merit)
-        # print("thicknesses: ", thicknesses)
+        print("merit: ", merit)
+        print("thicknesses: ", thicknesses)
         return merit
 
     # check targets is used in unit testing
