@@ -1,9 +1,26 @@
 {
+    "transmission": false,
+    "angleMin": 0,
+    "angleMax": 80,
+    "angleStep": 10,
+    "wavelengthMin": 250,
+    "wavelengthMax": 1000,
+    "wavelengthStep": 1,
+    "structure_materials": ["Al","PFOGlassy","Al"],
+    "structure_thicknesses": [100, 90, 20],
+    "polarization": "TE",
+    "azimuthalAngles": [0, 20, 40],
+    "inEnergy": true,
+    "EMin": 1.77,
+    "EMax": 3.1,
+    "Zmin": 0,
+    "Zmax": 1,
     "targets_type": ["r","r","r"],
 	"targets_polarization": ["","",""],
     "targets_condition": [">","<",">"],
     "targets_value": ["0.9","0.6","0.9"],
     "targets_angle": ["5.0","5.0","5.0"],
     "targets_wavelengths": [420,450,480],
-    "targets_tolerance": [1e-3,1e-3,1e-3]
+    "targets_tolerance": [1e-3,1e-3,1e-3],
+    "bounds": [[0,1000],[0,1000],[0,1000]]
 }
