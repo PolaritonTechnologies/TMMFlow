@@ -12,6 +12,7 @@ lib = ctypes.CDLL("./run_filter_stack.so")
 FilterStack = ctypes.POINTER(ctypes.c_char)
 
 c_double_array = np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS")
+c_int_array = np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS")
 
 lib.createFilterStack.argtypes = [ctypes.c_char_p]
 lib.createFilterStack.restype = FilterStack
@@ -25,18 +26,19 @@ lib.calculate_reflection_transmission_absorption.argtypes = [
     ctypes.c_double,
     ctypes.c_double,
     ctypes.c_double,
-    c_double_array,
-    ctypes.c_size_t,
 ]
 lib.calculate_reflection_transmission_absorption.restype = ctypes.c_double
+
+lib.change_material_thickness.argtypes = [FilterStack, c_double_array, ctypes.c_size_t]
+lib.change_material_order.argtypes = [FilterStack, c_int_array, ctypes.c_size_t]
 
 file_name = "calculation_order.json"
 
 my_filter = lib.createFilterStack(file_name.encode("utf-8"))
 
-wavelength = 400
-theta_0 = 0.0
-phi_0 = 0.0
+wavelength = 600
+theta_0 = 10.0
+phi_0 = 10.0
 
 with open("calculation_order.json") as f:
     data_order = json.load(f)
@@ -45,7 +47,7 @@ initial_thicknesses = np.array(data_order["structure_thicknesses"])[::-1]
 
 
 def merit_function(
-    thicknesses,
+    features,
     target_type,
     target_polarization,
     target_value,
@@ -69,6 +71,11 @@ def merit_function(
         # print("thicknesses: ", thicknesses)
         # print("np.size(thicknesses): ", np.size(thicknesses))
 
+        thicknesses = features[:np.size(features)//2]
+        material_list = features[np.size(features)//2:]
+        
+        lib.change_material_order(my_filter, material_list, np.size(material_list))
+        lib.change_material_thickness(my_filter, thicknesses, np.size(thicknesses))
         target_calculated = lib.calculate_reflection_transmission_absorption(
             my_filter,
             target_type[i].encode("utf-8"),
@@ -76,8 +83,6 @@ def merit_function(
             float(target_wavelength[i]),
             float(target_angle[i]),
             phi_0,
-            thicknesses,
-            np.size(thicknesses),
         )
 
         if target_condition[i] == "=" and target_calculated != float(target_value[i]):
@@ -105,12 +110,17 @@ def merit_function(
     return merit
 
 
-def optimization_function(thicknesses):
+def optimization_function(features):
     """
     Simple optimization function to optimize for a single target
     """
+    thicknesses = features[:np.size(features)//2].astype(np.float64)
+    material_list = features[np.size(features)//2:].astype(np.int32)
+    
+    lib.change_material_order(my_filter, material_list, np.size(material_list))
+    lib.change_material_thickness(my_filter, thicknesses, np.size(thicknesses))
     reflectivity = lib.calculate_reflection_transmission_absorption(
-        my_filter, wavelength, theta_0, phi_0, thicknesses, np.size(thicknesses)
+        my_filter, "r".encode("utf-8"), "s".encode("utf-8"), wavelength, theta_0, phi_0
     )
     return reflectivity
 
@@ -131,23 +141,26 @@ target_angle = np.array(data_optim["targets_angle"])
 target_wavelength = np.array(data_optim["targets_wavelengths"])
 target_tolerance = np.array(data_optim["targets_tolerance"])
 
+a = optimization_function(np.append(initial_thicknesses, [0,1,2]) )
+print(a)
+
 # ret = dual_annealing(merit_function, args = (target, target_wavelength, tolerance), bounds=[(0, 1000), (0, 1000), (0, 1000)])
-ret = differential_evolution(
-    merit_function,
-    args=(
-        target_type,
-        target_polarization,
-        target_value,
-        target_condition,
-        target_angle,
-        target_wavelength,
-        target_tolerance,
-    ),
-    bounds=[(0, 1000), (0, 1000), (0, 1000)],
-)
+# ret = differential_evolution(
+#     merit_function,
+#     args=(
+#         target_type,
+#         target_polarization,
+#         target_value,
+#         target_condition,
+#         target_angle,
+#         target_wavelength,
+#         target_tolerance,
+#     ),
+#     bounds=[(0, 1000), (0, 1000), (0, 1000)],
+# )
 # ret = minimize(merit_function, x0 = initial_thicknesses, args = (target, target_wavelength, tolerance), bounds=[(0, 1000), (0, 1000), (0, 1000)], method = "Nelder-Mead")
 
-print(ret.x[::-1])
+# print(ret.x[::-1])
 
 if False:
 

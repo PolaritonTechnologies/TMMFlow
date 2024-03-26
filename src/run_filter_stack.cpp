@@ -15,13 +15,22 @@ extern "C"
 		delete filter_stack;
 	}
 
-	double calculate_reflection_transmission_absorption(FilterStack *filter_stack, const char* type, const char* polarization, double wavelength, double theta_0, double phi_0, double *d_list, size_t size_d_list)
+	double calculate_reflection_transmission_absorption(FilterStack *filter_stack, const char *type, const char *polarization, double wavelength, double theta_0, double phi_0)
 	{
-		std::vector<double> d_list_vector(d_list, d_list + size_d_list);
-
-		double reflection = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0, d_list_vector);
+		double reflection = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0);
 
 		return reflection;
+	}
+	void change_material_thickness(FilterStack *filter_stack, double *d_list, size_t size_d_list)
+	{
+		std::vector<double> d_list_vector(d_list, d_list + size_d_list);
+		filter_stack->change_material_thickness(d_list_vector);
+	}
+
+	void change_material_order(FilterStack *filter_stack, int *material_order, size_t size_material_order)
+	{
+		std::vector<int> material_order_vector(material_order, material_order + size_material_order);
+		filter_stack->change_material_order(material_order_vector);
 	}
 };
 
