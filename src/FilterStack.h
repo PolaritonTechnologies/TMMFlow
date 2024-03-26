@@ -26,6 +26,8 @@ public:
     void change_material_order(std::vector<int> new_material_order);
     void change_material_thickness(std::vector<double> material_thickness);
 
+    void reset_filter();
+
     // Default constructor
     FilterStack() = default;
 
@@ -342,5 +344,19 @@ void FilterStack::change_material_thickness(std::vector<double> new_material_thi
     {
         // Replace the old vector with the new one
         calculation_order.structure_thicknesses = new_material_thickness;
+    }
+}
+
+void FilterStack::reset_filter()
+{
+    // Function that resets the filter parameters to their initial state (as
+    // read from the file)
+    calculation_order.structure_materials = material_order_initial;
+    calculation_order.structure_thicknesses = d_list_initial;
+    material_order_int.resize(calculation_order.structure_materials.size());
+
+    for (int i = 0; i < calculation_order.structure_materials.size(); ++i)
+    {
+        material_order_int[i] = i;
     }
 }
