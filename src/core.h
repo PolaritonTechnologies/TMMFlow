@@ -416,7 +416,7 @@ bool isRealDiagonalIsotropic(const MatrixXcd &matrix)
 
 std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0)
 {
-    // Incident medium and substrate hva to be real, diagonal and isotropic
+    // Incident medium and substrate have to be real, diagonal and isotropic
     // incident medium check
     MatrixXcd firstMatrix = e_list_3x3[0];
     if (!isRealDiagonalIsotropic(firstMatrix))
