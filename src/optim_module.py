@@ -27,29 +27,46 @@ class OptimModule:
         self.target_tolerance = np.array(self.data_order["targets_tolerance"])
         self.bounds = [tuple(x) for x in self.data_order["bounds"]]
 
-    def merit_function(self, features, layer_positions=False):
+    def merit_function(self, features):
         """
         Function that adds up all the computed values and computes a merit from the
         results
         """
         merit = 0
 
+        # Assemble the whole thicknesses and layer positions from the delivered
+        # features. They are set up as follows:
+        # [thickness_of_layer_to_optimize_1, .._2, .._3,
+        # layer_position_argument]
+        if np.any(self.thickness_opt_allowed) and not np.any(self.layer_switch_allowed):
+            # All features are thicknesses
+            thicknesses = np.copy(self.initial_thicknesses)
+            thicknesses[np.where(self.thickness_opt_allowed)] = features
+            thicknesses = thicknesses.astype(np.float64)
+        else:
+            print("This feature was not yet implemented")
+            pass
+
         for i in range(0, np.size(self.target_value)):
 
-            if layer_positions:
-                thicknesses = features[: len(features) / 2].astype(np.float64)
-                layer_positions = features[len(features) / 2 :].astype(np.int32)
-
-                self.lib.change_material_order(
-                    self.my_filter, layer_positions, int(np.size(features) / 2)
-                )
+            # thicknesses = features[: len(features) / 2].astype(np.float64)
+            # layer_positions = features[len(features) / 2 :].astype(np.int32)
+            #
+            # self.lib.change_material_order(
+            # self.my_filter, layer_positions, int(np.size(features) / 2)
+            # )
+            # self.lib.change_material_thickness(
+            # self.my_filter, thicknesses, int(np.size(features) / 2)
+            # )
+            if np.any(self.thickness_opt_allowed):
                 self.lib.change_material_thickness(
-                    self.my_filter, thicknesses, int(np.size(features) / 2)
+                    self.my_filter, thicknesses, np.size(thicknesses)
                 )
-            else:
-                self.lib.change_material_thickness(
-                    self.my_filter, features, np.size(features)
-                )
+            if np.any(self.layer_switch_allowed):
+                print("This feature has not yet been implemented")
+                # self.lib.change_material_order(
+                # self.my_filter, layer_positions, int(np.size(features) / 2)
+                # )
 
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,
@@ -173,24 +190,33 @@ class OptimModule:
 
     def perform_optimisation(self, optimisation_type):
 
-        data_optim = self.data_order
+        if not np.any(self.layer_switch_allowed):
+            # Assemble initial values and bounds depending on the layers that
+            # were selected for optimization
+            x_initial = self.initial_thicknesses[self.thickness_opt_allowed]
+
+            # There must be a better way of indexing!
+            bounds = []
+            for i in range(np.shape(self.bounds)[0]):
+                if self.thickness_opt_allowed[i]:
+                    bounds.append(self.bounds[i])
+            bounds = np.array(bounds)
 
         if optimisation_type == "differential_evolution":
             ret = differential_evolution(
                 self.merit_function,
-                bounds=self.bounds,
+                bounds=bounds,
             )
         elif optimisation_type == "dual_annealing":
             ret = dual_annealing(
                 self.merit_function,
-                bounds=self.bounds,
+                bounds=bounds,
             )
         elif optimisation_type == "minimize":
             ret = minimize(
                 self.merit_function,
-                args=(False,),
-                x0=self.initial_thicknesses,
-                bounds=self.bounds,
+                x0=x_initial,
+                bounds=bounds,
                 method="Nelder-Mead",
             )
 

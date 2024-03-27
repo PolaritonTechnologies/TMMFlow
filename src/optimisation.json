@@ -11,7 +11,7 @@
     "polarization": "s",
     "azimuthalAngles": [0, 20, 40],
     "thickness_opt_allowed": [false, true, false],
-    "layer_switch_allowed": [true, true, true],
+    "layer_switch_allowed": [false, false, false],
     "targets_type": ["r","r","r"],
     "targets_polarization": ["s","s","s"],
     "targets_condition": [">","<",">"],
