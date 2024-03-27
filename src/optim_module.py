@@ -23,7 +23,7 @@ class OptimModule:
         self.target_tolerance = np.array(self.data_order["targets_tolerance"])
         self.bounds = [tuple(x) for x in self.data_order["bounds"]]
 
-    def merit_function(self, thicknesses):
+    def merit_function(self, features, layer_positions=False):
         """
         Function that adds up all the computed values and computes a merit from the
         results
@@ -32,9 +32,21 @@ class OptimModule:
 
         for i in range(0, np.size(self.target_value)):
 
-            self.lib.change_material_thickness(
-                self.my_filter, thicknesses, np.size(thicknesses)
-            )
+            if layer_positions:
+                thicknesses = features[:len(features)/2].astype(np.float64)
+                layer_positions = features[len(features)/2:].astype(np.int32)
+
+                self.lib.change_material_order(
+                    self.my_filter, layer_positions, int(np.size(features)/2)
+                )
+                self.lib.change_material_thickness(
+                    self.my_filter, thicknesses, int(np.size(features)/2)
+                )
+            else:
+                self.lib.change_material_thickness(
+                    self.my_filter, features, np.size(features)
+                )
+
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,
                 self.target_type[i].encode("utf-8"),
@@ -86,7 +98,7 @@ class OptimModule:
                 ) ** 2
 
         print("merit: ", merit)
-        print("thicknesses: ", thicknesses)
+        print("thicknesses: ", features)
         return merit
 
     # check targets is used in unit testing
@@ -170,6 +182,7 @@ class OptimModule:
         elif optimisation_type == "minimize":
             ret = minimize(
                 self.merit_function,
+                args = (False,),
                 x0=self.initial_thicknesses,
                 bounds=self.bounds,
                 method="Nelder-Mead",
