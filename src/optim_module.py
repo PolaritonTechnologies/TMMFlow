@@ -13,7 +13,11 @@ class OptimModule:
         with open(optimisation_order_file) as f:
             self.data_order = json.load(f)
 
-        self.initial_thicknesses = np.array(self.data_order["structure_thicknesses"])[::-1]
+        self.initial_thicknesses = np.array(self.data_order["structure_thicknesses"])[
+            ::-1
+        ]
+        self.thickness_opt_allowed = np.array(self.data_order["thickness_opt_allowed"])
+        self.layer_switch_allowed = np.array(self.data_order["layer_switch_allowed"])
         self.target_type = np.array(self.data_order["targets_type"])
         self.target_polarization = np.array(self.data_order["targets_polarization"])
         self.target_value = np.array(self.data_order["targets_value"])
@@ -33,14 +37,14 @@ class OptimModule:
         for i in range(0, np.size(self.target_value)):
 
             if layer_positions:
-                thicknesses = features[:len(features)/2].astype(np.float64)
-                layer_positions = features[len(features)/2:].astype(np.int32)
+                thicknesses = features[: len(features) / 2].astype(np.float64)
+                layer_positions = features[len(features) / 2 :].astype(np.int32)
 
                 self.lib.change_material_order(
-                    self.my_filter, layer_positions, int(np.size(features)/2)
+                    self.my_filter, layer_positions, int(np.size(features) / 2)
                 )
                 self.lib.change_material_thickness(
-                    self.my_filter, thicknesses, int(np.size(features)/2)
+                    self.my_filter, thicknesses, int(np.size(features) / 2)
                 )
             else:
                 self.lib.change_material_thickness(
@@ -110,7 +114,9 @@ class OptimModule:
 
         for i in range(0, np.size(self.target_value)):
 
-            self.lib.change_material_thickness(self.my_filter, thicknesses, np.size(thicknesses))
+            self.lib.change_material_thickness(
+                self.my_filter, thicknesses, np.size(thicknesses)
+            )
 
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,
@@ -182,17 +188,10 @@ class OptimModule:
         elif optimisation_type == "minimize":
             ret = minimize(
                 self.merit_function,
-                args = (False,),
+                args=(False,),
                 x0=self.initial_thicknesses,
                 bounds=self.bounds,
                 method="Nelder-Mead",
             )
 
         return ret.x
-
-
-if __name__ == "__main__":
-
-    # Simple test to see if everything is working
-    optim_module = OptimModule("test_optimisation.json")
-    print(optim_module.perform_optimisation("minimize"))
