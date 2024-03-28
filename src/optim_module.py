@@ -197,7 +197,9 @@ class OptimModule:
                 self.clamp(features[-1], 0, len(self.allowed_permutations) - 1)
             ].astype(np.int32)
         else:
-            print("No optimization has been selected for the thicknesses or layer order.")
+            print(
+                "No optimization has been selected for the thicknesses or layer order."
+            )
             raise ValueError
         return thicknesses.astype(np.float64), layer_order.astype(np.int32)
 
@@ -301,8 +303,8 @@ class OptimModule:
                 ) ** 2 * self.target_wavelength_weights[i]
 
         print("merit: ", merit)
-        print("thicknesses: ", thicknesses)
-        print("layer_order: ", layer_order)
+        # print("thicknesses: ", thicknesses)
+        # print("layer_order: ", layer_order)
         # print("merit: ", merit)
         # print("thicknesses: ", features)
         return merit
@@ -388,7 +390,10 @@ class OptimModule:
         if np.any(self.thickness_opt_allowed):
             # Assemble initial values and bounds depending on the layers that
             # were selected for optimization
-            x_initial = x_initial + self.initial_thicknesses[self.thickness_opt_allowed].tolist()
+            x_initial = (
+                x_initial
+                + self.initial_thicknesses[self.thickness_opt_allowed].tolist()
+            )
 
             # There must be a better way of indexing!
             for i in range(np.shape(self.bounds)[0]):
@@ -428,6 +433,7 @@ class OptimModule:
                 x0=x_initial,
                 bounds=bounds,
                 method="Nelder-Mead",
+                tol=1e-6,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
