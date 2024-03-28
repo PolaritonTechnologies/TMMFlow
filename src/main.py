@@ -59,20 +59,20 @@ with open(optimisation_order_file) as f:
 
 wavelength = np.arange(
     plot_order["wavelengthMin"],
-    plot_order["wavelengthMax"],
-    plot_order["wavelengthStep"] + 1,
+    plot_order["wavelengthMax"] + 1,
+    plot_order["wavelengthStep"],
 )
 polar_angles = np.arange(
     plot_order["polarAngleMin"],
-    plot_order["polarAngleMax"],
-    plot_order["polarAngleStep"] + 1,
+    plot_order["polarAngleMax"] + 1,
+    plot_order["polarAngleStep"],
 )
 azimuthal_angles = np.arange(
     plot_order["azimAngleMin"],
-    plot_order["azimAngleMax"],
-    plot_order["azimAngleStep"] + 1,
+    plot_order["azimAngleMax"] + 1,
+    plot_order["azimAngleStep"],
 )
 
 print("plotting results...")
-plotting.plot_ar_data(wavelength, polar_angles, azimuthal_angles, "r", "s", False)
+plotting.plot_ar_data(wavelength, polar_angles, azimuthal_angles, "r", "s", True)
 #########################

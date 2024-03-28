@@ -42,11 +42,11 @@ class OptimModule:
         # wavelength treament in case of intervals, each wavelength is weighted
         # for evaluation with the merit function.
 
-        for w_idx, wavelength_entry_list in enumerate(self.wavelength_entries):
+        for w_idx, wavelength_entry_unchecked in enumerate(self.wavelength_entries):
 
-            if isinstance(wavelength_entry_list, list):
+            if isinstance(wavelength_entry_unchecked, list):
 
-                wavelength_entry = np.array(wavelength_entry_list)
+                wavelength_entry = np.array(wavelength_entry_unchecked)
 
                 interval = np.arange(
                     wavelength_entry[0],
@@ -61,27 +61,35 @@ class OptimModule:
                     self.target_wavelength = np.append(
                         self.target_wavelength, wavelength
                     )
+
                     self.target_wavelength_weights = np.append(
                         self.target_wavelength_weights, weight
                     )
+
                     self.target_value = np.append(
                         self.target_value, self.value_entries[w_idx]
                     )
+
                     self.target_polarization = np.append(
                         self.target_polarization, self.polarization_entries[w_idx]
                     )
+
                     self.target_condition = np.append(
                         self.target_condition, self.condition_entries[w_idx]
                     )
+
                     self.target_tolerance = np.append(
                         self.target_tolerance, self.tolerance_entries[w_idx]
                     )
+
                     self.target_type = np.append(
                         self.target_type, self.type_entries[w_idx]
                     )
+
                     self.target_polar_angle = np.append(
                         self.target_polar_angle, self.polar_angle_entries[w_idx]
                     )
+
                     self.target_azimuthal_angle = np.append(
                         self.target_azimuthal_angle, self.azim_angle_entries[w_idx]
                     )
@@ -89,7 +97,7 @@ class OptimModule:
             else:
 
                 self.target_wavelength = np.append(
-                    self.target_wavelength, wavelength_entry
+                    self.target_wavelength, wavelength_entry_unchecked
                 )
                 self.target_wavelength_weights = np.append(
                     self.target_wavelength_weights, 1
@@ -218,9 +226,15 @@ class OptimModule:
 
         for i in range(0, np.size(self.target_value)):
 
-            self.lib.change_material_thickness(
-                self.my_filter, thicknesses, np.size(thicknesses)
-            )
+            # print("target_wavelength:", self.target_wavelength[i])
+            # print("target_wavelength_weights:", self.target_wavelength_weights[i])
+            # print("target_value:", self.target_value[i])
+            # print("target_polarization:", self.target_polarization[i])
+            # print("target_condition:", self.target_condition[i])
+            # print("target_tolerance:", self.target_tolerance[i])
+            # print("target_type:", self.target_type[i])
+            # print("target_polar_angle:", self.target_polar_angle[i])
+            # print("target_azimuthal_angle:", self.target_azimuthal_angle[i])
 
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,

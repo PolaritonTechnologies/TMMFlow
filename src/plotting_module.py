@@ -34,9 +34,9 @@ class PlottingModule:
                         self.my_filter,
                         target_type.encode("utf-8"),
                         polarization.encode("utf-8"),
-                        float(wavelength),
-                        float(theta),
-                        float(phi),
+                        wavelength,
+                        theta,
+                        phi,
                     )
             # Print time elapsed for the generation of the reflectivity matrix
             print(time.time() - initial_time)
@@ -57,7 +57,7 @@ class PlottingModule:
             plt.ylabel("Wavelength (nm)")
             # Save the figure before showing it
             if save:
-                plt.savefig("my_plot.png", format="png", dpi=300)
+                plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
                 # Save X, Y, Z to csv files
                 np.savetxt(f"{phi}-X.csv", X, delimiter=",")
                 np.savetxt(f"{phi}-Y.csv", Y, delimiter=",")
