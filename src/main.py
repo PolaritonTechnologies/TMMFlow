@@ -1,4 +1,5 @@
 import ctypes
+import json
 import numpy as np
 
 from optim_module import OptimModule
@@ -43,16 +44,35 @@ my_filter = lib.createFilterStack(optimisation_order_file.encode("utf-8"))
 
 #########################
 # Optimization
+print("running optimisation...")
 optimization = OptimModule(optimisation_order_file, my_filter, lib)
 thicknesses = optimization.perform_optimisation("minimize")
+print("optimised thicknesses: ", thicknesses)
 #########################
 
 #########################
 # Plotting
 plotting = PlottingModule(my_filter, lib)
 
-wavelength = np.linspace(400, 700, 301)
-angles = np.linspace(1, 89, 89)
+with open(optimisation_order_file) as f:
+    plot_order = json.load(f)
 
-plotting.plot_ar_data(wavelength, angles, "r", "s", save=False)
+wavelength = np.arange(
+    plot_order["wavelengthMin"],
+    plot_order["wavelengthMax"],
+    plot_order["wavelengthStep"] + 1,
+)
+polar_angles = np.arange(
+    plot_order["polarAngleMin"],
+    plot_order["polarAngleMax"],
+    plot_order["polarAngleStep"] + 1,
+)
+azimuthal_angles = np.arange(
+    plot_order["azimAngleMin"],
+    plot_order["azimAngleMax"],
+    plot_order["azimAngleStep"] + 1,
+)
+
+print("plotting results...")
+plotting.plot_ar_data(wavelength, polar_angles, azimuthal_angles, "r", "s", False)
 #########################

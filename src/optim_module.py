@@ -22,7 +22,8 @@ class OptimModule:
         self.polarization_entries = np.array(self.data_order["targets_polarization"])
         self.value_entries = np.array(self.data_order["targets_value"])
         self.condition_entries = np.array(self.data_order["targets_condition"])
-        self.angle_entries = np.array(self.data_order["targets_angle"])
+        self.polar_angle_entries = np.array(self.data_order["targets_polar_angle"])
+        self.azim_angle_entries = np.array(self.data_order["targets_azimuthal_angle"])
         self.wavelength_entries = self.data_order["targets_wavelengths"]
         self.wavelength_step = np.array(self.data_order["wavelength_steps"])
         self.tolerance_entries = np.array(self.data_order["targets_tolerance"])
@@ -33,19 +34,24 @@ class OptimModule:
         self.target_value = np.empty(0)
         self.target_polarization = np.empty(0)
         self.target_condition = np.empty(0)
-        self.target_angle = np.empty(0)
+        self.target_polar_angle = np.empty(0)
+        self.target_azimuthal_angle = np.empty(0)
         self.target_type = np.empty(0)
         self.target_tolerance = np.empty(0)
 
         # wavelength treament in case of intervals, each wavelength is weighted
         # for evaluation with the merit function.
 
-        for w_idx, wavelength_entry in enumerate(self.wavelength_entries):
+        for w_idx, wavelength_entry_list in enumerate(self.wavelength_entries):
 
-            if isinstance(wavelength_entry, np.ndarray):
+            if isinstance(wavelength_entry_list, list):
+
+                wavelength_entry = np.array(wavelength_entry_list)
 
                 interval = np.arange(
-                    wavelength_entry[0], wavelength_entry[-1], self.wavelength_step
+                    wavelength_entry[0],
+                    wavelength_entry[-1] + 1,
+                    self.wavelength_step[w_idx],
                 )
 
                 weight = 1 / np.size(interval)
@@ -73,28 +79,40 @@ class OptimModule:
                     self.target_type = np.append(
                         self.target_type, self.type_entries[w_idx]
                     )
-                    self.target_angle = np.append(
-                        self.target_angle, self.angle_entries[w_idx]
+                    self.target_polar_angle = np.append(
+                        self.target_polar_angle, self.polar_angle_entries[w_idx]
+                    )
+                    self.target_azimuthal_angle = np.append(
+                        self.target_azimuthal_angle, self.azim_angle_entries[w_idx]
                     )
 
-        else:
+            else:
 
-            self.target_wavelength = np.append(self.target_wavelength, wavelength_entry)
-            self.target_wavelength_weights = np.append(
-                self.target_wavelength_weights, 1
-            )
-            self.target_value = np.append(self.target_value, self.value_entries[w_idx])
-            self.target_polarization = np.append(
-                self.target_polarization, self.polarization_entries[w_idx]
-            )
-            self.target_condition = np.append(
-                self.target_condition, self.condition_entries[w_idx]
-            )
-            self.target_tolerance = np.append(
-                self.target_tolerance, self.tolerance_entries[w_idx]
-            )
-            self.target_type = np.append(self.target_type, self.type_entries[w_idx])
-            self.target_angle = np.append(self.target_angle, self.angle_entries[w_idx])
+                self.target_wavelength = np.append(
+                    self.target_wavelength, wavelength_entry
+                )
+                self.target_wavelength_weights = np.append(
+                    self.target_wavelength_weights, 1
+                )
+                self.target_value = np.append(
+                    self.target_value, self.value_entries[w_idx]
+                )
+                self.target_polarization = np.append(
+                    self.target_polarization, self.polarization_entries[w_idx]
+                )
+                self.target_condition = np.append(
+                    self.target_condition, self.condition_entries[w_idx]
+                )
+                self.target_tolerance = np.append(
+                    self.target_tolerance, self.tolerance_entries[w_idx]
+                )
+                self.target_type = np.append(self.target_type, self.type_entries[w_idx])
+                self.target_polar_angle = np.append(
+                    self.target_polar_angle, self.polar_angle_entries[w_idx]
+                )
+                self.target_azimuthal_angle = np.append(
+                    self.target_azimuthal_angle, self.azim_angle_entries[w_idx]
+                )
 
     def merit_function(self, features):
         """
@@ -142,53 +160,53 @@ class OptimModule:
                 self.target_type[i].encode("utf-8"),
                 self.target_polarization[i].encode("utf-8"),
                 float(self.target_wavelength[i]),
-                float(self.target_angle[i]),
-                0,
+                float(self.target_polar_angle[i]),
+                float(self.target_azimuthal_angle[i]),
             )
 
-            print(self.target_wavelength[i], target_calculated)
+            # print(self.target_wavelength[i], target_calculated)
 
             if self.target_condition[i] == "=" and target_calculated != float(
                 self.target_value[i]
             ):
 
                 merit += (
-                    (target_calculated - float(self.target_value[i]))
+                    (target_calculated - self.target_value[i])
                     / float(self.target_tolerance[i])
-                ) ** 2 * self.target_weights[i]
+                ) ** 2 * self.target_wavelength_weights[i]
 
             if self.target_condition[i] == ">" and target_calculated < float(
                 self.target_value[i]
             ):
-                print(
-                    self.target_wavelength[i],
-                    "> : ",
-                    target_calculated,
-                    float(self.target_value[i]),
-                )
+                # print(
+                #     self.target_wavelength[i],
+                #     "> : ",
+                #     target_calculated,
+                #     self.target_value[i],
+                # )
 
                 merit += (
-                    (target_calculated - float(self.target_value[i]))
+                    (target_calculated - self.target_value[i])
                     / float(self.target_tolerance[i])
-                ) ** 2 * self.target_weights[i]
+                ) ** 2 * self.target_wavelength_weights[i]
 
             if self.target_condition[i] == "<" and target_calculated > float(
                 self.target_value[i]
             ):
-                print(
-                    self.target_wavelength[i],
-                    "< : ",
-                    target_calculated,
-                    float(self.target_value[i]),
-                )
+                # print(
+                #     self.target_wavelength[i],
+                #     "< : ",
+                #     target_calculated,
+                #     float(self.target_value[i]),
+                # )
 
                 merit += (
-                    (target_calculated - float(self.target_value[i]))
+                    (target_calculated - self.target_value[i])
                     / float(self.target_tolerance[i])
-                ) ** 2 * self.target_weights[i]
+                ) ** 2 * self.target_wavelength_weights[i]
 
-        print("merit: ", merit)
-        print("thicknesses: ", features)
+        # print("merit: ", merit)
+        # print("thicknesses: ", features)
         return merit
 
     # check targets is used in unit testing
@@ -208,9 +226,9 @@ class OptimModule:
                 self.my_filter,
                 self.target_type[i].encode("utf-8"),
                 self.target_polarization[i].encode("utf-8"),
-                float(self.target_wavelength[i]),
-                float(self.target_angle[i]),
-                0,
+                self.target_wavelength[i],
+                self.target_polar_angle[i],
+                self.target_azimuthal_angle[i],
             )
 
             if self.target_condition[i] == "=" and target_calculated != float(
