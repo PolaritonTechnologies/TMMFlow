@@ -13,7 +13,7 @@
     "structure_thicknesses": [100, 90, 20],
     "polarization": "s",
     "thickness_opt_allowed": [false, true, false],
-    "layer_switch_allowed": [false, false, false],
+    "layer_switch_allowed": [false, true, false],
     "targets_type": ["r","r","r"],
     "targets_polarization": ["s","s","s"],
     "targets_condition": [">","<",">"],
@@ -23,5 +23,5 @@
     "targets_wavelengths": [[420,440],450,[470,490]],
     "wavelength_steps": [1,1,1],
     "targets_tolerance": [1e-3,1e-3,1e-3],
-    "bounds": [[1,500],[1,500],[1,500]]
+    "bounds": [[1,500],[1,200],[1,500]]
 }

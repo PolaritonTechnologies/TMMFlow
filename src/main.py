@@ -47,8 +47,7 @@ my_filter = lib.createFilterStack(optimisation_order_file.encode("utf-8"))
 # Optimization
 print("running optimisation...")
 optimization = OptimModule(optimisation_order_file, my_filter, lib)
-features = optimization.perform_optimisation("minimize")
-print("optimised features: ", features)
+features = optimization.perform_optimisation("differential_evolution")
 #########################
 
 #########################

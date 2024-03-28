@@ -313,7 +313,7 @@ void FilterStack::change_material_order(std::vector<int> new_material_order)
     for (int i : new_material_order)
     {
         reordered_material_list.push_back(material_order_initial[i]);
-        reordered_d_list.push_back(d_list_initial[i]);
+        reordered_d_list.push_back(calculation_order.structure_thicknesses[material_order_int[i]]);
     }
 
     // Replace the old vector with the new one

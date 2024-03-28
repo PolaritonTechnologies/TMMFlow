@@ -2,6 +2,7 @@
 import numpy as np
 import json
 import itertools
+import time
 
 from scipy.optimize import dual_annealing, minimize, differential_evolution
 
@@ -379,6 +380,7 @@ class OptimModule:
         return test_pass
 
     def perform_optimisation(self, optimisation_type):
+        start_time = time.time()
 
         x_initial = []
         bounds = []
@@ -428,14 +430,17 @@ class OptimModule:
                 method="Nelder-Mead",
             )
 
-        # thicknesses, layer_order = self.extract_thickness_and_position_from_features(
-        #     ret.x
-        # )
-        # self.lib.change_material_thickness(
-        #     self.my_filter, thicknesses, int(np.size(thicknesses))
-        # )
-        # self.lib.change_material_order(
-        #     self.my_filter, layer_order, int(np.size(layer_order))
-        # )
+        thicknesses, layer_order = self.extract_thickness_and_position_from_features(
+            ret.x
+        )
+        self.lib.change_material_thickness(
+            self.my_filter, thicknesses, int(np.size(thicknesses))
+        )
+        self.lib.change_material_order(
+            self.my_filter, layer_order, int(np.size(layer_order))
+        )
+
+        print("Optimization time: ", time.time() - start_time, "s")
+        print("Optimized features: ", ret.x)
 
         return ret.x
