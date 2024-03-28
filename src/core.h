@@ -19,13 +19,12 @@ using namespace Eigen;
  * results from scipy and python
  * @return Returns the kernel of the matrix
  */
-MatrixXcd nullspace(MatrixXcd A, double atol = 1e-5)
+MatrixXcd nullspace(MatrixXcd A, double atol = 5e-7)
 {
     // Compute the singular value decomposition
     JacobiSVD<MatrixXcd> svd(A, ComputeThinU | ComputeThinV);
 
     // Get the singular values
-    // Singular values are fine, however, the tolerances seem to be different in C++ than in Python
     VectorXd singular_values = svd.singularValues();
 
     // Define a mask that cuts off all values that are smaller than atol
@@ -59,8 +58,6 @@ Vector4cd kz_eigenvalues(std::complex<double> k0, std::complex<double> kx, std::
 {
 
     Vector4cd v_kz;
-    // Define accuracy of floating point comparisons
-    double epsilon = 1e-9;
 
     // Are we diagonal and isotropic?
     bool diag_flag = m_eps.isApprox(m_eps.diagonal().asDiagonal().toDenseMatrix());
@@ -95,6 +92,7 @@ Vector4cd kz_eigenvalues(std::complex<double> k0, std::complex<double> kx, std::
         std::complex<double> D5 = (m_eps(0, 0) * m_eps(1, 1) + (m_eps(0, 1) * m_eps(1, 2) * m_eps(2, 0) + m_eps(1, 0) * m_eps(2, 1) * m_eps(0, 2)) / m_eps(2, 2) - m_eps(0, 1) * m_eps(1, 0) - (m_eps(0, 0) / m_eps(2, 2)) * m_eps(1, 2) * m_eps(2, 1) - (m_eps(1, 1) / m_eps(2, 2)) * m_eps(0, 2) * m_eps(2, 0));
 
         std::complex<double> D = D1 + D2 + D3 + D4 + D5;
+
         // companion matrix
         MatrixXcd m_comp = MatrixXcd::Zero(4, 4);
         m_comp(1, 0) = 1.0;
@@ -113,15 +111,6 @@ Vector4cd kz_eigenvalues(std::complex<double> k0, std::complex<double> kx, std::
         {
             v_kz[i] = k0 * eigvals[i];
         }
-    }
-
-    // We should first round the numbers as otherwise the sorting is
-    // meaningless. If the numbers are close to zero, they shouldn't be sorted
-    // (in this case I chose 1e-6 as a threshold)
-    // Round the real and imaginary parts of each complex number
-    for (auto &kz : v_kz)
-    {
-        kz = std::complex<double>(std::round(kz.real() / epsilon) * epsilon, std::round(kz.imag() / epsilon) * epsilon);
     }
 
     // Sort the complex numbers by their imaginary parts
@@ -210,20 +199,6 @@ std::pair<MatrixXcd, Vector4cd> kz_eigenvectors(std::complex<double> k0, std::co
             MatrixXcd null_space = nullspace(m_char);
 
             v_e.row(m) = null_space.col(0);
-        }
-
-        // cleaning small elements from the eigenvectors
-        for (int m = 0; m < 4; ++m)
-        {
-            std::complex<double> max_e = v_e.row(m).cwiseAbs().maxCoeff();
-            Vector3cd v_e_rel = v_e.row(m).cwiseAbs() / max_e;
-            for (int i = 0; i < 3; ++i)
-            {
-                if (std::abs(v_e_rel[i]) < 1.0e-12)
-                {
-                    v_e(m, i) = 0.0;
-                }
-            }
         }
 
         // eigenvector swapping to get appropriate polarization states

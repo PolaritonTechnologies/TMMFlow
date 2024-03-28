@@ -51,10 +51,11 @@ class PlottingModule:
             Z = stored_reflectivity.to_numpy(float)
             plt.pcolormesh(X, Y, Z, shading="auto")
             # Add a colorbar
-            plt.colorbar(label="Intensity")
+            plt.colorbar(label="Intensity (a.u.)")
             # Visuals
             plt.xlabel("Polar Angle (°)")
             plt.ylabel("Wavelength (nm)")
+            plt.title(f"Calculation for Azimuthal Angle {phi}°")
             # Save the figure before showing it
             if save:
                 plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
