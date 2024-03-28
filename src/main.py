@@ -7,7 +7,75 @@ from plotting_module import PlottingModule
 
 #########################
 # Input parameters
-optimisation_order_file = "optimisation.json"
+
+
+def translate_order_for_cpp(optimisation_order_file):
+
+    with open(optimisation_order_file, "r") as optimisation_order_file:
+        optimisation_order = json.load(optimisation_order_file)
+
+    updated_optimisation_order = optimisation_order.copy()
+
+    # translate the structure
+
+    structure_materials = optimisation_order["structure_materials"]
+    structure_thicknesses = optimisation_order["structure_thicknesses"]
+    thickness_opt_allowed = optimisation_order["thickness_opt_allowed"]
+    layer_switch_allowed = optimisation_order["layer_switch_allowed"]
+    bounds = optimisation_order["bounds"]
+
+    updated_structure_materials = []
+    updated_structure_thicknesses = []
+    updated_thickness_opt_allowed = []
+    updated_layer_switch_allowed = []
+    updated_bounds = []
+
+    for m_idx, mat in enumerate(structure_materials):
+
+        ## periodic assemblies start with a number
+
+        if mat[0].isdigit():
+            parts = mat.split("_")
+
+            nb_layers = int(parts[0])
+            layer1_mat = parts[1]
+            layer2_mat = parts[2]
+
+            for i in range(nb_layers):
+                updated_structure_materials.append(layer1_mat)
+                updated_structure_materials.append(layer2_mat)
+                updated_structure_thicknesses.append(structure_thicknesses[m_idx][0])
+                updated_structure_thicknesses.append(structure_thicknesses[m_idx][1])
+                updated_thickness_opt_allowed.append(thickness_opt_allowed[m_idx])
+                updated_thickness_opt_allowed.append(thickness_opt_allowed[m_idx])
+                updated_layer_switch_allowed.append(layer_switch_allowed[m_idx])
+                updated_layer_switch_allowed.append(layer_switch_allowed[m_idx])
+                updated_bounds.append(bounds[m_idx])
+                updated_bounds.append(bounds[m_idx])
+
+        else:
+            updated_structure_materials.append(mat)
+            updated_structure_thicknesses.append(structure_thicknesses[m_idx])
+            updated_thickness_opt_allowed.append(thickness_opt_allowed[m_idx])
+            updated_layer_switch_allowed.append(layer_switch_allowed[m_idx])
+            updated_bounds.append(bounds[m_idx])
+
+    updated_optimisation_order["structure_materials"] = updated_structure_materials
+    updated_optimisation_order["structure_thicknesses"] = updated_structure_thicknesses
+    updated_optimisation_order["thickness_opt_allowed"] = updated_thickness_opt_allowed
+    updated_optimisation_order["layer_switch_allowed"] = updated_layer_switch_allowed
+    updated_optimisation_order["bounds"] = updated_bounds
+
+    print(updated_optimisation_order)
+
+    with open("temp_cpp_order.json", "w") as f:
+        json.dump(updated_optimisation_order, f)
+
+    return "temp_cpp_order.json"
+
+
+optimisation_order_file_python = "test_optimisation_DBRCavity.json"
+optimisation_order_file = translate_order_for_cpp(optimisation_order_file_python)
 
 #########################
 
