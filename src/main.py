@@ -38,6 +38,7 @@ lib.calculate_reflection_transmission_absorption.restype = ctypes.c_double
 
 lib.change_material_thickness.argtypes = [FilterStack, c_double_array, ctypes.c_size_t]
 lib.change_material_order.argtypes = [FilterStack, c_int_array, ctypes.c_size_t]
+lib.reset_filter.argtypes = [FilterStack]
 
 my_filter = lib.createFilterStack(optimisation_order_file.encode("utf-8"))
 #########################
@@ -46,8 +47,8 @@ my_filter = lib.createFilterStack(optimisation_order_file.encode("utf-8"))
 # Optimization
 print("running optimisation...")
 optimization = OptimModule(optimisation_order_file, my_filter, lib)
-thicknesses = optimization.perform_optimisation("minimize")
-print("optimised thicknesses: ", thicknesses)
+features = optimization.perform_optimisation("minimize")
+print("optimised features: ", features)
 #########################
 
 #########################

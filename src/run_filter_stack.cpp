@@ -32,6 +32,11 @@ extern "C"
 		std::vector<int> material_order_vector(material_order, material_order + size_material_order);
 		filter_stack->change_material_order(material_order_vector);
 	}
+
+	void reset_filter(FilterStack *filter_stack)
+	{
+		filter_stack->reset_filter();
+	}
 };
 
 // int main()

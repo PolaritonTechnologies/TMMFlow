@@ -1,6 +1,8 @@
 # import ctypes
 import numpy as np
 import json
+import itertools
+
 from scipy.optimize import dual_annealing, minimize, differential_evolution
 
 
@@ -122,25 +124,98 @@ class OptimModule:
                     self.target_azimuthal_angle, self.azim_angle_entries[w_idx]
                 )
 
+        if np.any(self.layer_switch_allowed):
+            self.allowed_permutations = self.move_elements(
+                np.arange(0, len(self.initial_thicknesses)),
+                np.where(self.layer_switch_allowed)[0],
+            )
+
+    def move_element(self, arr, movable_index):
+        """
+        Currently only works for one layer
+        """
+        # Remove the movable element from the array
+        movable_element = arr[movable_index]
+        new_arr = np.delete(arr, movable_index)
+
+        # Insert the movable element into all possible positions
+        result = []
+        for i in range(len(arr)):
+            result.append(np.insert(new_arr, i, movable_element))
+
+        return np.array(result)
+
+    def move_elements(self, arr, movable_indices):
+        """
+        Move elements at movable_indices to all possible positions
+        """
+        # Remove the movable elements from the array
+        movable_elements = arr[movable_indices]
+        new_arr = np.delete(arr, movable_indices)
+
+        # Generate all possible positions for the movable elements
+        positions = list(itertools.permutations(range(len(arr)), len(movable_elements)))
+
+        # Insert the movable elements into all possible positions
+        result = []
+        for pos in positions:
+            pos = np.array(pos)
+            temp_arr = new_arr.copy()
+            for idx, element in zip(
+                pos[np.argsort(pos)], movable_elements[np.argsort(pos)]
+            ):
+                temp_arr = np.insert(temp_arr, idx, element)
+            result.append(temp_arr)
+
+        return np.array(result)
+
+    def clamp(self, n, minn, maxn):
+        return max(min(maxn, int(n)), minn)
+
+    def extract_thickness_and_position_from_features(self, features):
+        if np.any(self.thickness_opt_allowed) and not np.any(self.layer_switch_allowed):
+            # All features are thicknesses
+            thicknesses = np.copy(self.initial_thicknesses)
+            thicknesses[np.where(self.thickness_opt_allowed)] = features
+            thicknesses = thicknesses.astype(np.float64)
+            layer_order = np.arange(0, len(self.initial_thicknesses))
+        elif not np.any(self.thickness_opt_allowed) and np.any(
+            self.layer_switch_allowed
+        ):
+            thicknesses = np.copy(self.initial_thicknesses)
+
+            layer_order = self.allowed_permutations[
+                self.clamp(features[-1], 0, len(self.allowed_permutations) - 1)
+            ].astype(np.int32)
+        elif np.any(self.thickness_opt_allowed) and np.any(self.layer_switch_allowed):
+            thicknesses = np.copy(self.initial_thicknesses)
+            thicknesses[np.where(self.thickness_opt_allowed)] = features[:-1]
+            thicknesses = thicknesses.astype(np.float64)
+
+            layer_order = self.allowed_permutations[
+                self.clamp(features[-1], 0, len(self.allowed_permutations) - 1)
+            ].astype(np.int32)
+        else:
+            print("No optimization has been selected for the thicknesses or layer order.")
+            raise ValueError
+        return thicknesses.astype(np.float64), layer_order.astype(np.int32)
+
     def merit_function(self, features):
         """
         Function that adds up all the computed values and computes a merit from the
         results
         """
         merit = 0
+        # print("Layer order no.: " + str(features))
+
+        thicknesses, layer_order = self.extract_thickness_and_position_from_features(
+            features
+        )
 
         # Assemble the whole thicknesses and layer positions from the delivered
         # features. They are set up as follows:
         # [thickness_of_layer_to_optimize_1, .._2, .._3,
         # layer_position_argument]
-        if np.any(self.thickness_opt_allowed) and not np.any(self.layer_switch_allowed):
-            # All features are thicknesses
-            thicknesses = np.copy(self.initial_thicknesses)
-            thicknesses[np.where(self.thickness_opt_allowed)] = features
-            thicknesses = thicknesses.astype(np.float64)
-        else:
-            print("This feature was not yet implemented")
-            pass
 
         for i in range(0, np.size(self.target_value)):
 
@@ -155,13 +230,12 @@ class OptimModule:
             # )
             if np.any(self.thickness_opt_allowed):
                 self.lib.change_material_thickness(
-                    self.my_filter, thicknesses, np.size(thicknesses)
+                    self.my_filter, thicknesses, int(np.size(thicknesses))
                 )
             if np.any(self.layer_switch_allowed):
-                print("This feature has not yet been implemented")
-                # self.lib.change_material_order(
-                # self.my_filter, layer_positions, int(np.size(features) / 2)
-                # )
+                self.lib.change_material_order(
+                    self.my_filter, layer_order, int(np.size(layer_order))
+                )
 
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,
@@ -192,6 +266,12 @@ class OptimModule:
                 #     target_calculated,
                 #     self.target_value[i],
                 # )
+                # print(
+                #     self.target_wavelength[i],
+                #     "> : ",
+                #     target_calculated,
+                #     float(self.target_value[i]),
+                # )
 
                 merit += (
                     (target_calculated - self.target_value[i])
@@ -207,12 +287,21 @@ class OptimModule:
                 #     target_calculated,
                 #     float(self.target_value[i]),
                 # )
+                # print(
+                #     self.target_wavelength[i],
+                #     "< : ",
+                #     target_calculated,
+                #     float(self.target_value[i]),
+                # )
 
                 merit += (
                     (target_calculated - self.target_value[i])
                     / float(self.target_tolerance[i])
                 ) ** 2 * self.target_wavelength_weights[i]
 
+        print("merit: ", merit)
+        print("thicknesses: ", thicknesses)
+        print("layer_order: ", layer_order)
         # print("merit: ", merit)
         # print("thicknesses: ", features)
         return merit
@@ -291,18 +380,35 @@ class OptimModule:
 
     def perform_optimisation(self, optimisation_type):
 
-        if not np.any(self.layer_switch_allowed):
+        x_initial = []
+        bounds = []
+
+        if np.any(self.thickness_opt_allowed):
             # Assemble initial values and bounds depending on the layers that
             # were selected for optimization
-            x_initial = self.initial_thicknesses[self.thickness_opt_allowed]
+            x_initial = x_initial + self.initial_thicknesses[self.thickness_opt_allowed].tolist()
 
             # There must be a better way of indexing!
-            bounds = []
             for i in range(np.shape(self.bounds)[0]):
                 if self.thickness_opt_allowed[i]:
                     bounds.append(self.bounds[i])
-            bounds = np.array(bounds)
 
+        if np.any(self.layer_switch_allowed):
+            # If layer switching is allowed add the additional parameter that
+            # decides the layer positions
+            x_initial.append(1)
+            bounds.append(
+                (
+                    -0.5,
+                    np.size(self.initial_thicknesses)
+                    ** np.sum(self.layer_switch_allowed)
+                    + 0.5,
+                )
+            )
+
+        ret = 0
+
+        # With scipy we cannot do integer optimization
         if optimisation_type == "differential_evolution":
             ret = differential_evolution(
                 self.merit_function,
@@ -314,11 +420,22 @@ class OptimModule:
                 bounds=bounds,
             )
         elif optimisation_type == "minimize":
+
             ret = minimize(
                 self.merit_function,
                 x0=x_initial,
                 bounds=bounds,
                 method="Nelder-Mead",
             )
+
+        # thicknesses, layer_order = self.extract_thickness_and_position_from_features(
+        #     ret.x
+        # )
+        # self.lib.change_material_thickness(
+        #     self.my_filter, thicknesses, int(np.size(thicknesses))
+        # )
+        # self.lib.change_material_order(
+        #     self.my_filter, layer_order, int(np.size(layer_order))
+        # )
 
         return ret.x
