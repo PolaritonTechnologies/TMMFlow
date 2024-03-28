@@ -18,14 +18,83 @@ class OptimModule:
         ]
         self.thickness_opt_allowed = np.array(self.data_order["thickness_opt_allowed"])
         self.layer_switch_allowed = np.array(self.data_order["layer_switch_allowed"])
-        self.target_type = np.array(self.data_order["targets_type"])
-        self.target_polarization = np.array(self.data_order["targets_polarization"])
-        self.target_value = np.array(self.data_order["targets_value"])
-        self.target_condition = np.array(self.data_order["targets_condition"])
-        self.target_angle = np.array(self.data_order["targets_angle"])
-        self.target_wavelength = np.array(self.data_order["targets_wavelengths"])
-        self.target_tolerance = np.array(self.data_order["targets_tolerance"])
+        self.type_entries = np.array(self.data_order["targets_type"])
+        self.polarization_entries = np.array(self.data_order["targets_polarization"])
+        self.value_entries = np.array(self.data_order["targets_value"])
+        self.condition_entries = np.array(self.data_order["targets_condition"])
+        self.angle_entries = np.array(self.data_order["targets_angle"])
+        self.wavelength_entries = self.data_order["targets_wavelengths"]
+        self.wavelength_step = np.array(self.data_order["wavelength_steps"])
+        self.tolerance_entries = np.array(self.data_order["targets_tolerance"])
         self.bounds = [tuple(x) for x in self.data_order["bounds"]]
+
+        self.target_wavelength = np.empty(0)
+        self.target_wavelength_weights = np.empty(0)
+        self.target_value = np.empty(0)
+        self.target_polarization = np.empty(0)
+        self.target_condition = np.empty(0)
+        self.target_angle = np.empty(0)
+        self.target_type = np.empty(0)
+        self.target_tolerance = np.empty(0)
+
+        # wavelength treament in case of intervals, each wavelength is weighted
+        # for evaluation with the merit function.
+
+        for w_idx, wavelength_entry in enumerate(self.wavelength_entries):
+
+            if isinstance(wavelength_entry, np.ndarray):
+
+                interval = np.arange(
+                    wavelength_entry[0], wavelength_entry[-1], self.wavelength_step
+                )
+
+                weight = 1 / np.size(interval)
+
+                for wavelength in interval:
+
+                    self.target_wavelength = np.append(
+                        self.target_wavelength, wavelength
+                    )
+                    self.target_wavelength_weights = np.append(
+                        self.target_wavelength_weights, weight
+                    )
+                    self.target_value = np.append(
+                        self.target_value, self.value_entries[w_idx]
+                    )
+                    self.target_polarization = np.append(
+                        self.target_polarization, self.polarization_entries[w_idx]
+                    )
+                    self.target_condition = np.append(
+                        self.target_condition, self.condition_entries[w_idx]
+                    )
+                    self.target_tolerance = np.append(
+                        self.target_tolerance, self.tolerance_entries[w_idx]
+                    )
+                    self.target_type = np.append(
+                        self.target_type, self.type_entries[w_idx]
+                    )
+                    self.target_angle = np.append(
+                        self.target_angle, self.angle_entries[w_idx]
+                    )
+
+        else:
+
+            self.target_wavelength = np.append(self.target_wavelength, wavelength_entry)
+            self.target_wavelength_weights = np.append(
+                self.target_wavelength_weights, 1
+            )
+            self.target_value = np.append(self.target_value, self.value_entries[w_idx])
+            self.target_polarization = np.append(
+                self.target_polarization, self.polarization_entries[w_idx]
+            )
+            self.target_condition = np.append(
+                self.target_condition, self.condition_entries[w_idx]
+            )
+            self.target_tolerance = np.append(
+                self.target_tolerance, self.tolerance_entries[w_idx]
+            )
+            self.target_type = np.append(self.target_type, self.type_entries[w_idx])
+            self.target_angle = np.append(self.target_angle, self.angle_entries[w_idx])
 
     def merit_function(self, features):
         """
@@ -86,7 +155,7 @@ class OptimModule:
                 merit += (
                     (target_calculated - float(self.target_value[i]))
                     / float(self.target_tolerance[i])
-                ) ** 2
+                ) ** 2 * self.target_weights[i]
 
             if self.target_condition[i] == ">" and target_calculated < float(
                 self.target_value[i]
@@ -101,7 +170,7 @@ class OptimModule:
                 merit += (
                     (target_calculated - float(self.target_value[i]))
                     / float(self.target_tolerance[i])
-                ) ** 2
+                ) ** 2 * self.target_weights[i]
 
             if self.target_condition[i] == "<" and target_calculated > float(
                 self.target_value[i]
@@ -116,7 +185,7 @@ class OptimModule:
                 merit += (
                     (target_calculated - float(self.target_value[i]))
                     / float(self.target_tolerance[i])
-                ) ** 2
+                ) ** 2 * self.target_weights[i]
 
         print("merit: ", merit)
         print("thicknesses: ", features)

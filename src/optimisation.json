@@ -17,7 +17,8 @@
     "targets_condition": [">","<",">"],
     "targets_value": ["0.87","0.65","0.87"],
     "targets_angle": ["45.0","45.0","45.0"],
-    "targets_wavelengths": [420,450,480],
+    "targets_wavelengths": [[420,440],450,[460,490]],
+    "wavelength_steps": [1,1,1],
     "targets_tolerance": [1e-3,1e-3,1e-3],
     "bounds": [[1,500],[1,500],[1,500]]
 }
