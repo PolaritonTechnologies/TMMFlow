@@ -5,7 +5,7 @@ import itertools
 import math
 import time
 
-from scipy.optimize import dual_annealing, minimize, differential_evolution, basinhopping, shgo
+from scipy.optimize import dual_annealing, minimize, differential_evolution, basinhopping, shgo, direct
 
 
 class OptimModule:
@@ -44,6 +44,7 @@ class OptimModule:
         self.target_tolerance = np.empty(0)
 
         self.initial_merit = 0
+        self.iteration_no = 0
 
         # wavelength treament in case of intervals, each wavelength is weighted
         # for evaluation with the merit function.
@@ -203,7 +204,7 @@ class OptimModule:
             raise ValueError
         return thicknesses.astype(np.float64), layer_order.astype(np.int32)
 
-    def callback_func_advanced(self, x, f, context):
+    def callback_func1(self, x, f, context):
         """
         Function that is called after each optimization step to impose further
         break conditions for the non trivial optimization methods.
@@ -216,7 +217,7 @@ class OptimModule:
             return True
         # print("callback: ", x, f, context)
 
-    def callback_func_minimize(self, intermediate_result):
+    def callback_func2(self, intermediate_result):
         """
         Function that is called after each optimization step to impose further
         break conditions for scipy.minimize.
@@ -332,7 +333,8 @@ class OptimModule:
         if self.initial_merit == 0:
             self.initial_merit = merit
 
-        print("merit: ", merit/self.initial_merit)
+        print("merit | iteration #" + str(self.iteration_no) +  ": ", merit/self.initial_merit)
+        self.iteration_no += 1
         # print("thicknesses: ", thicknesses)
         # print("layer_order: ", layer_order)
         # print("merit: ", merit)
@@ -451,25 +453,31 @@ class OptimModule:
             ret = differential_evolution(
                 self.merit_function,
                 bounds=bounds,
-                callback = self.callback_func_advanced
+                # callback = self.callback_func_advanced
             )
         elif optimisation_type == "dual_annealing":
             ret = dual_annealing(
                 self.merit_function,
                 bounds=bounds,
-                callback = self.callback_func_advanced,
+                callback = self.callback_func1,
             )
         elif optimisation_type == "basinhopping":
+            # This algorithm does 
+            # 1. a random perturbation of the features 
+            # 2. then a scipy.minimize 
+            # 3. accepts of rejects the new optimum value
             ret = basinhopping(
                 self.merit_function,
-                bounds=bounds,
-                callback = self.callback_func_advanced,
+                x0 =x_initial,
+                minimizer_kwargs={"method": "Nelder-Mead", "callback": self.callback_func2},
+                callback = self.callback_func1,
             )
         elif optimisation_type == "direct":
-            ret = shgo(
+            ret = direct(
                 self.merit_function,
                 bounds=bounds,
-                callback = self.callback_func_advanced,
+                locally_biased = False,
+                # maxiter = 50000,
             )
         elif optimisation_type == "minimize":
 
@@ -479,7 +487,7 @@ class OptimModule:
                 bounds=bounds,
                 method="Nelder-Mead",
                 # tol=1e-1,
-                callback = self.callback_func_minimize,
+                callback = self.callback_func2,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
@@ -494,8 +502,11 @@ class OptimModule:
 
         # Set initial merit back to zero
         self.initial_merit = 0
+        self.iteration_no = 0
 
         print("Optimization time: ", time.time() - start_time, "s")
         print("Optimized features: ", ret.x)
+        print("Optimized merit value: ", ret.fun)
+        print("Number of function evaluations: ", ret.nfev)
 
         return ret.x
