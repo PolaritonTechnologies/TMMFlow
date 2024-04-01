@@ -5,7 +5,7 @@ import itertools
 import math
 import time
 
-from scipy.optimize import dual_annealing, minimize, differential_evolution
+from scipy.optimize import dual_annealing, minimize, differential_evolution, basinhopping, shgo
 
 
 class OptimModule:
@@ -455,6 +455,18 @@ class OptimModule:
             )
         elif optimisation_type == "dual_annealing":
             ret = dual_annealing(
+                self.merit_function,
+                bounds=bounds,
+                callback = self.callback_func_advanced,
+            )
+        elif optimisation_type == "basinhopping":
+            ret = basinhopping(
+                self.merit_function,
+                bounds=bounds,
+                callback = self.callback_func_advanced,
+            )
+        elif optimisation_type == "direct":
+            ret = shgo(
                 self.merit_function,
                 bounds=bounds,
                 callback = self.callback_func_advanced,
