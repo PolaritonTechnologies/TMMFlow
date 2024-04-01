@@ -2,6 +2,7 @@
 import numpy as np
 import json
 import itertools
+import math
 import time
 
 from scipy.optimize import dual_annealing, minimize, differential_evolution
@@ -128,29 +129,16 @@ class OptimModule:
                 )
 
         if np.any(self.layer_switch_allowed):
-            self.allowed_permutations = self.move_elements(
+            self.allowed_permutations = self.compute_permutations(
                 np.arange(0, len(self.initial_thicknesses)),
                 np.where(self.layer_switch_allowed)[0],
             )
 
-    def move_element(self, arr, movable_index):
+    def compute_permutations(self, arr, movable_indices):
         """
-        Currently only works for one layer
-        """
-        # Remove the movable element from the array
-        movable_element = arr[movable_index]
-        new_arr = np.delete(arr, movable_index)
-
-        # Insert the movable element into all possible positions
-        result = []
-        for i in range(len(arr)):
-            result.append(np.insert(new_arr, i, movable_element))
-
-        return np.array(result)
-
-    def move_elements(self, arr, movable_indices):
-        """
-        Move elements at movable_indices to all possible positions
+        Compute all available permutations for a given stack, given the movable
+        layer indices. This is used to permute layers based on a single integer
+        value (single feature that needs to be optimized).
         """
         # Remove the movable elements from the array
         movable_elements = arr[movable_indices]
@@ -173,9 +161,19 @@ class OptimModule:
         return np.array(result)
 
     def clamp(self, n, minn, maxn):
+        """
+        Clamp integer values to the maximum number of available positions in the
+        stack (given by the number of layers to the power of available movable
+        layers).
+        """
         return max(min(maxn, int(n)), minn)
 
     def extract_thickness_and_position_from_features(self, features):
+        """
+        If the layer position is to be optimized the last element of the
+        features list is the layer position parameter. If it is not to be
+        optimized all features are thicknesses.
+        """
         if np.any(self.thickness_opt_allowed) and not np.any(self.layer_switch_allowed):
             # All features are thicknesses
             thicknesses = np.copy(self.initial_thicknesses)
@@ -204,6 +202,31 @@ class OptimModule:
             )
             raise ValueError
         return thicknesses.astype(np.float64), layer_order.astype(np.int32)
+
+    def callback_func_advanced(self, x, f, context):
+        """
+        Function that is called after each optimization step to impose further
+        break conditions for the non trivial optimization methods.
+        """
+        # If the merit function is close to zero (within the tolerance), stop
+        # the optimization (It probably makes sense here to assume a lower
+        # tolerance than for the minimize but this has to be adjusted
+        # empirically).
+        if math.isclose(f, 0, abs_tol = 1e-5):
+            return True
+        # print("callback: ", x, f, context)
+
+    def callback_func_minimize(self, intermediate_result):
+        """
+        Function that is called after each optimization step to impose further
+        break conditions for scipy.minimize.
+        """
+        # If the merit function is close to zero (within the tolerance), stop
+        # the optimization.
+        if math.isclose(intermediate_result.fun, 0, abs_tol = 1e-9):
+            print("Optimization finished because merit reached threshold.")
+            raise StopIteration
+        # print("callback: ", intermediate_result.fun)
 
     def merit_function(self, features):
         """
@@ -428,12 +451,13 @@ class OptimModule:
             ret = differential_evolution(
                 self.merit_function,
                 bounds=bounds,
+                callback = self.callback_func_advanced
             )
         elif optimisation_type == "dual_annealing":
             ret = dual_annealing(
                 self.merit_function,
                 bounds=bounds,
-                maxiter = 1000,
+                callback = self.callback_func_advanced,
             )
         elif optimisation_type == "minimize":
 
@@ -442,7 +466,8 @@ class OptimModule:
                 x0=x_initial,
                 bounds=bounds,
                 method="Nelder-Mead",
-                tol=1e-1,
+                # tol=1e-1,
+                callback = self.callback_func_minimize,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
