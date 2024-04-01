@@ -5,19 +5,20 @@ import matplotlib.pylab as plt
 import time
 
 
-class PlottingModule:
+class CalculationModule:
     def __init__(self, my_filter, lib):
         self.my_filter = my_filter
         self.lib = lib
 
-    def plot_ar_data(
+    def calculate_ar_data(
         self,
         wavelength,
         polar_angles,
         azim_angles,
         target_type,
         polarization,
-        save=False,
+        save_figure=False,
+        save_data=False,
     ):
 
         initial_time = time.time()
@@ -57,10 +58,21 @@ class PlottingModule:
             plt.ylabel("Wavelength (nm)")
             plt.title(f"Calculation for Azimuthal Angle {phi}°")
             # Save the figure before showing it
-            if save:
+
+            if save_figure:
                 plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
                 # Save X, Y, Z to csv files
-                np.savetxt(f"{phi}-X.csv", X, delimiter=",")
-                np.savetxt(f"{phi}-Y.csv", Y, delimiter=",")
-                np.savetxt(f"{phi}-Z.csv", Z, delimiter=",")
+            if save_data:
+                header_lines = []
+                header_lines.append("Here we can add some meta data to the header \n")
+
+                # Save header lines indicating what the simulation represents
+                with open("reflectivity.csv", "w") as the_file:
+                    the_file.write("\n".join(header_lines))
+                
+                # Save actual data by appending
+                stored_reflectivity.to_csv("reflectivity.csv", sep = ",", header = True, mode = "a")
+
+                print("Reflectivity data saved!")
+
             plt.show()

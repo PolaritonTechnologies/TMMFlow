@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 from optim_module import OptimModule
-from plotting_module import PlottingModule
+from calculation_module import CalculationModule
 
 #########################
 # Input parameters
@@ -120,7 +120,7 @@ features = optimization.perform_optimisation("minimize")
 
 #########################
 # Plotting
-plotting = PlottingModule(my_filter, lib)
+plotting = CalculationModule(my_filter, lib)
 
 with open(optimisation_order_file) as f:
     plot_order = json.load(f)
@@ -142,5 +142,5 @@ azimuthal_angles = np.arange(
 )
 
 print("plotting results...")
-plotting.plot_ar_data(wavelength, polar_angles, azimuthal_angles, "r", "s", True)
+plotting.calculate_ar_data(wavelength, polar_angles, azimuthal_angles, "r", "s", save_figure=True, save_data=True)
 #########################
