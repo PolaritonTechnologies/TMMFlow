@@ -42,6 +42,8 @@ class OptimModule:
         self.target_type = np.empty(0)
         self.target_tolerance = np.empty(0)
 
+        self.initial_merit = 0
+
         # wavelength treament in case of intervals, each wavelength is weighted
         # for evaluation with the merit function.
 
@@ -302,12 +304,18 @@ class OptimModule:
                     / float(self.target_tolerance[i])
                 ) ** 2 * self.target_wavelength_weights[i]
 
-        print("merit: ", merit)
+
+        # Set initial merit and normalize to it
+        if self.initial_merit == 0:
+            self.initial_merit = merit
+
+        print("merit: ", merit/self.initial_merit)
         # print("thicknesses: ", thicknesses)
         # print("layer_order: ", layer_order)
         # print("merit: ", merit)
         # print("thicknesses: ", features)
-        return merit
+
+        return merit/self.initial_merit
 
     # check targets is used in unit testing
     def check_targets(self, thicknesses):
@@ -425,6 +433,7 @@ class OptimModule:
             ret = dual_annealing(
                 self.merit_function,
                 bounds=bounds,
+                maxiter = 1000,
             )
         elif optimisation_type == "minimize":
 
@@ -433,7 +442,7 @@ class OptimModule:
                 x0=x_initial,
                 bounds=bounds,
                 method="Nelder-Mead",
-                tol=1e-6,
+                tol=1e-1,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
@@ -445,6 +454,9 @@ class OptimModule:
         self.lib.change_material_order(
             self.my_filter, layer_order, int(np.size(layer_order))
         )
+
+        # Set initial merit back to zero
+        self.initial_merit = 0
 
         print("Optimization time: ", time.time() - start_time, "s")
         print("Optimized features: ", ret.x)
