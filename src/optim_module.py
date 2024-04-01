@@ -414,7 +414,7 @@ class OptimModule:
 
         return test_pass
 
-    def perform_optimisation(self, optimisation_type):
+    def perform_optimisation(self, optimisation_type, save_optimized_to_file = False):
         start_time = time.time()
 
         x_initial = []
@@ -508,5 +508,15 @@ class OptimModule:
         print("Optimized features: ", ret.x)
         print("Optimized merit value: ", ret.fun)
         print("Number of function evaluations: ", ret.nfev)
+
+        if save_optimized_to_file:
+            optimized_values = []
+            optimized_values.append("Optimization time: " + str(time.time() - start_time) + " s \n")
+            optimized_values.append("Number of function evaluations: " + str(ret.nfev) + "\n")
+            optimized_values.append("Optimized merit value: " + str(ret.fun) + "\n")
+            optimized_values.append("Optimized features: " + str(ret.x) + "\n")
+            with open("optimized_values.csv", "w") as the_file:
+                the_file.write("\n".join(optimized_values))
+
 
         return ret.x

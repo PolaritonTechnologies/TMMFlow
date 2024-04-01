@@ -12,7 +12,7 @@ varying all layer thicknesses plus the organic's position )
 | minimize (Nelder-Mead) | 60 s             | Using 1e-9 tolerance                                                   |
 | dual_annealing         | 1802 s           | Using 1e-5 tolerance                                                   |
 | basinhopping           | 126 s            | Does not support bounds (recovers results of minimize for the example) |
-| direct                 |                  |                                                                        |
+| direct                 |                  | Did not yield sensible results after 2000 iterations                   |
 | differential_evolution |                  |                                                                        |
 | shgo                   |                  |                                                                        |
 
