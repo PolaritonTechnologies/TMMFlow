@@ -54,6 +54,8 @@ def translate_order_for_cpp(optimisation_order_file):
                 updated_bounds.append(bounds[m_idx])
 
         else:
+            print(len(structure_materials))
+            print(m_idx)
             updated_structure_materials.append(mat)
             updated_structure_thicknesses.append(structure_thicknesses[m_idx])
             updated_thickness_opt_allowed.append(thickness_opt_allowed[m_idx])
@@ -74,7 +76,7 @@ def translate_order_for_cpp(optimisation_order_file):
     return "temp_cpp_order.json"
 
 
-optimisation_order_file_python = "test_optimisation.json"
+optimisation_order_file_python = "converted_open_filter.json"
 optimisation_order_file = translate_order_for_cpp(optimisation_order_file_python)
 
 #########################

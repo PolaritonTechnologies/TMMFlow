@@ -167,15 +167,15 @@ class OptimModule:
                         )
 
         # Check that the targets have been entered correctly
-        print("target_wavelength:", self.target_wavelength)
-        print("target_weights:", self.target_weights)
-        print("target_value:", self.target_value)
-        print("target_polarization:", self.target_polarization)
-        print("target_condition:", self.target_condition)
-        print("target_tolerance:", self.target_tolerance)
-        print("target_type:", self.target_type)
-        print("target_polar_angle:", self.target_polar_angle)
-        print("target_azimuthal_angle:", self.target_azimuthal_angle)
+        # print("target_wavelength:", self.target_wavelength)
+        # print("target_weights:", self.target_weights)
+        # print("target_value:", self.target_value)
+        # print("target_polarization:", self.target_polarization)
+        # print("target_condition:", self.target_condition)
+        # print("target_tolerance:", self.target_tolerance)
+        # print("target_type:", self.target_type)
+        # print("target_polar_angle:", self.target_polar_angle)
+        # print("target_azimuthal_angle:", self.target_azimuthal_angle)
 
         if np.any(self.layer_switch_allowed):
             self.allowed_permutations = self.compute_permutations(
