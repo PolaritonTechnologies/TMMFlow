@@ -7,14 +7,15 @@ Simulation and Optimisation software based on the Transfer Matrix Method
 Optimization benchmark (test_optimisation_DBRCavity.json on Julian's laptop
 varying all layer thicknesses plus the organic's position )
 
-| Method                 | Time to Optimize | Comments                                                               |
-| ---------------------- | ---------------- | ---------------------------------------------------------------------- |
-| minimize (Nelder-Mead) | 60 s             | Using 1e-9 tolerance                                                   |
-| dual_annealing         | 1802 s           | Using 1e-5 tolerance                                                   |
-| basinhopping           | 126 s            | Does not support bounds (recovers results of minimize for the example) |
-| direct                 |                  | Did not yield sensible results after 2000 iterations                   |
-| differential_evolution |                  |                                                                        |
-| shgo                   |                  |                                                                        |
+| Method                 | Time to Optimize | Comments                                                                         |
+| ---------------------- | ---------------- | -------------------------------------------------------------------------------- |
+| minimize (Nelder-Mead) | 60 s             | Using 1e-9 tolerance                                                             |
+| dual_annealing         | 1802 s           | Using 1e-5 tolerance, 7000 iterations                                            |
+| basinhopping           | 126 s            | Does not support bounds (recovers results of minimize for the example)           |
+| direct                 | 777 s            | merit only minimized to 0.003 after 2831 calls                                   |
+| differential_evolution |                  | no sign of convergence after ~50000 iterations                                   |
+| shgo                   |                  | did not even start to optimize                                                   |
+| brute                  |                  | not really an option because it requires too many iterations for relevant stacks |
 
 dual_annealing, optimized weights:
 [ 43.44974405 32.76934884 31.45234875 190.87887203 65.24474902

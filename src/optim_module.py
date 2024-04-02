@@ -13,6 +13,7 @@ from scipy.optimize import (
     shgo,
     direct,
 )
+from scipy.optimize import dual_annealing, minimize, differential_evolution, basinhopping, shgo, direct, brute
 
 
 class OptimModule:
@@ -508,7 +509,13 @@ class OptimModule:
         gtol = 1e-6
 
         # With scipy we cannot do integer optimization
-        if optimisation_type == "differential_evolution":
+        if optimisation_type == "dual_annealing":
+            ret = dual_annealing(
+                self.merit_function,
+                bounds=bounds,
+                callback = self.callback_func1,
+            )
+        elif optimisation_type == "differential_evolution":
             ret = differential_evolution(
                 self.merit_function,
                 bounds=bounds,
@@ -543,6 +550,23 @@ class OptimModule:
                 bounds=bounds,
                 locally_biased=False,
                 options={"gtol": gtol},
+                # maxiter = 50000,
+            )
+        elif optimisation_type == "brute":
+            # Brute force optimization: only sensible for a low number of
+            # features (e.g., 3). Depending on Ns, the number of points to
+            # try is established  (Ns^(#features) = number of iterations)
+            ret = brute(
+                self.merit_function,
+                ranges=bounds,
+                Ns = 2,
+                # maxiter = 50000,
+            )
+        elif optimisation_type == "shgo":
+            # Doesn't really start
+            ret = shgo(
+                self.merit_function,
+                bounds=bounds,
                 # maxiter = 50000,
             )
         elif optimisation_type == "minimize":
