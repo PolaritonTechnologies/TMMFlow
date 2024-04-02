@@ -12,8 +12,8 @@ from scipy.optimize import (
     basinhopping,
     shgo,
     direct,
+    brute,
 )
-from scipy.optimize import dual_annealing, minimize, differential_evolution, basinhopping, shgo, direct, brute
 
 
 class OptimModule:
