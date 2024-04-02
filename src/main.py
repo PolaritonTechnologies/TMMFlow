@@ -30,6 +30,20 @@ def translate_order_for_cpp(optimisation_order_file):
     updated_layer_switch_allowed = []
     updated_bounds = []
 
+    if optimisation_order["add_layers"]:
+        for i in range(optimisation_order["nb_added_layers"]):
+            structure_materials.append(optimisation_order["added_materials"][0])
+            structure_thicknesses.append(
+                (
+                    optimisation_order["added_layer_bounds"][0][0]
+                    + optimisation_order["added_layer_bounds"][0][1]
+                )
+                / 2
+            )
+            thickness_opt_allowed.append(True)
+            layer_switch_allowed.append(True)
+            bounds.append(optimisation_order["added_layer_bounds"][0])
+
     for m_idx, mat in enumerate(structure_materials):
 
         ## periodic assemblies start with a number
@@ -67,7 +81,6 @@ def translate_order_for_cpp(optimisation_order_file):
     updated_optimisation_order["thickness_opt_allowed"] = updated_thickness_opt_allowed
     updated_optimisation_order["layer_switch_allowed"] = updated_layer_switch_allowed
     updated_optimisation_order["bounds"] = updated_bounds
-
     print(updated_optimisation_order)
 
     with open("temp_cpp_order.json", "w") as f:
@@ -76,7 +89,7 @@ def translate_order_for_cpp(optimisation_order_file):
     return "temp_cpp_order.json"
 
 
-optimisation_order_file_python = "converted_open_filter.json"
+optimisation_order_file_python = "layer_addition_test.json"
 optimisation_order_file = translate_order_for_cpp(optimisation_order_file_python)
 
 #########################
@@ -117,7 +130,9 @@ my_filter = lib.createFilterStack(optimisation_order_file.encode("utf-8"))
 # Optimization
 print("running optimisation...")
 optimization = OptimModule(optimisation_order_file, my_filter, lib)
-features = optimization.perform_optimisation("minimize")
+features = optimization.perform_optimisation(
+    "dual_annealing", save_optimized_to_file=True
+)
 #########################
 
 #########################

@@ -52,7 +52,6 @@ class OptimModule:
         self.target_azimuthal_angle = np.empty(0)
         self.target_type = np.empty(0)
         self.target_tolerance = np.empty(0)
-
         self.initial_merit = 0
         self.iteration_no = 0
 
@@ -386,6 +385,7 @@ class OptimModule:
             print(
                 "merit | iteration #" + str(self.iteration_no) + ": ",
                 merit / self.initial_merit,
+                merit,
             )
             self.iteration_no += 1
             # print("thicknesses: ", thicknesses)
@@ -526,7 +526,6 @@ class OptimModule:
             ret = dual_annealing(
                 self.merit_function,
                 bounds=bounds,
-                options={"gtol": gtol},
                 callback=self.callback_func1,
             )
         elif optimisation_type == "basinhopping":
