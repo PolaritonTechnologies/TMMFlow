@@ -25,7 +25,7 @@ extern "C"
 		while (std::isnan(values) || values > 1.0) 
 		{
 			theta_0 = theta_0 + 0.0001;
-			std::cout << "Increasing theta_0 by 0.0001 to avoid kz crash. New theta_0: " << theta_0 << std::endl;
+			// std::cout << "Increasing theta_0 by 0.0001 to avoid kz crash. New theta_0: " << theta_0 << std::endl;
 			values = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0);
 		}
 

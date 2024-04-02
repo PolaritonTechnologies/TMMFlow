@@ -74,7 +74,7 @@ def translate_order_for_cpp(optimisation_order_file):
     return "temp_cpp_order.json"
 
 
-optimisation_order_file_python = "test_optimisation_DBRCavity.json"
+optimisation_order_file_python = "test_optimisation.json"
 optimisation_order_file = translate_order_for_cpp(optimisation_order_file_python)
 
 #########################
@@ -142,5 +142,13 @@ azimuthal_angles = np.arange(
 )
 
 print("plotting results...")
-plotting.calculate_ar_data(wavelength, polar_angles, azimuthal_angles, "r", "s", save_figure=True, save_data=True)
+plotting.calculate_ar_data(
+    wavelength,
+    polar_angles,
+    azimuthal_angles,
+    "r",
+    "s",
+    save_figure=True,
+    save_data=True,
+)
 #########################

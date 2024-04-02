@@ -5,7 +5,14 @@ import itertools
 import math
 import time
 
-from scipy.optimize import dual_annealing, minimize, differential_evolution, basinhopping, shgo, direct
+from scipy.optimize import (
+    dual_annealing,
+    minimize,
+    differential_evolution,
+    basinhopping,
+    shgo,
+    direct,
+)
 
 
 class OptimModule:
@@ -26,15 +33,17 @@ class OptimModule:
         self.polarization_entries = np.array(self.data_order["targets_polarization"])
         self.value_entries = np.array(self.data_order["targets_value"])
         self.condition_entries = np.array(self.data_order["targets_condition"])
-        self.polar_angle_entries = np.array(self.data_order["targets_polar_angle"])
-        self.azim_angle_entries = np.array(self.data_order["targets_azimuthal_angle"])
+        self.polar_angle_entries = self.data_order["targets_polar_angle"]
+        self.polar_angle_steps = np.array(self.data_order["polar_angle_steps"])
+        self.azim_angle_entries = self.data_order["targets_azimuthal_angle"]
+        self.azim_angle_steps = np.array(self.data_order["azimuthal_angle_steps"])
         self.wavelength_entries = self.data_order["targets_wavelengths"]
         self.wavelength_step = np.array(self.data_order["wavelength_steps"])
         self.tolerance_entries = np.array(self.data_order["targets_tolerance"])
         self.bounds = [tuple(x) for x in self.data_order["bounds"]]
 
         self.target_wavelength = np.empty(0)
-        self.target_wavelength_weights = np.empty(0)
+        self.target_weights = np.empty(0)
         self.target_value = np.empty(0)
         self.target_polarization = np.empty(0)
         self.target_condition = np.empty(0)
@@ -46,88 +55,127 @@ class OptimModule:
         self.initial_merit = 0
         self.iteration_no = 0
 
-        # wavelength treament in case of intervals, each wavelength is weighted
-        # for evaluation with the merit function.
+        for target_idx in range(0, np.size(self.type_entries)):
 
-        for w_idx, wavelength_entry_unchecked in enumerate(self.wavelength_entries):
+            # polar angle treament in case of intervals, each angle is weighted
+            # for evaluation with the merit function.
 
-            if isinstance(wavelength_entry_unchecked, list):
+            if isinstance(self.polar_angle_entries[target_idx], list):
 
-                wavelength_entry = np.array(wavelength_entry_unchecked)
+                polar_angle_entry = np.array(self.polar_angle_entries[target_idx])
 
-                interval = np.arange(
-                    wavelength_entry[0],
-                    wavelength_entry[-1] + 1,
-                    self.wavelength_step[w_idx],
+                interval_polar = np.arange(
+                    polar_angle_entry[0],
+                    polar_angle_entry[-1] + 1,
+                    self.polar_angle_steps[target_idx],
                 )
 
-                weight = 1 / np.size(interval)
-
-                for wavelength in interval:
-
-                    self.target_wavelength = np.append(
-                        self.target_wavelength, wavelength
-                    )
-
-                    self.target_wavelength_weights = np.append(
-                        self.target_wavelength_weights, weight
-                    )
-
-                    self.target_value = np.append(
-                        self.target_value, self.value_entries[w_idx]
-                    )
-
-                    self.target_polarization = np.append(
-                        self.target_polarization, self.polarization_entries[w_idx]
-                    )
-
-                    self.target_condition = np.append(
-                        self.target_condition, self.condition_entries[w_idx]
-                    )
-
-                    self.target_tolerance = np.append(
-                        self.target_tolerance, self.tolerance_entries[w_idx]
-                    )
-
-                    self.target_type = np.append(
-                        self.target_type, self.type_entries[w_idx]
-                    )
-
-                    self.target_polar_angle = np.append(
-                        self.target_polar_angle, self.polar_angle_entries[w_idx]
-                    )
-
-                    self.target_azimuthal_angle = np.append(
-                        self.target_azimuthal_angle, self.azim_angle_entries[w_idx]
-                    )
+                weight_polar = 1 / np.size(interval_polar)
 
             else:
 
-                self.target_wavelength = np.append(
-                    self.target_wavelength, wavelength_entry_unchecked
+                interval_polar = [self.polar_angle_entries[target_idx]]
+                weight_polar = 1
+
+            # azimuthal angle treament in case of intervals, each angle is weighted
+            # for evaluation with the merit function.
+
+            if isinstance(self.azim_angle_entries[target_idx], list):
+
+                azimuthal_entry = np.array(self.azim_angle_entries[target_idx])
+
+                interval_azim = np.arange(
+                    azimuthal_entry[0],
+                    azimuthal_entry[-1] + 1,
+                    self.azim_angle_steps[target_idx],
                 )
-                self.target_wavelength_weights = np.append(
-                    self.target_wavelength_weights, 1
+
+                weight_azim = 1 / np.size(interval_azim)
+
+            else:
+
+                interval_azim = [self.azim_angle_entries[target_idx]]
+                weight_azim = 1
+
+            # wavelength treament in case of intervals, each wavelength is weighted
+            # for evaluation with the merit function.
+
+            if isinstance(self.wavelength_entries[target_idx], list):
+
+                wavelength_entry = np.array(self.wavelength_entries[target_idx])
+
+                interval_wvl = np.arange(
+                    wavelength_entry[0],
+                    wavelength_entry[-1] + 1,
+                    self.wavelength_step[target_idx],
                 )
-                self.target_value = np.append(
-                    self.target_value, self.value_entries[w_idx]
-                )
-                self.target_polarization = np.append(
-                    self.target_polarization, self.polarization_entries[w_idx]
-                )
-                self.target_condition = np.append(
-                    self.target_condition, self.condition_entries[w_idx]
-                )
-                self.target_tolerance = np.append(
-                    self.target_tolerance, self.tolerance_entries[w_idx]
-                )
-                self.target_type = np.append(self.target_type, self.type_entries[w_idx])
-                self.target_polar_angle = np.append(
-                    self.target_polar_angle, self.polar_angle_entries[w_idx]
-                )
-                self.target_azimuthal_angle = np.append(
-                    self.target_azimuthal_angle, self.azim_angle_entries[w_idx]
-                )
+
+                weight_wvl = 1 / np.size(interval_wvl)
+
+            else:
+
+                interval_wvl = [self.wavelength_entries[target_idx]]
+                weight_wvl = 1
+
+            # Check on the created intervals
+            print("intervals: ", interval_polar, interval_azim, interval_wvl)
+
+            for polar_angle in interval_polar:
+
+                print("polar_angle: ", polar_angle)
+
+                for azim_angle in interval_azim:
+
+                    print("azim_angle: ", azim_angle)
+
+                    for wvl in interval_wvl:
+
+                        print("wavelength: ", wvl)
+
+                        self.target_wavelength = np.append(self.target_wavelength, wvl)
+
+                        self.target_polar_angle = np.append(
+                            self.target_polar_angle, polar_angle
+                        )
+
+                        self.target_azimuthal_angle = np.append(
+                            self.target_azimuthal_angle, azim_angle
+                        )
+                        self.target_weights = np.append(
+                            self.target_weights, weight_wvl * weight_azim * weight_polar
+                        )
+
+                        self.target_value = np.append(
+                            self.target_value, self.value_entries[target_idx]
+                        )
+
+                        self.target_polarization = np.append(
+                            self.target_polarization,
+                            self.polarization_entries[target_idx],
+                        )
+
+                        self.target_condition = np.append(
+                            self.target_condition, self.condition_entries[target_idx]
+                        )
+
+                        self.target_tolerance = np.append(
+                            self.target_tolerance, self.tolerance_entries[target_idx]
+                        )
+
+                        self.target_type = np.append(
+                            self.target_type, self.type_entries[target_idx]
+                        )
+
+        # Check that the targets have been entered correctly
+        print("target_wavelength:", self.target_wavelength)
+        print("target_weights:", self.target_weights)
+        print("target_value:", self.target_value)
+        print("target_polarization:", self.target_polarization)
+        print("target_condition:", self.target_condition)
+        print("target_tolerance:", self.target_tolerance)
+        print("target_type:", self.target_type)
+        print("target_polar_angle:", self.target_polar_angle)
+        print("target_azimuthal_angle:", self.target_azimuthal_angle)
 
         if np.any(self.layer_switch_allowed):
             self.allowed_permutations = self.compute_permutations(
@@ -213,7 +261,7 @@ class OptimModule:
         # the optimization (It probably makes sense here to assume a lower
         # tolerance than for the minimize but this has to be adjusted
         # empirically).
-        if math.isclose(f, 0, abs_tol = 1e-5):
+        if math.isclose(f, 0, abs_tol=1e-5):
             return True
         # print("callback: ", x, f, context)
 
@@ -224,7 +272,7 @@ class OptimModule:
         """
         # If the merit function is close to zero (within the tolerance), stop
         # the optimization.
-        if math.isclose(intermediate_result.fun, 0, abs_tol = 1e-9):
+        if math.isclose(intermediate_result.fun, 0, abs_tol=1e-9):
             print("Optimization finished because merit reached threshold.")
             raise StopIteration
         # print("callback: ", intermediate_result.fun)
@@ -284,7 +332,7 @@ class OptimModule:
                 merit += (
                     (target_calculated - self.target_value[i])
                     / float(self.target_tolerance[i])
-                ) ** 2 * self.target_wavelength_weights[i]
+                ) ** 2 * self.target_weights[i]
 
             if self.target_condition[i] == ">" and target_calculated < float(
                 self.target_value[i]
@@ -305,7 +353,7 @@ class OptimModule:
                 merit += (
                     (target_calculated - self.target_value[i])
                     / float(self.target_tolerance[i])
-                ) ** 2 * self.target_wavelength_weights[i]
+                ) ** 2 * self.target_weights[i]
 
             if self.target_condition[i] == "<" and target_calculated > float(
                 self.target_value[i]
@@ -326,21 +374,29 @@ class OptimModule:
                 merit += (
                     (target_calculated - self.target_value[i])
                     / float(self.target_tolerance[i])
-                ) ** 2 * self.target_wavelength_weights[i]
+                ) ** 2 * self.target_weights[i]
 
+        if merit != 0:
 
-        # Set initial merit and normalize to it
-        if self.initial_merit == 0:
-            self.initial_merit = merit
+            # Set initial merit and normalize to it
+            if self.initial_merit == 0:
+                self.initial_merit = merit
 
-        print("merit | iteration #" + str(self.iteration_no) +  ": ", merit/self.initial_merit)
-        self.iteration_no += 1
-        # print("thicknesses: ", thicknesses)
-        # print("layer_order: ", layer_order)
-        # print("merit: ", merit)
-        # print("thicknesses: ", features)
+            print(
+                "merit | iteration #" + str(self.iteration_no) + ": ",
+                merit / self.initial_merit,
+            )
+            self.iteration_no += 1
+            # print("thicknesses: ", thicknesses)
+            # print("layer_order: ", layer_order)
+            # print("merit: ", merit)
+            # print("thicknesses: ", features)
 
-        return merit/self.initial_merit
+            return merit / self.initial_merit
+
+        else:
+
+            return merit
 
     # check targets is used in unit testing
     def check_targets(self, thicknesses):
@@ -352,7 +408,7 @@ class OptimModule:
         for i in range(0, np.size(self.target_value)):
 
             # print("target_wavelength:", self.target_wavelength[i])
-            # print("target_wavelength_weights:", self.target_wavelength_weights[i])
+            # print("target_weights:", self.target_weights[i])
             # print("target_value:", self.target_value[i])
             # print("target_polarization:", self.target_polarization[i])
             # print("target_condition:", self.target_condition[i])
@@ -414,7 +470,7 @@ class OptimModule:
 
         return test_pass
 
-    def perform_optimisation(self, optimisation_type, save_optimized_to_file = False):
+    def perform_optimisation(self, optimisation_type, save_optimized_to_file=False):
         start_time = time.time()
 
         x_initial = []
@@ -448,35 +504,45 @@ class OptimModule:
 
         ret = 0
 
+        # Sets the gradient tolerance value for stopping the optimization
+        gtol = 1e-6
+
         # With scipy we cannot do integer optimization
         if optimisation_type == "differential_evolution":
             ret = differential_evolution(
                 self.merit_function,
                 bounds=bounds,
+                options={"gtol": gtol},
                 # callback = self.callback_func_advanced
             )
         elif optimisation_type == "dual_annealing":
             ret = dual_annealing(
                 self.merit_function,
                 bounds=bounds,
-                callback = self.callback_func1,
+                options={"gtol": gtol},
+                callback=self.callback_func1,
             )
         elif optimisation_type == "basinhopping":
-            # This algorithm does 
-            # 1. a random perturbation of the features 
-            # 2. then a scipy.minimize 
+            # This algorithm does
+            # 1. a random perturbation of the features
+            # 2. then a scipy.minimize
             # 3. accepts of rejects the new optimum value
             ret = basinhopping(
                 self.merit_function,
-                x0 =x_initial,
-                minimizer_kwargs={"method": "Nelder-Mead", "callback": self.callback_func2},
-                callback = self.callback_func1,
+                x0=x_initial,
+                minimizer_kwargs={
+                    "method": "Nelder-Mead",
+                    "callback": self.callback_func2,
+                },
+                options={"gtol": gtol},
+                callback=self.callback_func1,
             )
         elif optimisation_type == "direct":
             ret = direct(
                 self.merit_function,
                 bounds=bounds,
-                locally_biased = False,
+                locally_biased=False,
+                options={"gtol": gtol},
                 # maxiter = 50000,
             )
         elif optimisation_type == "minimize":
@@ -487,7 +553,10 @@ class OptimModule:
                 bounds=bounds,
                 method="Nelder-Mead",
                 # tol=1e-1,
-                callback = self.callback_func2,
+                # the below values for xatol and fatol were found to prevent the function
+                # from overoptimising
+                options={"xatol": 1e-1, "fatol": 1e-1},
+                callback=self.callback_func2,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
@@ -511,12 +580,15 @@ class OptimModule:
 
         if save_optimized_to_file:
             optimized_values = []
-            optimized_values.append("Optimization time: " + str(time.time() - start_time) + " s \n")
-            optimized_values.append("Number of function evaluations: " + str(ret.nfev) + "\n")
+            optimized_values.append(
+                "Optimization time: " + str(time.time() - start_time) + " s \n"
+            )
+            optimized_values.append(
+                "Number of function evaluations: " + str(ret.nfev) + "\n"
+            )
             optimized_values.append("Optimized merit value: " + str(ret.fun) + "\n")
             optimized_values.append("Optimized features: " + str(ret.x) + "\n")
             with open("optimized_values.csv", "w") as the_file:
                 the_file.write("\n".join(optimized_values))
-
 
         return ret.x
