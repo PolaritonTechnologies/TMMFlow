@@ -27,6 +27,10 @@ def home():
 def simulate():
     return render_template('simulate.html')
 
+@app.route("/optimize", methods=['GET', 'POST'])
+def optimize():
+    return render_template('optimize.html')
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -105,6 +109,17 @@ def calculate_and_plot():
 
     # Send the image URL back to the client
     return render_template('simulate.html', plot_url='plot.png')
+
+@app.route('/start_optimization', methods=['POST'])
+def start_optimization():
+    # optimization_method = request.form.get('optimizationMethod')
+    # Perform the optimization using the selected method...
+    return render_template('optimize.html')
+
+@app.route('/stop_optimization', methods=['POST'])
+def stop_optimization():
+    # Stop the optimization...
+    return render_template('optimize.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
