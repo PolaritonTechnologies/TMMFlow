@@ -60,7 +60,8 @@ class CalculationModule:
             # Save the figure before showing it
 
             if save_figure:
-                plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
+                # plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
+                plt.savefig("plot.png", format="png", dpi=300)
                 # Save X, Y, Z to csv files
             if save_data:
                 header_lines = []
