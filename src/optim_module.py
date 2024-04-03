@@ -51,8 +51,10 @@ class OptimModule:
         self.target_azimuthal_angle = np.empty(0)
         self.target_type = np.empty(0)
         self.target_tolerance = np.empty(0)
+
         self.initial_merit = 0
         self.iteration_no = 0
+        self.callback_call = 0
 
         for target_idx in range(0, np.size(self.type_entries)):
 
@@ -255,7 +257,22 @@ class OptimModule:
         """
         Function that is called after each optimization step to impose further
         break conditions for the non trivial optimization methods.
+        In the case of dual annealing it is only called if the optimum is
+        updated and not after each iteration.
         """
+        # Save the optimized values and the merit to file every 100 iterations
+        # if self.iteration_no > self.callback_call * 100:
+        optimized_values = []
+        optimized_values.append("Iteration no.: " + str(self.iteration_no))
+        optimized_values.append("Optimized merit value: " + str(f) + "\n")
+        optimized_values.append("Optimized features: " + str(x) + "\n")
+        with open("optimized_values_intermediate.csv", "w") as the_file:
+            the_file.write("\n".join(optimized_values))
+
+        self.callback_call += 1
+
+        print("Optimum values saved!")
+
         # If the merit function is close to zero (within the tolerance), stop
         # the optimization (It probably makes sense here to assume a lower
         # tolerance than for the minimize but this has to be adjusted
@@ -269,6 +286,18 @@ class OptimModule:
         Function that is called after each optimization step to impose further
         break conditions for scipy.minimize.
         """
+        # Save the optimized values and the merit to file every 100 iterations
+        if self.iteration_no >= self.callback_call * 100:
+            optimized_values = []
+            optimized_values.append("Iteration no.: " + str(self.iteration_no))
+            optimized_values.append("Optimized merit value: " + str(intermediate_result.fun) + "\n")
+            optimized_values.append("Optimized features: " + str(intermediate_result.x) + "\n")
+            with open("optimized_values_intermediate.csv", "w") as the_file:
+                the_file.write("\n".join(optimized_values))
+            self.callback_call += 1
+
+            print("Optimum values saved!")
+
         # If the merit function is close to zero (within the tolerance), stop
         # the optimization.
         if math.isclose(intermediate_result.fun, 0, abs_tol=1e-9):
@@ -382,9 +411,9 @@ class OptimModule:
                 self.initial_merit = merit
 
             print(
-                "merit | iteration #" + str(self.iteration_no) + ": ",
-                merit / self.initial_merit,
-                merit,
+                "merit | call #" + str(self.iteration_no) + ": ",
+                round(merit / self.initial_merit, 9),
+                round(merit, 2),
             )
             self.iteration_no += 1
             # print("thicknesses: ", thicknesses)
@@ -518,14 +547,7 @@ class OptimModule:
             ret = differential_evolution(
                 self.merit_function,
                 bounds=bounds,
-                options={"gtol": gtol},
                 # callback = self.callback_func_advanced
-            )
-        elif optimisation_type == "dual_annealing":
-            ret = dual_annealing(
-                self.merit_function,
-                bounds=bounds,
-                callback=self.callback_func1,
             )
         elif optimisation_type == "basinhopping":
             # This algorithm does
@@ -539,7 +561,6 @@ class OptimModule:
                     "method": "Nelder-Mead",
                     "callback": self.callback_func2,
                 },
-                options={"gtol": gtol},
                 callback=self.callback_func1,
             )
         # elif optimisation_type == "direct":
@@ -578,7 +599,7 @@ class OptimModule:
                 # the below values for xatol and fatol were found to prevent the function
                 # from overoptimising
                 options={"xatol": 1e-1, "fatol": 1e-1},
-                # callback=self.callback_func2,
+                callback=self.callback_func2,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
@@ -594,6 +615,7 @@ class OptimModule:
         # Set initial merit back to zero
         self.initial_merit = 0
         self.iteration_no = 0
+        self.callback_call = 0
 
         print("Optimization time: ", time.time() - start_time, "s")
         print("Optimized features: ", ret.x)
