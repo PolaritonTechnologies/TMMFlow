@@ -11,7 +11,6 @@ from scipy.optimize import (
     differential_evolution,
     basinhopping,
     shgo,
-    direct,
     brute,
 )
 
@@ -543,14 +542,14 @@ class OptimModule:
                 options={"gtol": gtol},
                 callback=self.callback_func1,
             )
-        elif optimisation_type == "direct":
-            ret = direct(
-                self.merit_function,
-                bounds=bounds,
-                locally_biased=False,
-                options={"gtol": gtol},
+        # elif optimisation_type == "direct":
+            # ret = direct(
+                # self.merit_function,
+                # bounds=bounds,
+                # locally_biased=False,
+                # options={"gtol": gtol},
                 # maxiter = 50000,
-            )
+            # )
         elif optimisation_type == "brute":
             # Brute force optimization: only sensible for a low number of
             # features (e.g., 3). Depending on Ns, the number of points to
@@ -579,7 +578,7 @@ class OptimModule:
                 # the below values for xatol and fatol were found to prevent the function
                 # from overoptimising
                 options={"xatol": 1e-1, "fatol": 1e-1},
-                callback=self.callback_func2,
+                # callback=self.callback_func2,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
