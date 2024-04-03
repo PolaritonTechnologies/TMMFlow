@@ -9,21 +9,100 @@
     "wavelengthMin": 400,
     "wavelengthMax": 500,
     "wavelengthStep": 1,
-    "structure_materials": ["Al","PFOGlassy","Al"],
-    "structure_thicknesses": [100, 90, 20],
+    "structure_materials": [
+        "Al",
+        "PFOGlassy",
+        "Al"
+    ],
+    "structure_thicknesses": [
+        100,
+        90,
+        20
+    ],
     "polarization": "s",
-    "thickness_opt_allowed": [true, true, true],
-    "layer_switch_allowed": [false, false, false],
-    "targets_type": ["r","r","r"],
-    "targets_polarization": ["s","s","s"],
-    "targets_condition": [">","<",">"],
-    "targets_value": [0.87,0.66,0.86],
-    "targets_polar_angle": [[0.0,45.0],45.0,[0.0,45.0]],
-    "polar_angle_steps": [5,5,5],
-    "targets_azimuthal_angle": [0.0,[0.0,10.0],0.0],
-    "azimuthal_angle_steps": [1,1,1],
-    "targets_wavelengths": [[420,440],450,[470,490]],
-    "wavelength_steps": [1,1,1],
-    "targets_tolerance": [1e-3,1e-3,1e-3],
-    "bounds": [[1,500],[1,500],[1,500]]
+    "thickness_opt_allowed": [
+        true,
+        true,
+        true
+    ],
+    "layer_switch_allowed": [
+        false,
+        false,
+        false
+    ],
+    "targets_type": [
+        "r",
+        "r",
+        "r"
+    ],
+    "targets_polarization": [
+        "s",
+        "s",
+        "s"
+    ],
+    "targets_condition": [
+        ">",
+        "<",
+        ">"
+    ],
+    "targets_value": [
+        0.87,
+        0.66,
+        0.86
+    ],
+    "targets_polar_angle": [
+        45.0,
+        45.0,
+        45.0
+    ],
+    "polar_angle_steps": [
+        5,
+        5,
+        5
+    ],
+    "targets_azimuthal_angle": [
+        0.0,
+        10.0,
+        0.0
+    ],
+    "azimuthal_angle_steps": [
+        1,
+        1,
+        1
+    ],
+    "targets_wavelengths": [
+        [
+            420,
+            440
+        ],
+        450,
+        [
+            470,
+            490
+        ]
+    ],
+    "wavelength_steps": [
+        1,
+        1,
+        1
+    ],
+    "targets_tolerance": [
+        1e-3,
+        1e-3,
+        1e-3
+    ],
+    "bounds": [
+        [
+            1,
+            500
+        ],
+        [
+            1,
+            500
+        ],
+        [
+            1,
+            500
+        ]
+    ]
 }
