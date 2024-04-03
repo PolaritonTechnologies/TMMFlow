@@ -2,6 +2,7 @@ import json
 import ctypes
 import numpy as np
 
+
 def translate_order_for_cpp(optimisation_order_file):
 
     with open(optimisation_order_file, "r") as optimisation_order_file:
@@ -15,6 +16,7 @@ def translate_order_for_cpp(optimisation_order_file):
     structure_thicknesses = optimisation_order["structure_thicknesses"]
     thickness_opt_allowed = optimisation_order["thickness_opt_allowed"]
     layer_switch_allowed = optimisation_order["layer_switch_allowed"]
+    add_layers = optimisation_order["add_layers"]
     bounds = optimisation_order["bounds"]
 
     updated_structure_materials = []
@@ -59,6 +61,27 @@ def translate_order_for_cpp(optimisation_order_file):
     updated_optimisation_order["layer_switch_allowed"] = updated_layer_switch_allowed
     updated_optimisation_order["bounds"] = updated_bounds
 
+    if add_layers:
+        for i in range(0, optimisation_order["nb_added_layers"]):
+            updated_optimisation_order["structure_materials"].append(
+                optimisation_order["added_materials"][0]
+            )
+            updated_optimisation_order["structure_thicknesses"].append(
+                0.5
+                * (
+                    optimisation_order["added_layer_bounds"][0][0]
+                    + optimisation_order["added_layer_bounds"][0][1]
+                )
+            )
+            updated_optimisation_order["bounds"].append(
+                [
+                    optimisation_order["added_layer_bounds"][0][0],
+                    optimisation_order["added_layer_bounds"][0][1],
+                ]
+            )
+            updated_optimisation_order["thickness_opt_allowed"].append(True)
+            updated_optimisation_order["layer_switch_allowed"].append(True)
+
     print(updated_optimisation_order)
 
     with open("temp_cpp_order.json", "w") as f:
@@ -66,13 +89,16 @@ def translate_order_for_cpp(optimisation_order_file):
 
     return "temp_cpp_order.json"
 
+
 def create_filter(optimisation_order_file):
     # Link C++ functions and create filter
     lib = ctypes.CDLL("./run_filter_stack.so")
 
     FilterStack = ctypes.POINTER(ctypes.c_char)
 
-    c_double_array = np.ctypeslib.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS")
+    c_double_array = np.ctypeslib.ndpointer(
+        dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"
+    )
 
     c_int_array = np.ctypeslib.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS")
 
@@ -91,7 +117,11 @@ def create_filter(optimisation_order_file):
     ]
     lib.calculate_reflection_transmission_absorption.restype = ctypes.c_double
 
-    lib.change_material_thickness.argtypes = [FilterStack, c_double_array, ctypes.c_size_t]
+    lib.change_material_thickness.argtypes = [
+        FilterStack,
+        c_double_array,
+        ctypes.c_size_t,
+    ]
     lib.change_material_order.argtypes = [FilterStack, c_int_array, ctypes.c_size_t]
     lib.reset_filter.argtypes = [FilterStack]
 

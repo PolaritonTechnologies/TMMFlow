@@ -1,0 +1,348 @@
+Version: 1.1.1
+Comment:
+End
+Filter:
+	Substrate: substrate_24mm_koeln 1000000.000000
+	FrontMedium: void
+	BackMedium: void
+	CenterWavelength: 450.000000
+	WavelengthRange: 300.000000 1000.000000 1.000000
+	DontConsiderSubstrate: 0
+	StepSpacing: 0.010000
+	MinimumThickness: 0.000000
+	Illuminant: CIE-D65
+	Observer: CIE-1931
+	ConsiderBackside: 1
+	EllipsometerType: 1
+	DeltaMin: -90.000000
+	ConsiderBacksideOnMonitoring: 1
+	MonitoringEllipsometerType: 1
+	MonitoringDeltaMin: -90.000000
+	MonitoringSublayerThickness: 1.000000
+	NeedleMaterials: Ta2O5_Koeln_AM SiO2_Koeln_AM
+	FrontStackFormula:
+		Formula: TSTSTSTSTCTSTSTSTSTCTSTSTSTSTCTSTSTSTSTST
+		C: C545T
+		S: SiO2_Koeln_AM
+		T: Ta2O5_Koeln_AM
+	End
+	FrontLayer: Ta2O5_Koeln_AM 50.822605
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 54.004410
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 57.355586
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 71.657844
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 60.898645
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 66.956434
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 55.315435
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 76.445012
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 52.524708
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: C545T 100.000000
+	RefineThickness: 0
+	AddNeedles: 0
+	FrontLayer: Ta2O5_Koeln_AM 36.088018
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 74.719703
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 62.603107
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 64.742471
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 67.354191
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 62.513582
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 62.430582
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 74.613280
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 42.889420
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: C545T 100.000000
+	RefineThickness: 0
+	AddNeedles: 0
+	FrontLayer: Ta2O5_Koeln_AM 47.503883
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 76.186294
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 60.274304
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 62.243861
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 66.727141
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 66.529945
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 59.188364
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 67.246958
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 46.257555
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: C545T 100.000000
+	RefineThickness: 0
+	AddNeedles: 0
+	FrontLayer: Ta2O5_Koeln_AM 54.586473
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 76.964180
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 51.155566
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 66.932000
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 62.180660
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 77.489563
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 50.385110
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 59.671810
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 64.936485
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: SiO2_Koeln_AM 126.698379
+	RefineThickness: 1
+	AddNeedles: 1
+	FrontLayer: Ta2O5_Koeln_AM 0.125656
+	RefineThickness: 1
+	AddNeedles: 1
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 0.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 400.000000
+	To: 510.000000
+	By: 5.000000
+	Points:
+		     400.000000        0.000000    1.000000e-05
+		     520.000000        0.000000    1.000000e-05
+	End
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 0.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 540.000000
+	To: 800.000000
+	By: 5.000000
+	Points:
+		     540.000000        0.900000    1.000000e-03
+		     800.000000        0.900000    1.000000e-03
+	End
+	Inequality: larger
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 10.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 400.000000
+	To: 510.000000
+	By: 5.000000
+	Points:
+		     400.000000        0.000000    1.000000e-04
+		     520.000000        0.000000    1.000000e-04
+	End
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 20.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 400.000000
+	To: 510.000000
+	By: 5.000000
+	Points:
+		     400.000000        0.000000    1.000000e-04
+		     520.000000        0.000000    1.000000e-04
+	End
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 30.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 400.000000
+	To: 510.000000
+	By: 5.000000
+	Points:
+		     400.000000        0.000000    1.000000e-04
+		     520.000000        0.000000    1.000000e-04
+	End
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 40.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 400.000000
+	To: 510.000000
+	By: 5.000000
+	Points:
+		     400.000000        0.000000    1.000000e-04
+		     520.000000        0.000000    1.000000e-04
+	End
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 50.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 400.000000
+	To: 510.000000
+	By: 5.000000
+	Points:
+		     400.000000        0.000000    1.000000e-04
+		     520.000000        0.000000    1.000000e-04
+	End
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 10.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 540.000000
+	To: 600.000000
+	By: 5.000000
+	Points:
+		     540.000000        0.800000        0.010000
+		     550.000000        0.800000        0.010000
+		     560.000000        0.800000        0.010000
+		     570.000000        0.800000        0.010000
+		     580.000000        0.800000        0.010000
+		     600.000000        0.800000        0.010000
+	End
+	Inequality: larger
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 20.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 540.000000
+	To: 600.000000
+	By: 5.000000
+	Points:
+		     540.000000        0.800000        0.010000
+		     550.000000        0.800000        0.010000
+		     560.000000        0.800000        0.010000
+		     570.000000        0.800000        0.010000
+		     580.000000        0.800000        0.010000
+		     600.000000        0.800000        0.010000
+	End
+	Inequality: larger
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 30.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 540.000000
+	To: 600.000000
+	By: 5.000000
+	Points:
+		     540.000000        0.800000        0.010000
+		     550.000000        0.800000        0.010000
+		     560.000000        0.800000        0.010000
+		     570.000000        0.800000        0.010000
+		     580.000000        0.800000        0.010000
+		     600.000000        0.800000        0.010000
+	End
+	Inequality: larger
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 40.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 540.000000
+	To: 600.000000
+	By: 5.000000
+	Points:
+		     540.000000        0.800000        0.010000
+		     550.000000        0.800000        0.010000
+		     560.000000        0.800000        0.010000
+		     570.000000        0.800000        0.010000
+		     580.000000        0.800000        0.010000
+		     600.000000        0.800000        0.010000
+	End
+	Inequality: larger
+End
+Target:
+	Kind: TransmissionSpectrum
+	Angle: 50.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 540.000000
+	To: 600.000000
+	By: 5.000000
+	Points:
+		     540.000000        0.800000        0.010000
+		     550.000000        0.800000        0.010000
+		     560.000000        0.800000        0.010000
+		     570.000000        0.800000        0.010000
+		     580.000000        0.800000        0.010000
+		     600.000000        0.800000        0.010000
+	End
+	Inequality: larger
+End
+Target:
+	Kind: AbsorptionSpectrum
+	Angle: 0.000000
+	Polarization: 45.000000
+	Direction: Normal
+	From: 400.000000
+	To: 510.000000
+	By: 5.000000
+	Points:
+		     400.000000        0.100000        0.100000
+		     510.000000        0.100000        0.100000
+	End
+	Inequality: smaller
+End

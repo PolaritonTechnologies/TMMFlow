@@ -9,7 +9,7 @@ from utility import translate_order_for_cpp, create_filter
 
 #########################
 # Input parameters
-optimisation_order_file_python = "test_optimisation_DBRCavity.json"
+optimisation_order_file_python = "current_structure.json"
 optimisation_order_file = translate_order_for_cpp(optimisation_order_file_python)
 my_filter, lib = create_filter(optimisation_order_file)
 

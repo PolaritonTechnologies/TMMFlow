@@ -184,6 +184,8 @@ class OptimModule:
                 np.where(self.layer_switch_allowed)[0],
             )
 
+            print(self.allowed_permutations)
+
     def compute_permutations(self, arr, movable_indices):
         """
         Compute all available permutations for a given stack, given the movable
@@ -271,6 +273,34 @@ class OptimModule:
 
         self.callback_call += 1
 
+        if np.any(self.layer_switch_allowed) or self.data_order["add_layers"]:
+            current_structure_indices = self.allowed_permutations[
+                self.clamp(x[-1], 0, len(self.allowed_permutations) - 1)
+            ]
+            current_structure_materials = []
+            current_structure_thicknesses = []
+            for idx, el in enumerate(current_structure_indices):
+                current_structure_materials.append(
+                    self.data_order["structure_materials"][el]
+                )
+                current_structure_thicknesses.append(x[idx])
+            temp_json = self.data_order.copy()
+            temp_json["structure_materials"] = current_structure_materials
+            temp_json["structure_thicknesses"] = current_structure_thicknesses
+
+            if self.data_order:
+                temp_json["add_layers"] = False
+
+        else:
+            current_structure_materials = list(self.data_order["structure_materials"])
+            current_structure_thicknesses = list(x)
+            temp_json = self.data_order.copy()
+            temp_json["structure_thicknesses"] = current_structure_thicknesses
+
+        with open("current_structure.json", "w") as file:
+            print(temp_json)
+            json.dump(temp_json, file)
+
         print("Optimum values saved!")
 
         # If the merit function is close to zero (within the tolerance), stop
@@ -290,8 +320,12 @@ class OptimModule:
         if self.iteration_no >= self.callback_call * 100:
             optimized_values = []
             optimized_values.append("Iteration no.: " + str(self.iteration_no))
-            optimized_values.append("Optimized merit value: " + str(intermediate_result.fun) + "\n")
-            optimized_values.append("Optimized features: " + str(intermediate_result.x) + "\n")
+            optimized_values.append(
+                "Optimized merit value: " + str(intermediate_result.fun) + "\n"
+            )
+            optimized_values.append(
+                "Optimized features: " + str(intermediate_result.x) + "\n"
+            )
             with open("optimized_values_intermediate.csv", "w") as the_file:
                 the_file.write("\n".join(optimized_values))
             self.callback_call += 1
@@ -541,7 +575,7 @@ class OptimModule:
             ret = dual_annealing(
                 self.merit_function,
                 bounds=bounds,
-                callback = self.callback_func1,
+                callback=self.callback_func1,
             )
         elif optimisation_type == "differential_evolution":
             ret = differential_evolution(
@@ -564,13 +598,13 @@ class OptimModule:
                 callback=self.callback_func1,
             )
         # elif optimisation_type == "direct":
-            # ret = direct(
-                # self.merit_function,
-                # bounds=bounds,
-                # locally_biased=False,
-                # options={"gtol": gtol},
-                # maxiter = 50000,
-            # )
+        # ret = direct(
+        # self.merit_function,
+        # bounds=bounds,
+        # locally_biased=False,
+        # options={"gtol": gtol},
+        # maxiter = 50000,
+        # )
         elif optimisation_type == "brute":
             # Brute force optimization: only sensible for a low number of
             # features (e.g., 3). Depending on Ns, the number of points to
@@ -578,7 +612,7 @@ class OptimModule:
             ret = brute(
                 self.merit_function,
                 ranges=bounds,
-                Ns = 2,
+                Ns=2,
                 # maxiter = 50000,
             )
         elif optimisation_type == "shgo":
