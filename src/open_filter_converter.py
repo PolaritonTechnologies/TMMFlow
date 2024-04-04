@@ -132,72 +132,114 @@ def import_from_open_filter(input_text):
 
 
 def export_to_open_filter(dictionary_input):
+
+    to_export = ""
+
     header = """Version: 1.1.1
-    Comment:
-    End
-    Filter:
-        Substrate: substrate_24mm_koeln 1000000.000000
-        FrontMedium: void
-        BackMedium: void
-        CenterWavelength: 450.000000
-        WavelengthRange: 300.000000 1000.000000 1.000000
-        DontConsiderSubstrate: 0
-        StepSpacing: 0.010000
-        MinimumThickness: 0.000000
-        Illuminant: CIE-D65
-        Observer: CIE-1931
-        ConsiderBackside: 1
-        EllipsometerType: 1
-        DeltaMin: -90.000000
-        ConsiderBacksideOnMonitoring: 1
-        MonitoringEllipsometerType: 1
-        MonitoringDeltaMin: -90.000000
-        MonitoringSublayerThickness: 1.000000
-        End"""
+Comment:
+End
+Filter:
+    Substrate: substrate_24mm_koeln 1000000.000000
+    FrontMedium: void
+    BackMedium: void
+    CenterWavelength: 450.000000
+    WavelengthRange: 300.000000 1000.000000 1.000000
+    DontConsiderSubstrate: 0
+    StepSpacing: 0.010000
+    MinimumThickness: 0.000000
+    Illuminant: CIE-D65
+    Observer: CIE-1931
+    ConsiderBackside: 1
+    EllipsometerType: 1
+    DeltaMin: -90.000000
+    ConsiderBacksideOnMonitoring: 1
+    MonitoringEllipsometerType: 1
+    MonitoringDeltaMin: -90.000000
+    MonitoringSublayerThickness: 1.000000
+"""
 
-    lines_header = header.split("\n")
+    to_export = to_export + header
 
-    lines = []
+    for i, el in enumerate(dictionary_input["structure_materials"]):
 
-    for line_header in lines_header:
-        lines.append(line_header)
+        if el == "Ta2O5":
 
-    for i in range(len(dictionary_input["structure_materials"])):
-        lines.append(
-            f"FrontLayer: {dictionary_input['structure_materials'][i]} {dictionary_input['structure_thicknesses'][i]}"
-        )
-        lines.append(
-            f"RefineThickness: {int(dictionary_input['thickness_opt_allowed'][i])}"
-        )
+            material_block = f"""   FrontLayer: Ta2O5_Koeln_AM {dictionary_input['structure_thicknesses'][i]}
+    RefineThickness: {int(dictionary_input['thickness_opt_allowed'][i])}
+"""
+            to_export = to_export + material_block
 
-    for i in range(len(dictionary_input["targets_type"])):
-        if dictionary_input["targets_type"][i] == "t":
-            lines.append("Kind: TransmissionSpectrum")
-        elif dictionary_input["targets_type"][i] == "a":
-            lines.append("Kind: AbsorptionSpectrum")
-        elif dictionary_input["targets_type"][i] == "r":
-            lines.append("Kind: ReflectionSpectrum")
-        lines.append(f"Angle: {dictionary_input['targets_polar_angle'][i]}")
-        lines.append(
-            f"Polarization: {45.0 if dictionary_input['targets_polarization'][i] == '' else dictionary_input['targets_polarization'][i]}"
-        )
-        lines.append(f"From: {dictionary_input['targets_wavelengths'][i][0]}")
-        lines.append(f"To: {dictionary_input['targets_wavelengths'][i][1]}")
-        lines.append(f"By: {dictionary_input['wavelength_steps'][i]}")
-        lines.append(f"Points: {dictionary_input['targets_value'][i]}")
-        if dictionary_input["targets_condition"][i] == ">":
-            lines.append("Inequality: larger")
-        elif dictionary_input["targets_condition"][i] == "<":
-            lines.append("Inequality: smaller")
+        elif el == "SiO2":
 
-    output_text = "\n".join(lines)
+            material_block = f"""   FrontLayer: SiO2_Koeln_AM {dictionary_input['structure_thicknesses'][i]}
+    RefineThickness: {int(dictionary_input['thickness_opt_allowed'][i])}
+"""
+            to_export = to_export + material_block
+
+        else:
+
+            material_block = f"""   FrontLayer: {dictionary_input['structure_materials'][i]} {dictionary_input['structure_thicknesses'][i]}
+    RefineThickness: {int(dictionary_input['thickness_opt_allowed'][i])}
+"""
+            to_export = to_export + material_block
+
+    to_export = to_export + "End\n"
+
+    dictionary_polarization = {"s": 0.0, "p": 90.0, "": 45.0}
+    dictionary_type = {
+        "t": "TransmissionSpectrum",
+        "r": "ReflectionSpectrum",
+        "a": "AbsorptionSpectrum",
+    }
+    dictionary_condition = {
+        "=": "",
+        ">": "Inequality: larger",
+        "<": "Inequality: smaller",
+    }
+
+    for i, el in enumerate(dictionary_input["targets_type"]):
+
+        if isinstance(dictionary_input["targets_wavelengths"][i], list):
+            target_block = f"""Target:
+    Kind: {dictionary_type[dictionary_input['targets_type'][i]]}
+    Angle: {dictionary_input['targets_polar_angle'][i]}
+    Polarization: {dictionary_polarization[dictionary_input['targets_polarization'][i]]}
+    Direction: Normal
+    From: {dictionary_input['targets_wavelengths'][i][0]}
+    To: {dictionary_input['targets_wavelengths'][i][1]}
+    By: {dictionary_input['wavelength_steps'][i]}
+    Points: 
+        {dictionary_input['targets_wavelengths'][i][0]}\t{dictionary_input['targets_value'][i]}\t{dictionary_input['targets_tolerance'][i]}
+        {dictionary_input['targets_wavelengths'][i][1]}\t{dictionary_input['targets_value'][i]}\t{dictionary_input['targets_tolerance'][i]}
+    End"""
+        if dictionary_input["targets_condition"][i] != "":
+            target_block = (
+                target_block
+                + f"""
+    {dictionary_condition[dictionary_input['targets_condition'][i]]}
+End
+"""
+            )
+        else:
+            target_block = target_block.rsplit("\n", 1)[0] + "End"
+
+        to_export = to_export + target_block
 
     # Write to text file
     with open("converted_open_filter.ofp", "w") as output_file:
-        output_file.write(output_text)
+        output_file.write(to_export)
 
 
-input_file = "open_filter_project.ofp"
-with open(input_file, "r") as input_file:
-    input_text = input_file.read()
-print(import_from_open_filter(input_text))
+if False:
+
+    input_file = "open_filter_project.ofp"
+    with open(input_file, "r") as input_file:
+        input_text = input_file.read()
+    print(import_from_open_filter(input_text))
+
+if True:
+
+    input_file = "current_structure.json"
+    with open(input_file, "r") as input_file:
+        input_dic = json.load(input_file)
+    print(export_to_open_filter(input_dic))

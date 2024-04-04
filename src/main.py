@@ -16,10 +16,10 @@ my_filter, lib = create_filter(optimisation_order_file)
 #########################
 # Optimization
 print("running optimisation...")
-optimization = OptimModule(optimisation_order_file, my_filter, lib)
-features = optimization.perform_optimisation(
-    "dual_annealing", save_optimized_to_file=True
-)
+# optimization = OptimModule(optimisation_order_file, my_filter, lib)
+# features = optimization.perform_optimisation(
+#     "dual_annealing", save_optimized_to_file=True
+# )
 #########################
 
 #########################
