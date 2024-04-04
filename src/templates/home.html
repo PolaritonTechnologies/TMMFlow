@@ -63,7 +63,10 @@
             <h2>Upload your Filter Design</h2>
             <p>Upload a .json file containing your filter design.</p>
             <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
-                <input type="file" name="file">
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" id="customFile" name="file" style="display: none;">
+                    <label class="custom-file-label" for="customFile">{{ file_label }}</label>
+                </div>
                 <button type="submit" class="btn btn-primary" value="upload">Upload</button>
             </form>
         </section>
@@ -100,5 +103,11 @@
     </footer>
     </footer>
 </body>
-
+<script>
+    document.querySelector('.custom-file-input').addEventListener('change',function(e){
+        var fileName = document.getElementById("customFile").files[0].name;
+        var nextSibling = e.target.nextElementSibling
+        nextSibling.innerText = fileName
+    })
+</script>
 </html>

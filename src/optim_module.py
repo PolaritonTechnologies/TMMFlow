@@ -14,13 +14,27 @@ from scipy.optimize import (
     brute,
 )
 
+from queue import Queue
+
 
 class OptimModule:
-    def __init__(self, optimisation_order_file, my_filter, ctypes_lib):
+    def __init__(
+        self,
+        optimisation_order_file,
+        my_filter,
+        ctypes_lib,
+        message_queue=None,
+        update_queue=None,
+        log_func=print,
+        log_design_func=print,
+    ):
 
         self.lib = ctypes_lib
         self.my_filter = my_filter
-
+        self.log_func = log_func
+        self.log_design_func = log_design_func
+        self.message_queue = message_queue
+        self.update_queue = update_queue
         with open(optimisation_order_file) as f:
             self.data_order = json.load(f)
 
@@ -255,89 +269,65 @@ class OptimModule:
             raise ValueError
         return thicknesses.astype(np.float64), layer_order.astype(np.int32)
 
-    def callback_func1(self, x, f, context):
+    def callback(self, x, f, stop_flag):
         """
         Function that is called after each optimization step to impose further
-        break conditions for the non trivial optimization methods.
-        In the case of dual annealing it is only called if the optimum is
-        updated and not after each iteration.
+        break conditions.
         """
-        # Save the optimized values and the merit to file every 100 iterations
-        # if self.iteration_no > self.callback_call * 100:
-        optimized_values = []
-        optimized_values.append("Iteration no.: " + str(self.iteration_no))
-        optimized_values.append("Optimized merit value: " + str(f) + "\n")
-        optimized_values.append("Optimized features: " + str(x) + "\n")
-        with open("optimized_values_intermediate.csv", "w") as the_file:
-            the_file.write("\n".join(optimized_values))
+
+        # Save the current best optimisation values to a file
+        if f < self.initial_merit:
+
+            if np.any(self.layer_switch_allowed) or self.data_order["add_layers"]:
+                current_structure_indices = self.allowed_permutations[
+                    self.clamp(x[-1], 0, len(self.allowed_permutations) - 1)
+                ]
+                current_structure_materials = []
+                current_structure_thicknesses = []
+                for idx, el in enumerate(current_structure_indices):
+                    current_structure_materials.append(
+                        self.data_order["structure_materials"][el]
+                    )
+                    current_structure_thicknesses.append(x[idx])
+                temp_json = self.data_order.copy()
+                temp_json["structure_materials"] = current_structure_materials
+                temp_json["structure_thicknesses"] = current_structure_thicknesses
+
+                if self.data_order["add_layers"]:
+                    temp_json["add_layers"] = False
+
+            else:
+                current_structure_materials = list(
+                    self.data_order["structure_materials"]
+                )
+                current_structure_thicknesses = list(x)
+                temp_json = self.data_order.copy()
+                temp_json["structure_thicknesses"] = current_structure_thicknesses
+
+            with open("current_structure.json", "w") as file:
+                print(temp_json)
+                json.dump(temp_json, file)
+
+            self.log_func("New Optimum found. Saving to file.")
+            self.log_design_func(True)
 
         self.callback_call += 1
 
-        if np.any(self.layer_switch_allowed) or self.data_order["add_layers"]:
-            current_structure_indices = self.allowed_permutations[
-                self.clamp(x[-1], 0, len(self.allowed_permutations) - 1)
-            ]
-            current_structure_materials = []
-            current_structure_thicknesses = []
-            for idx, el in enumerate(current_structure_indices):
-                current_structure_materials.append(
-                    self.data_order["structure_materials"][el]
-                )
-                current_structure_thicknesses.append(x[idx])
-            temp_json = self.data_order.copy()
-            temp_json["structure_materials"] = current_structure_materials
-            temp_json["structure_thicknesses"] = current_structure_thicknesses
-
-            if self.data_order:
-                temp_json["add_layers"] = False
-
-        else:
-            current_structure_materials = list(self.data_order["structure_materials"])
-            current_structure_thicknesses = list(x)
-            temp_json = self.data_order.copy()
-            temp_json["structure_thicknesses"] = current_structure_thicknesses
-
-        with open("current_structure.json", "w") as file:
-            print(temp_json)
-            json.dump(temp_json, file)
-
-        print("Optimum values saved!")
+        self.log_func(
+            f"merit | call #{str(self.iteration_no)} : {round(f / self.initial_merit, 9)} {round(f, 2)}"
+        )
 
         # If the merit function is close to zero (within the tolerance), stop
         # the optimization (It probably makes sense here to assume a lower
         # tolerance than for the minimize but this has to be adjusted
         # empirically).
-        if math.isclose(f, 0, abs_tol=1e-5):
+        # If the stop flag is true, the optimization is stopped.
+
+        # self.log_func(f"Stop flag: {self.stop_flag()}")
+        if self.stop_flag() or math.isclose(f, 0, abs_tol=1e-5):
             return True
-        # print("callback: ", x, f, context)
-
-    def callback_func2(self, intermediate_result):
-        """
-        Function that is called after each optimization step to impose further
-        break conditions for scipy.minimize.
-        """
-        # Save the optimized values and the merit to file every 100 iterations
-        if self.iteration_no >= self.callback_call * 100:
-            optimized_values = []
-            optimized_values.append("Iteration no.: " + str(self.iteration_no))
-            optimized_values.append(
-                "Optimized merit value: " + str(intermediate_result.fun) + "\n"
-            )
-            optimized_values.append(
-                "Optimized features: " + str(intermediate_result.x) + "\n"
-            )
-            with open("optimized_values_intermediate.csv", "w") as the_file:
-                the_file.write("\n".join(optimized_values))
-            self.callback_call += 1
-
-            print("Optimum values saved!")
-
-        # If the merit function is close to zero (within the tolerance), stop
-        # the optimization.
-        if math.isclose(intermediate_result.fun, 0, abs_tol=1e-9):
-            print("Optimization finished because merit reached threshold.")
-            raise StopIteration
-        # print("callback: ", intermediate_result.fun)
+        else:
+            return False
 
     def merit_function(self, features):
         """
@@ -358,15 +348,6 @@ class OptimModule:
 
         for i in range(0, np.size(self.target_value)):
 
-            # thicknesses = features[: len(features) / 2].astype(np.float64)
-            # layer_positions = features[len(features) / 2 :].astype(np.int32)
-            #
-            # self.lib.change_material_order(
-            # self.my_filter, layer_positions, int(np.size(features) / 2)
-            # )
-            # self.lib.change_material_thickness(
-            # self.my_filter, thicknesses, int(np.size(features) / 2)
-            # )
             if np.any(self.thickness_opt_allowed):
                 self.lib.change_material_thickness(
                     self.my_filter, thicknesses, int(np.size(thicknesses))
@@ -444,16 +425,16 @@ class OptimModule:
             if self.initial_merit == 0:
                 self.initial_merit = merit
 
-            print(
-                "merit | call #" + str(self.iteration_no) + ": ",
-                round(merit / self.initial_merit, 9),
-                round(merit, 2),
-            )
+            ## callback function
+            if self.callback(features, merit, False):
+                raise Exception("Optimization stopped.")
+
+            # print(
+            #     "merit | call #" + str(self.iteration_no) + ": ",
+            #     round(merit / self.initial_merit, 9),
+            #     round(merit, 2),
+            # )
             self.iteration_no += 1
-            # print("thicknesses: ", thicknesses)
-            # print("layer_order: ", layer_order)
-            # print("merit: ", merit)
-            # print("thicknesses: ", features)
 
             return merit / self.initial_merit
 
@@ -533,7 +514,10 @@ class OptimModule:
 
         return test_pass
 
-    def perform_optimisation(self, optimisation_type, save_optimized_to_file=False):
+    def perform_optimisation(
+        self, optimisation_type, save_optimized_to_file=False, stop_flag=None
+    ):
+        self.stop_flag = stop_flag
         start_time = time.time()
 
         x_initial = []
@@ -575,7 +559,6 @@ class OptimModule:
             ret = dual_annealing(
                 self.merit_function,
                 bounds=bounds,
-                callback=self.callback_func1,
             )
         elif optimisation_type == "differential_evolution":
             ret = differential_evolution(
@@ -595,7 +578,6 @@ class OptimModule:
                     "method": "Nelder-Mead",
                     "callback": self.callback_func2,
                 },
-                callback=self.callback_func1,
             )
         # elif optimisation_type == "direct":
         # ret = direct(
@@ -633,7 +615,6 @@ class OptimModule:
                 # the below values for xatol and fatol were found to prevent the function
                 # from overoptimising
                 options={"xatol": 1e-1, "fatol": 1e-1},
-                callback=self.callback_func2,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(

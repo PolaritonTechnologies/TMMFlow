@@ -13,13 +13,6 @@
     <header>
         <h1>PolaritonTechnologies - Transfer Matrix Method (TMM) Optimization</h1>
     </header>
-    <!-- <nav>
-        <ul>
-            <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ simulation }}">Simulate</a></li>
-            <li><a href="{{ optimization }}">Optimize</a></li>
-        </ul>
-    </nav> -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand" href="#">PolaritonTechnologies</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
@@ -37,25 +30,7 @@
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
                     <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
                 </li>
-                <!-- Dropdown
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Dropdown
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="#">Action</a>
-                        <a class="dropdown-item" href="#">Another action</a>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="#">Something else here</a>
-                    </div>
-                </li> -->
             </ul>
-            <!-- Search form -->
-            <!-- <form class="form-inline ml-auto">
-                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-            </form> -->
         </div>
     </nav>
     <main>
@@ -66,25 +41,127 @@
                     <option value="minimize">Nelder-Mead</option>
                     <option value="dual_annealing">Dual annealing</option>
                     <option value="basinhopping">Basin Hopping</option>
-                    <!-- Add more options as needed -->
                 </select>
             </div>
-            <div class="row">
-                <div class="col">
-                    <button type="submit" class="btn btn-primary">Start Optimization</button>
-                </div>
         </form>
-        <div class="col">
-            <form action="{{ url_for('stop_optimization') }}" method="post">
-                <button type="submit" class="btn btn-danger">Stop Optimization</button>
-            </form>
-        </div>
+        <div class="container-fluid">
+            <div class="row mb-3">
+                <div class="col-3">
+                    <form action="{{ url_for('start_optimization') }}" method="post" class="w-100">
+                        <button type="submit" class="btn btn-primary w-100" id="startOptimization" {{ 'disabled' if optimization_running }}>Start Optimization</button>
+                        <input type="hidden" id="hiddenOptimizationMethod" name="optimizationMethod">
+                    </form>
+                </div>
+                <div class="col-3">
+                    <form action="{{ url_for('stop_optimization') }}" method="post" class="w-100">
+                        <button type="submit" class="btn btn-danger w-100" id="stopOptimization" {{ 'disabled' if not optimization_running }}>Stop Optimization</button>
+                    </form>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div id="logPanel" style="height: 50vh; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <section class="row">
+                        <div class="col-3 d-flex justify-content-center align-items-center">
+                            <div class="container">
+                                {% if num_boxes and colors is defined %}
+                                {% for _ in range(num_boxes) %}
+                                <div class="box"
+                                    style="background-color: {{ colors[loop.index0 % colors|length] }}; height: {{ heights[loop.index0 % heights|length] }}px;">
+                                </div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-9">
+                            <div id="legend">
+                                {% if num_legend_items and legend_colors is defined %}
+                                {% for i in range(num_legend_items) %}
+                                <div class="legend-item row d-flex align-items-center justify-content-start">
+                                    <div class="box"
+                                        style="background-color: {{ legend_colors[i] }}; height: 20px; margin-right: 10px; width: 5em;">
+                                    </div>
+                                    <span>{{ unique_materials[i] }}</span>
+                                </div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
         </div>
     </main>
     <footer>
         <p>© 2024 PolaritonTechnologies</p>
     </footer>
-    </footer>
 </body>
+<script>
+    document.getElementById('startOptimization').addEventListener('click', function() {
+    // Get the selected optimization method
+    var optimizationMethod = document.getElementById('optimizationMethod').value;
+
+    // Set the value of the hidden input field
+    document.getElementById('hiddenOptimizationMethod').value = optimizationMethod;
+    });
+    function updateLogPanel() {
+        fetch('{{ url_for("get_messages") }}')
+            .then(response => response.json())
+            .then(messages => {
+                var logPanel = document.getElementById('logPanel');
+                messages.forEach(message => {
+                    var newLogMessage = document.createElement('p');
+                    newLogMessage.textContent = message;
+                    logPanel.appendChild(newLogMessage);
+                });
+                logPanel.scrollTop = logPanel.scrollHeight;
+            });
+    }
+    function updateDesign() {
+    fetch('{{ url_for("get_design_data") }}')
+        .then(response => response.json())
+        .then(data => {
+            if (Object.keys(data).length === 0) {
+                // No new design data
+                return;
+            }
+            var container = document.querySelector('.container');
+            container.innerHTML = '';
+            for (var i = 0; i < data.num_boxes; i++) {
+                var box = document.createElement('div');
+                box.className = 'box';
+                box.style.backgroundColor = data.colors[i % data.colors.length];
+                box.style.height = data.heights[i % data.heights.length] + 'px';
+                container.appendChild(box);
+            }
+
+            var legend = document.getElementById('legend');
+            legend.innerHTML = '';
+            for (var i = 0; i < data.num_legend_items; i++) {
+                var legendItem = document.createElement('div');
+                legendItem.className = 'legend-item row d-flex align-items-center justify-content-start';
+
+                var box = document.createElement('div');
+                box.className = 'box';
+                box.style.backgroundColor = data.legend_colors[i];
+                box.style.height = '20px';
+                box.style.marginRight = '10px';
+                box.style.width = '5em';
+                legendItem.appendChild(box);
+
+                var span = document.createElement('span');
+                span.textContent = data.unique_materials[i];
+                legendItem.appendChild(span);
+
+                legend.appendChild(legendItem);
+            }
+        });
+    }
+    setInterval(updateDesign, 5000);
+    setInterval(updateLogPanel, 1000);
+</script>
 
 </html>
