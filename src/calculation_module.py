@@ -5,15 +5,19 @@ import math
 import time
 
 
+def ignore(msg=None):
+    pass
+
+
 class CalculationModule:
     def __init__(
         self,
         my_filter,
         lib,
-        plot_queue,
-        plot_done_queue,
-        log_plot=print,
-        log_plot_done=print,
+        plot_queue=None,
+        plot_done_queue=None,
+        log_plot=ignore,
+        log_plot_done=ignore,
         web=True,
     ):
         self.my_filter = my_filter
@@ -36,30 +40,28 @@ class CalculationModule:
     ):
 
         initial_time = time.time()
-        stored_reflectivity = pd.DataFrame(
-            columns=polar_angles.astype("U"), index=wavelength
-        )
+        stored_value = pd.DataFrame(columns=polar_angles.astype("U"), index=wavelength)
         for phi in azim_angles:
             for theta in polar_angles:
                 print("Polar angle: ", theta, "Azimuthal angle: ", phi)
-                for wavelength in stored_reflectivity.index:
-                    stored_reflectivity.loc[
-                        stored_reflectivity.index == wavelength, str(theta)
-                    ] = self.lib.calculate_reflection_transmission_absorption(
-                        self.my_filter,
-                        target_type.encode("utf-8"),
-                        polarization.encode("utf-8"),
-                        wavelength,
-                        theta,
-                        phi,
+                for wavelength in stored_value.index:
+                    stored_value.loc[stored_value.index == wavelength, str(theta)] = (
+                        self.lib.calculate_reflection_transmission_absorption(
+                            self.my_filter,
+                            target_type.encode("utf-8"),
+                            polarization.encode("utf-8"),
+                            wavelength,
+                            theta,
+                            phi,
+                        )
                     )
-                self.plot_queue.put(
+                self.log_plot(
                     {
                         "intensity": np.nan_to_num(
-                            stored_reflectivity.to_numpy(float)
+                            stored_value.to_numpy(float)
                         ).tolist(),
-                        "wavelength": stored_reflectivity.index.astype(float).tolist(),
-                        "angles": stored_reflectivity.columns.astype(float).tolist(),
+                        "wavelength": stored_value.index.astype(float).tolist(),
+                        "angles": stored_value.columns.astype(float).tolist(),
                         "azimuthal_angle": phi,
                     }
                 )
@@ -72,12 +74,12 @@ class CalculationModule:
             # Plotting
             plt.close()
             X, Y = np.meshgrid(
-                stored_reflectivity.columns.astype(float),
-                stored_reflectivity.index.astype(float),
+                stored_value.columns.astype(float),
+                stored_value.index.astype(float),
             )
             # Prepare data for 3D plot where each column contains the same data for
             # the different angles
-            Z = stored_reflectivity.to_numpy(float)
+            Z = stored_value.to_numpy(float)
             plt.pcolormesh(X, Y, Z, shading="auto")
             # Add a colorbar
             plt.colorbar(label="Intensity (a.u.)")
@@ -96,14 +98,10 @@ class CalculationModule:
                 header_lines.append("Here we can add some meta data to the header \n")
 
                 # Save header lines indicating what the simulation represents
-                with open("reflectivity.csv", "w") as the_file:
+                with open("value.csv", "w") as the_file:
                     the_file.write("\n".join(header_lines))
 
                 # Save actual data by appending
-                stored_reflectivity.to_csv(
-                    "reflectivity.csv", sep=",", header=True, mode="a"
-                )
-
-                print("Reflectivity data saved!")
+                stored_value.to_csv("value.csv", sep=",", header=True, mode="a")
 
             plt.show()

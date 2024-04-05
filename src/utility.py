@@ -83,7 +83,7 @@ def translate_order_for_cpp(optimisation_order_file):
             updated_optimisation_order["thickness_opt_allowed"].append(True)
             updated_optimisation_order["layer_switch_allowed"].append(True)
 
-    print(updated_optimisation_order)
+    # print(updated_optimisation_order)
 
     with open("temp_cpp_order.json", "w") as f:
         json.dump(updated_optimisation_order, f)

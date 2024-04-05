@@ -9,22 +9,22 @@ from utility import translate_order_for_cpp, create_filter
 
 #########################
 # Input parameters
-optimisation_order_file_python = "current_structure.json"
+optimisation_order_file_python = "demo_test.json"
 optimisation_order_file = translate_order_for_cpp(optimisation_order_file_python)
 my_filter, lib = create_filter(optimisation_order_file)
 
 #########################
 # Optimization
 print("running optimisation...")
-# optimization = OptimModule(optimisation_order_file, my_filter, lib)
-# features = optimization.perform_optimisation(
-#     "dual_annealing", save_optimized_to_file=True
-# )
+optimization = OptimModule(optimisation_order_file, my_filter, lib)
+features = optimization.perform_optimisation(
+    "minimize", save_optimized_to_file=True, stop_flag=lambda: False
+)
 #########################
 
 #########################
 # Plotting
-plotting = CalculationModule(my_filter, lib)
+plotting = CalculationModule(my_filter, lib, web=False)
 
 with open(optimisation_order_file) as f:
     plot_order = json.load(f)

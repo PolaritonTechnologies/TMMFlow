@@ -29,6 +29,11 @@ class OptimModule:
         log_design_func=print,
     ):
 
+        self.last_log_time = 0
+        self.optimum_merit = None
+        self.optimum_number = 0
+        self.optimum_iteration = None
+        self.last_optimum_number = 0
         self.lib = ctypes_lib
         self.my_filter = my_filter
         self.log_func = log_func
@@ -132,20 +137,17 @@ class OptimModule:
                 interval_wvl = [self.wavelength_entries[target_idx]]
                 weight_wvl = 1
 
-            # Check on the created intervals
-            print("intervals: ", interval_polar, interval_azim, interval_wvl)
-
             for polar_angle in interval_polar:
 
-                print("polar_angle: ", polar_angle)
+                # print("polar_angle: ", polar_angle)
 
                 for azim_angle in interval_azim:
 
-                    print("azim_angle: ", azim_angle)
+                    # print("azim_angle: ", azim_angle)
 
                     for wvl in interval_wvl:
 
-                        print("wavelength: ", wvl)
+                        # print("wavelength: ", wvl)
 
                         self.target_wavelength = np.append(self.target_wavelength, wvl)
 
@@ -198,7 +200,7 @@ class OptimModule:
                 np.where(self.layer_switch_allowed)[0],
             )
 
-            print(self.allowed_permutations)
+            # print(self.allowed_permutations)
 
     def compute_permutations(self, arr, movable_indices):
         """
@@ -263,9 +265,9 @@ class OptimModule:
                 self.clamp(features[-1], 0, len(self.allowed_permutations) - 1)
             ].astype(np.int32)
         else:
-            print(
-                "No optimization has been selected for the thicknesses or layer order."
-            )
+            # print(
+            # "No optimization has been selected for the thicknesses or layer order."
+            # )
             raise ValueError
         return thicknesses.astype(np.float64), layer_order.astype(np.int32)
 
@@ -274,9 +276,8 @@ class OptimModule:
         Function that is called after each optimization step to impose further
         break conditions.
         """
-
         # Save the current best optimisation values to a file
-        if f < self.initial_merit:
+        if f < self.optimum_merit:
 
             if np.any(self.layer_switch_allowed) or self.data_order["add_layers"]:
                 current_structure_indices = self.allowed_permutations[
@@ -304,18 +305,28 @@ class OptimModule:
                 temp_json = self.data_order.copy()
                 temp_json["structure_thicknesses"] = current_structure_thicknesses
 
-            with open("current_structure.json", "w") as file:
-                print(temp_json)
-                json.dump(temp_json, file)
+            self.optimum_merit = f
+            self.optimum_iteration = self.iteration_no
+            self.optimum_number += 1
 
-            self.log_func("New Optimum found. Saving to file.")
-            self.log_design_func()
+            with open("current_structure.json", "w") as file:
+                json.dump(temp_json, file)
 
         self.callback_call += 1
 
-        self.log_func(
-            f"merit | call #{str(self.iteration_no)} : {round(f / self.initial_merit, 9)} {round(f, 2)}"
-        )
+        current_time = time.time()
+        # Number of seconds to wait for next logging is defined here at 2 seconds
+        if current_time - self.last_log_time >= 2:
+            self.log_func(
+                f"merit | call #{str(self.iteration_no)} : {round(f / self.initial_merit, 9)} {round(f, 2)}"
+            )
+            self.last_log_time = current_time
+            if self.last_optimum_number < self.optimum_number:
+                self.log_func(
+                    f"New optimum on call #{self.optimum_iteration} : {round(self.optimum_merit / self.initial_merit, 9)} {round(self.optimum_merit, 2)}"
+                )
+                self.log_design_func()
+                self.last_optimum_number = self.optimum_number
 
         # If the merit function is close to zero (within the tolerance), stop
         # the optimization (It probably makes sense here to assume a lower
@@ -424,6 +435,7 @@ class OptimModule:
             # Set initial merit and normalize to it
             if self.initial_merit == 0:
                 self.initial_merit = merit
+                self.optimum_merit = merit
 
             ## callback function
             if self.callback(features, merit, False):
