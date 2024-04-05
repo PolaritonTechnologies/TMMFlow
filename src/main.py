@@ -23,6 +23,11 @@ features = optimization.perform_optimisation(
 #########################
 
 #########################
+
+# calculation_order_file_python = "current_structure.json"
+# calculation_order_file = translate_order_for_cpp(calculation_order_file_python)
+# my_filter, lib = create_filter(calculation_order_file)
+
 # Plotting
 plotting = CalculationModule(my_filter, lib, web=False)
 
@@ -50,8 +55,8 @@ plotting.calculate_ar_data(
     wavelength,
     polar_angles,
     azimuthal_angles,
-    "r",
-    "s",
+    plot_order["calculation_type"],
+    plot_order["polarization"],
     save_figure=True,
     save_data=True,
 )

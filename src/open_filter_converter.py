@@ -191,6 +191,11 @@ Filter:
         "r": "ReflectionSpectrum",
         "a": "AbsorptionSpectrum",
     }
+    dictionary_type_single = {
+        "t": "Transmission",
+        "r": "Reflection",
+        "a": "Absorption",
+    }
     dictionary_condition = {
         "=": "",
         ">": "Inequality: larger",
@@ -212,17 +217,32 @@ Filter:
         {dictionary_input['targets_wavelengths'][i][0]}\t{dictionary_input['targets_value'][i]}\t{dictionary_input['targets_tolerance'][i]}
         {dictionary_input['targets_wavelengths'][i][1]}\t{dictionary_input['targets_value'][i]}\t{dictionary_input['targets_tolerance'][i]}
     End"""
-        if dictionary_input["targets_condition"][i] != "":
-            target_block = (
-                target_block
-                + f"""
-    {dictionary_condition[dictionary_input['targets_condition'][i]]}
-End
-"""
-            )
+            if dictionary_input["targets_condition"][i] != "":
+                target_block = (
+                    target_block
+                    + f"""
+        {dictionary_condition[dictionary_input['targets_condition'][i]]}
+    End
+    """
+                )
         else:
-            target_block = target_block.rsplit("\n", 1)[0] + "End"
+            target_block = f"""Target:
+    Kind: {dictionary_type_single[dictionary_input['targets_type'][i]]}
+    Angle: {dictionary_input['targets_polar_angle'][i]}
+    Polarization: {dictionary_polarization[dictionary_input['targets_polarization'][i]]}
+    Direction: Normal
+    Wavelength: {dictionary_input['targets_wavelengths'][i]}
+    Value: {dictionary_input['targets_value'][i]}
+    Tolerance: {dictionary_input['targets_tolerance'][i]}
+End"""
 
+            if dictionary_input["targets_condition"][i] != "":
+                target_block = (
+                    target_block
+                    + f"""Inequality: {dictionary_condition[dictionary_input['targets_condition'][i]]}
+    End
+    """
+                )
         to_export = to_export + target_block
 
     # Write to text file
@@ -242,4 +262,5 @@ if True:
     input_file = "current_structure.json"
     with open(input_file, "r") as input_file:
         input_dic = json.load(input_file)
+        print(input_dic)
     print(export_to_open_filter(input_dic))

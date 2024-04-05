@@ -268,8 +268,8 @@ def calculate_and_plot():
         wavelength,
         polar_angles,
         azimuthal_angles,
-        "r",
-        "s",
+        plot_order["calculation_type"],
+        plot_order["polarization"],
         save_figure=True,
         save_data=True,
     )

@@ -89,6 +89,7 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
     double transmissivity_s = m_t_ps.cwiseAbs2()(1, 1);
     double reflectivity_p = m_r_ps.cwiseAbs2()(0, 0);
     double transmissivity_p = m_t_ps.cwiseAbs2()(0, 0);
+
     double absorption_s = 1 - reflectivity_s - transmissivity_s;
     double absorption_p = 1 - reflectivity_p - transmissivity_p;
 

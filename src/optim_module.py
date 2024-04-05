@@ -17,6 +17,10 @@ from scipy.optimize import (
 from queue import Queue
 
 
+def ignore(msg=None):
+    pass
+
+
 class OptimModule:
     def __init__(
         self,
@@ -26,7 +30,7 @@ class OptimModule:
         message_queue=None,
         update_queue=None,
         log_func=print,
-        log_design_func=print,
+        log_design_func=ignore,
     ):
 
         self.last_log_time = 0
@@ -34,6 +38,7 @@ class OptimModule:
         self.optimum_number = 0
         self.optimum_iteration = None
         self.last_optimum_number = 0
+        self.first_zero = True
         self.lib = ctypes_lib
         self.my_filter = my_filter
         self.log_func = log_func
@@ -277,12 +282,12 @@ class OptimModule:
         break conditions.
         """
         # Save the current best optimisation values to a file
-        if f < self.optimum_merit:
+        if f < self.optimum_merit or f == 0:
 
             if np.any(self.layer_switch_allowed) or self.data_order["add_layers"]:
                 current_structure_indices = self.allowed_permutations[
                     self.clamp(x[-1], 0, len(self.allowed_permutations) - 1)
-                ]
+                ].astype(np.int32)
                 current_structure_materials = []
                 current_structure_thicknesses = []
                 for idx, el in enumerate(current_structure_indices):
@@ -291,8 +296,8 @@ class OptimModule:
                     )
                     current_structure_thicknesses.append(x[idx])
                 temp_json = self.data_order.copy()
-                temp_json["structure_materials"] = current_structure_materials
-                temp_json["structure_thicknesses"] = current_structure_thicknesses
+                temp_json["structure_materials"] = current_structure_materials[::-1]
+                temp_json["structure_thicknesses"] = current_structure_thicknesses[::-1]
 
                 if self.data_order["add_layers"]:
                     temp_json["add_layers"] = False
@@ -334,8 +339,7 @@ class OptimModule:
         # empirically).
         # If the stop flag is true, the optimization is stopped.
 
-        # self.log_func(f"Stop flag: {self.stop_flag()}")
-        if self.stop_flag() or math.isclose(f, 0, abs_tol=1e-5):
+        if self.stop_flag() or math.isclose(f, 0, abs_tol=1e-6):
             return True
         else:
             return False
@@ -346,8 +350,6 @@ class OptimModule:
         results
         """
         merit = 0
-        # print("Layer order no.: " + str(features))
-
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
             features
         )
@@ -391,18 +393,6 @@ class OptimModule:
             if self.target_condition[i] == ">" and target_calculated < float(
                 self.target_value[i]
             ):
-                # print(
-                #     self.target_wavelength[i],
-                #     "> : ",
-                #     target_calculated,
-                #     self.target_value[i],
-                # )
-                # print(
-                #     self.target_wavelength[i],
-                #     "> : ",
-                #     target_calculated,
-                #     float(self.target_value[i]),
-                # )
 
                 merit += (
                     (target_calculated - self.target_value[i])
@@ -412,18 +402,6 @@ class OptimModule:
             if self.target_condition[i] == "<" and target_calculated > float(
                 self.target_value[i]
             ):
-                # print(
-                #     self.target_wavelength[i],
-                #     "< : ",
-                #     target_calculated,
-                #     float(self.target_value[i]),
-                # )
-                # print(
-                #     self.target_wavelength[i],
-                #     "< : ",
-                #     target_calculated,
-                #     float(self.target_value[i]),
-                # )
 
                 merit += (
                     (target_calculated - self.target_value[i])
@@ -441,18 +419,22 @@ class OptimModule:
             if self.callback(features, merit, False):
                 raise Exception("Optimization stopped.")
 
-            # print(
-            #     "merit | call #" + str(self.iteration_no) + ": ",
-            #     round(merit / self.initial_merit, 9),
-            #     round(merit, 2),
-            # )
             self.iteration_no += 1
 
             return merit / self.initial_merit
 
         else:
 
-            return merit
+            if self.first_zero:
+                self.first_zero = False
+                self.log_func("Optimization has reached merit 0")
+                self.callback(features, merit, False)
+
+            # Callback once to save the obtained features
+            if self.iteration_no == 0:
+                raise Exception("Initial features are optimal.")
+
+            return 0
 
     # check targets is used in unit testing
     def check_targets(self, thicknesses):
@@ -462,16 +444,6 @@ class OptimModule:
         test_pass = True
 
         for i in range(0, np.size(self.target_value)):
-
-            # print("target_wavelength:", self.target_wavelength[i])
-            # print("target_weights:", self.target_weights[i])
-            # print("target_value:", self.target_value[i])
-            # print("target_polarization:", self.target_polarization[i])
-            # print("target_condition:", self.target_condition[i])
-            # print("target_tolerance:", self.target_tolerance[i])
-            # print("target_type:", self.target_type[i])
-            # print("target_polar_angle:", self.target_polar_angle[i])
-            # print("target_azimuthal_angle:", self.target_azimuthal_angle[i])
 
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,
@@ -551,7 +523,7 @@ class OptimModule:
         if np.any(self.layer_switch_allowed):
             # If layer switching is allowed add the additional parameter that
             # decides the layer positions
-            x_initial.append(1)
+            x_initial.append(0)
             bounds.append(
                 (
                     -0.5,
@@ -588,17 +560,9 @@ class OptimModule:
                 x0=x_initial,
                 minimizer_kwargs={
                     "method": "Nelder-Mead",
-                    "callback": self.callback_func2,
                 },
             )
-        # elif optimisation_type == "direct":
-        # ret = direct(
-        # self.merit_function,
-        # bounds=bounds,
-        # locally_biased=False,
-        # options={"gtol": gtol},
-        # maxiter = 50000,
-        # )
+
         elif optimisation_type == "brute":
             # Brute force optimization: only sensible for a low number of
             # features (e.g., 3). Depending on Ns, the number of points to
@@ -623,7 +587,6 @@ class OptimModule:
                 x0=x_initial,
                 bounds=bounds,
                 method="Nelder-Mead",
-                # tol=1e-1,
                 # the below values for xatol and fatol were found to prevent the function
                 # from overoptimising
                 options={"xatol": 1e-1, "fatol": 1e-1},
@@ -644,10 +607,10 @@ class OptimModule:
         self.iteration_no = 0
         self.callback_call = 0
 
-        print("Optimization time: ", time.time() - start_time, "s")
-        print("Optimized features: ", ret.x)
-        print("Optimized merit value: ", ret.fun)
-        print("Number of function evaluations: ", ret.nfev)
+        self.log_func("Optimization time: ", time.time() - start_time, "s")
+        self.log_func("Optimized features: ", ret.x)
+        self.log_func("Optimized merit value: ", ret.fun)
+        self.log_func("Number of function evaluations: ", ret.nfev)
 
         if save_optimized_to_file:
             optimized_values = []

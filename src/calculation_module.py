@@ -55,6 +55,7 @@ class CalculationModule:
                             phi,
                         )
                     )
+
                 self.log_plot(
                     {
                         "intensity": np.nan_to_num(
@@ -68,7 +69,7 @@ class CalculationModule:
 
         self.log_plot_done()
 
-        if not self.web:
+        if not self.web or True:
             # Print time elapsed for the generation of the reflectivity matrix
             print(time.time() - initial_time)
             # Plotting

@@ -1,8 +1,8 @@
 {
     "calculation_type": "t",
-    "polarAngleMin": 0.0,
-    "polarAngleMax": 80.0,
-    "polarAngleStep": 5.0,
+    "polarAngleMin": 40.0,
+    "polarAngleMax": 50.0,
+    "polarAngleStep": 1.0,
     "azimAngleMin": 0.0,
     "azimAngleMax": 0.0,
     "azimAngleStep": 1.0,
@@ -18,7 +18,7 @@
             65
         ]
     ],
-    "polarization": "",
+    "polarization": "s",
     "thickness_opt_allowed": [
         true
     ],
@@ -38,7 +38,7 @@
     "targets_condition": [
         "<",
         ">",
-        ">"
+        "<"
     ],
     "targets_value": [
         0.01,
