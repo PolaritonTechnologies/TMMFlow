@@ -1,14 +1,28 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pylab as plt
-
+import math
 import time
 
 
 class CalculationModule:
-    def __init__(self, my_filter, lib):
+    def __init__(
+        self,
+        my_filter,
+        lib,
+        plot_queue,
+        plot_done_queue,
+        log_plot=print,
+        log_plot_done=print,
+        web=True,
+    ):
         self.my_filter = my_filter
         self.lib = lib
+        self.plot_queue = plot_queue
+        self.plot_done_queue = plot_done_queue
+        self.log_plot = log_plot
+        self.log_plot_done = log_plot_done
+        self.web = web
 
     def calculate_ar_data(
         self,
@@ -39,6 +53,20 @@ class CalculationModule:
                         theta,
                         phi,
                     )
+                self.plot_queue.put(
+                    {
+                        "intensity": np.nan_to_num(
+                            stored_reflectivity.to_numpy(float)
+                        ).tolist(),
+                        "wavelength": stored_reflectivity.index.astype(float).tolist(),
+                        "angles": stored_reflectivity.columns.astype(float).tolist(),
+                        "azimuthal_angle": phi,
+                    }
+                )
+
+        self.log_plot_done()
+
+        if not self.web:
             # Print time elapsed for the generation of the reflectivity matrix
             print(time.time() - initial_time)
             # Plotting
@@ -70,9 +98,11 @@ class CalculationModule:
                 # Save header lines indicating what the simulation represents
                 with open("reflectivity.csv", "w") as the_file:
                     the_file.write("\n".join(header_lines))
-                
+
                 # Save actual data by appending
-                stored_reflectivity.to_csv("reflectivity.csv", sep = ",", header = True, mode = "a")
+                stored_reflectivity.to_csv(
+                    "reflectivity.csv", sep=",", header=True, mode="a"
+                )
 
                 print("Reflectivity data saved!")
 

@@ -31,20 +31,35 @@ from queue import Queue
 # Create global queues
 message_queue = Queue()
 design_update_queue = Queue()
+plot_queue = Queue()
+plot_done_queue = Queue()
 
 # Create a lock for the queue
+message_queue_lock = threading.Lock()
 design_update_queue_lock = threading.Lock()
+plot_queue_lock = threading.Lock()
+plot_done_queue_lock = threading.Lock()
 
 
-def queue_update(msg):
+def queue_update():
+    print("Queueing design update...")
     with design_update_queue_lock:
-
-        if not design_update_queue.empty():
-            design_update_queue.put(1)
+        design_update_queue.put(1)
 
 
 def queue_msg(msg):
-    message_queue.put(msg)
+    with message_queue_lock:
+        message_queue.put(msg)
+
+
+def queue_plot(plot_dic):
+    with plot_queue_lock:
+        plot_queue.put(plot_dic)
+
+
+def queue_plot_done():
+    with plot_done_queue_lock:
+        plot_done_queue.put(1)
 
 
 app = Flask(__name__)
@@ -58,6 +73,7 @@ num_boxes = None
 colors = None
 heights = None
 unique_materials = None
+selected_file = None
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -66,10 +82,12 @@ def home():
     global colors
     global heights
     global unique_materials
+    global selected_file
 
     num_boxes, colors, heights, num_legend_items, unique_materials, legend_colors = (
         upload_file(default_file)
     )
+    selected_file = default_file
     return render_template(
         "home.html",
         num_boxes=num_boxes,
@@ -86,11 +104,43 @@ def home():
 
 @app.route("/simulate", methods=["GET", "POST"])
 def simulate():
-    return render_template("simulate.html")
+
+    with open(optimisation_order_file) as f:
+        plot_order = json.load(f)
+
+    wavelength = np.arange(
+        plot_order["wavelengthMin"],
+        plot_order["wavelengthMax"] + 1,
+        plot_order["wavelengthStep"],
+    )
+    polar_angles = np.arange(
+        plot_order["polarAngleMin"],
+        plot_order["polarAngleMax"] + 1,
+        plot_order["polarAngleStep"],
+    )
+    azimuthal_angles = np.arange(
+        plot_order["azimAngleMin"],
+        plot_order["azimAngleMax"] + 1,
+        plot_order["azimAngleStep"],
+    )
+    # Send the image URL back to the client
+    return render_template(
+        "simulate.html",
+        intensity=[
+            [0 for _ in range(len(polar_angles))] for _ in range(len(wavelength))
+        ],
+        wavelength=list(wavelength),
+        angles=list(polar_angles),
+        azimuthal_angle=0,
+    )
 
 
 @app.route("/optimize", methods=["GET", "POST"])
 def optimize():
+    global selected_file
+    num_boxes, colors, heights, num_legend_items, unique_materials, legend_colors = (
+        upload_file(selected_file)
+    )
     return render_template(
         "optimize.html",
         num_boxes=num_boxes,
@@ -104,6 +154,7 @@ def optimize():
 
 @app.route("/upload_file", methods=["POST"])
 def upload_file(defaultname=None):
+    global selected_file
     if defaultname == None:
         if "file" not in request.files:
             flash("No file part")
@@ -118,6 +169,7 @@ def upload_file(defaultname=None):
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
+        selected_file = filename
         data = json.load(file)
 
         # Save the data back to a JSON file so that it can be accessed by the C++ code
@@ -155,6 +207,8 @@ def upload_file(defaultname=None):
             * 400
         )
 
+        file.close()
+
         if defaultname is not None:
             return (
                 num_boxes,
@@ -181,8 +235,15 @@ def upload_file(defaultname=None):
 
 @app.route("/calculate_and_plot", methods=["POST"])
 def calculate_and_plot():
-    # Perform calculations here...
-    plotting = CalculationModule(my_filter, lib)
+
+    plotting = CalculationModule(
+        my_filter,
+        lib,
+        plot_queue,
+        plot_done_queue,
+        log_plot=queue_plot,
+        log_plot_done=queue_plot_done,
+    )
 
     with open(optimisation_order_file) as f:
         plot_order = json.load(f)
@@ -203,7 +264,6 @@ def calculate_and_plot():
         plot_order["azimAngleStep"],
     )
 
-    print("plotting results...")
     plotting.calculate_ar_data(
         wavelength,
         polar_angles,
@@ -214,8 +274,34 @@ def calculate_and_plot():
         save_data=True,
     )
 
-    # Send the image URL back to the client
-    return render_template("simulate.html", plot_url="plot.png")
+    return "", 204  # Return no content
+
+
+@app.route("/get_plot", methods=["GET"])
+def get_plot():
+    with plot_queue_lock:
+        if plot_queue.empty():
+            return jsonify({})
+        dict_plot = plot_queue.get()
+        print("Updating plot...")
+        return jsonify(
+            {
+                "intensity": dict_plot["intensity"],
+                "wavelength": dict_plot["wavelength"],
+                "angles": dict_plot["angles"],
+                "azimuthal_angle": dict_plot["azimuthal_angle"],
+            }
+        )
+
+
+@app.route("/get_plot_done", methods=["GET"])
+def get_plot_done():
+    with plot_done_queue_lock:
+        if plot_done_queue.empty():
+            return jsonify({})
+        plot_done_queue.get()
+        print("Plotting done.")
+        return jsonify({"done": True})
 
 
 @app.route("/get_messages", methods=["GET"])
@@ -231,24 +317,24 @@ def get_design_data():
     with design_update_queue_lock:
         if design_update_queue.empty():
             return jsonify({})
-        else:
-            design_update_queue.get()
-            (
-                num_boxes,
-                colors,
-                heights,
-                num_legend_items,
-                unique_materials,
-                legend_colors,
-            ) = upload_file("current_structure.json")
+        design_update_queue.get()
+        (
+            num_boxes,
+            colors,
+            heights,
+            num_legend_items,
+            unique_materials,
+            legend_colors,
+        ) = upload_file("current_structure.json")
+        queue_msg("Updating design...")
         return jsonify(
             {
                 "num_boxes": num_boxes,
-                "colors": colors,
-                "heights": heights,
+                "colors": list(colors),
+                "heights": list(heights),
                 "num_legend_items": len(unique_materials),
-                "unique_materials": unique_materials,
-                "legend_colors": colors,
+                "unique_materials": list(unique_materials),
+                "legend_colors": list(colors),
             }
         )
 
@@ -260,7 +346,8 @@ def start_optimization():
     stop_optimization = False
 
     # Get the value of optimizationMethod outside of the new thread
-    optimization_method = request.form.get("optimizationMethod")
+    data = request.get_json()
+    optimization_method = data.get("optimizationMethod")
     print("Optimization method: ", optimization_method)
 
     def run_optimization(optimization_method):
@@ -282,16 +369,7 @@ def start_optimization():
     # Run the optimization in a separate thread
     threading.Thread(target=run_optimization, args=(optimization_method,)).start()
 
-    return render_template(
-        "optimize.html",
-        num_boxes=num_boxes,
-        colors=colors,
-        heights=heights,
-        num_legend_items=len(unique_materials),
-        unique_materials=unique_materials,
-        legend_colors=colors,
-        optimization_running=True,
-    )
+    return "", 204  # Return no content
 
 
 @app.route("/stop_optimization", methods=["POST"])
@@ -299,16 +377,8 @@ def stop_optimization():
     queue_msg("Stopping optimization...")
     global stop_optimization
     stop_optimization = True
-    return render_template(
-        "optimize.html",
-        num_boxes=num_boxes,
-        colors=colors,
-        heights=heights,
-        num_legend_items=len(unique_materials),
-        unique_materials=unique_materials,
-        legend_colors=colors,
-        optimization_running=False,
-    )
+
+    return "", 204  # Return no content
 
 
 if __name__ == "__main__":

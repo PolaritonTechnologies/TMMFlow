@@ -13,13 +13,6 @@
     <header>
         <h1>PolaritonTechnologies - Transfer Matrix Method (TMM) Optimization</h1>
     </header>
-    <!-- <nav>
-        <ul>
-            <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ simulation }}">Simulate</a></li>
-            <li><a href="{{ optimization }}">Optimize</a></li>
-        </ul>
-    </nav> -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand" href="#">PolaritonTechnologies</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
@@ -37,40 +30,96 @@
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
                     <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
                 </li>
-                <!-- Dropdown
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Dropdown
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="#">Action</a>
-                        <a class="dropdown-item" href="#">Another action</a>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="#">Something else here</a>
-                    </div>
-                </li> -->
             </ul>
-            <!-- Search form -->
-            <!-- <form class="form-inline ml-auto">
-                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-            </form> -->
         </div>
     </nav>
     <main>
         <form action="{{ url_for('calculate_and_plot') }}" method="post">
-            <button type="submit" class="btn btn-primary">Calculate and Plot</button>
+            <button type="submit" id="calculateButton" class="btn btn-primary">Calculate and Plot</button>
         </form>
-        {% if plot_url %}
-        <img src="{{ plot_url }}" alt="Plot">
-        {% endif %}
-
+        <div id="myDiv"></div>
     </main>
     <footer>
         <p>© 2024 PolaritonTechnologies</p>
     </footer>
-    </footer>
 </body>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
 
+document.getElementById('calculateButton').addEventListener('click', function() {
+    this.disabled = true;
+    fetch('{{ url_for("calculate_and_plot") }}', {method: 'POST'})
+});
+
+var data = [{
+    z: {{ intensity | tojson | safe }},
+    x: {{ angles | tojson | safe }},
+    y: {{ wavelength | tojson | safe }},
+    type: 'heatmap',
+    colorscale: 'Viridis',
+    xmin: Math.min(...{{ angles | tojson | safe }}.flat()),  // minIntensity
+    xmax: Math.max(...{{ angles | tojson | safe }}.flat()),  // maxIntensity
+    ymin: Math.min(...{{ wavelength | tojson | safe }}.flat()),  // minIntensity
+    ymax: Math.max(...{{ wavelength | tojson | safe }}.flat()),  // maxIntensity
+    zmin: 0,  // minIntensity
+    zmax: 1,  // maxIntensity
+}];
+
+var layout = {
+    title: 'Azimuthal Angle: ' + {{ azimuthal_angle | tojson | safe }},
+    xaxis: {title: 'Angles (°)'},
+    yaxis: {title: 'Wavelength (nm)'},
+    coloraxis: {colorbar: {title: 'Intensity'}},
+    autosize: false,
+    width: window.innerWidth * 0.45,
+    height: window.innerHeight * 0.7,
+};
+
+Plotly.newPlot('myDiv', data, layout);
+
+function updatePlot() {
+    fetch('{{ url_for("get_plot") }}')
+        .then(response => response.json())
+        .then(data => {
+            if (Object.keys(data).length === 0) {
+                return;
+            }
+            console.log(data)
+            var xMin = Math.min(...data.angles);
+            var xMax = Math.max(...data.angles);
+            var yMin = Math.min(...data.wavelength);
+            var yMax = Math.max(...data.wavelength);
+            var zMin = Math.min(...data.intensity.flat());
+            var zMax = Math.max(...data.intensity.flat());
+
+            Plotly.react('myDiv', [{
+                z: data.intensity,
+                x: data.angles,
+                y: data.wavelength,
+                type: 'heatmap',
+                colorscale: 'Viridis',
+                zmin: zMin,
+                zmax: zMax,
+            }], {
+                title: 'Azimuthal Angle: ' + data.azimuthal_angle,
+                xaxis: {title: 'Angles', range: [xMin, xMax]},
+                yaxis: {title: 'Wavelength', range: [yMin, yMax]},
+                coloraxis: {colorbar: {title: 'Intensity'}},
+            });
+        });
+    }
+
+function checkPlotDone() {
+    fetch('{{ url_for("get_plot_done") }}')
+        .then(response => response.json())
+        .then(data => {
+            if (Object.keys(data).length !== 0) {
+                document.getElementById('calculateButton').disabled = false;
+            }
+        });
+}
+
+setInterval(checkPlotDone, 1000);
+setInterval(updatePlot, 1000);
+</script>
 </html>

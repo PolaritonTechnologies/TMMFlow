@@ -309,7 +309,7 @@ class OptimModule:
                 json.dump(temp_json, file)
 
             self.log_func("New Optimum found. Saving to file.")
-            self.log_design_func(True)
+            self.log_design_func()
 
         self.callback_call += 1
 

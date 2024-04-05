@@ -47,13 +47,13 @@
         <div class="container-fluid">
             <div class="row mb-3">
                 <div class="col-3">
-                    <form action="{{ url_for('start_optimization') }}" method="post" class="w-100">
+                    <form method="post" class="w-100">
                         <button type="submit" class="btn btn-primary w-100" id="startOptimization" {{ 'disabled' if optimization_running }}>Start Optimization</button>
                         <input type="hidden" id="hiddenOptimizationMethod" name="optimizationMethod">
                     </form>
                 </div>
                 <div class="col-3">
-                    <form action="{{ url_for('stop_optimization') }}" method="post" class="w-100">
+                    <form method="post" class="w-100">
                         <button type="submit" class="btn btn-danger w-100" id="stopOptimization" {{ 'disabled' if not optimization_running }}>Stop Optimization</button>
                     </form>
                 </div>
@@ -64,9 +64,9 @@
                     </div>
                 </div>
                 <div class="col-6">
-                    <section class="row">
-                        <div class="col-3 d-flex justify-content-center align-items-center">
-                            <div class="container">
+                    <div class="row">
+                        <div class="col-6 d-flex justify-content-center align-items-center">
+                            <div class="container" id="design_container">
                                 {% if num_boxes and colors is defined %}
                                 {% for _ in range(num_boxes) %}
                                 <div class="box"
@@ -76,21 +76,16 @@
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="col-9">
+                        <div class="col-6">
                             <div id="legend">
                                 {% if num_legend_items and legend_colors is defined %}
                                 {% for i in range(num_legend_items) %}
-                                <div class="legend-item row d-flex align-items-center justify-content-start">
-                                    <div class="box"
-                                        style="background-color: {{ legend_colors[i] }}; height: 20px; margin-right: 10px; width: 5em;">
-                                    </div>
-                                    <span>{{ unique_materials[i] }}</span>
-                                </div>
+                                <!-- legend items -->
                                 {% endfor %}
                                 {% endif %}
                             </div>
                         </div>
-                    </section>
+                    </div>
                 </div>
             </div>
         </div>
@@ -101,12 +96,39 @@
 </body>
 <script>
     document.getElementById('startOptimization').addEventListener('click', function() {
-    // Get the selected optimization method
-    var optimizationMethod = document.getElementById('optimizationMethod').value;
-
-    // Set the value of the hidden input field
-    document.getElementById('hiddenOptimizationMethod').value = optimizationMethod;
+        // Prevent the form from being submitted
+        event.preventDefault();
+        var optimizationMethod = document.getElementById('optimizationMethod').value;
+        document.getElementById('hiddenOptimizationMethod').value = optimizationMethod;
+        fetch('{{ url_for("start_optimization") }}', {
+            method: 'POST',
+            body: JSON.stringify({
+                optimizationMethod: optimizationMethod
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(response => {
+            if (response.ok) {
+                this.disabled = true;
+                document.getElementById('stopOptimization').disabled = false;
+            }
+        });
     });
+
+    document.getElementById('stopOptimization').addEventListener('click', function() {
+        // Prevent the form from being submitted
+        event.preventDefault();
+        fetch('{{ url_for("stop_optimization") }}', {
+            method: 'POST',
+        }).then(response => {
+            if (response.ok) {
+                this.disabled = true;
+                document.getElementById('startOptimization').disabled = false;
+            }
+        });
+    });
+
     function updateLogPanel() {
         fetch('{{ url_for("get_messages") }}')
             .then(response => response.json())
@@ -128,8 +150,15 @@
                 // No new design data
                 return;
             }
-            var container = document.querySelector('.container');
+            console.log("attempting design update")
+            var container = document.getElementById('design_container');
             container.innerHTML = '';
+
+            // var updateTime = new Date().toLocaleTimeString();
+            // var updateTimeDiv = document.createElement('div');
+            // updateTimeDiv.textContent = 'Updated at ' + updateTime;
+            // container.prepend(updateTimeDiv);
+            
             for (var i = 0; i < data.num_boxes; i++) {
                 var box = document.createElement('div');
                 box.className = 'box';
