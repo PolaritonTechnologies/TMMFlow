@@ -65,19 +65,19 @@ def translate_order_for_cpp(optimisation_order_file):
     if add_layers:
         for i in range(0, optimisation_order["nb_added_layers"]):
             updated_optimisation_order["structure_materials"].append(
-                optimisation_order["added_materials"][0]
+                optimisation_order["added_materials"][i]
             )
             updated_optimisation_order["structure_thicknesses"].append(
                 0.5
                 * (
-                    optimisation_order["added_layer_bounds"][0][0]
-                    + optimisation_order["added_layer_bounds"][0][1]
+                    optimisation_order["added_layer_bounds"][i][0]
+                    + optimisation_order["added_layer_bounds"][i][1]
                 )
             )
             updated_optimisation_order["bounds"].append(
                 [
-                    optimisation_order["added_layer_bounds"][0][0],
-                    optimisation_order["added_layer_bounds"][0][1],
+                    optimisation_order["added_layer_bounds"][i][0],
+                    optimisation_order["added_layer_bounds"][i][1],
                 ]
             )
             updated_optimisation_order["thickness_opt_allowed"].append(True)
@@ -130,15 +130,18 @@ def create_filter(optimisation_order_file):
 
     return my_filter, lib
 
+
 def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {'json'}
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    ALLOWED_EXTENSIONS = {"json"}
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def generate_colors(n):
-    cmap = plt.cm.get_cmap('viridis', n)  # Get the 'viridis' color map
+    cmap = plt.cm.get_cmap("viridis", n)  # Get the 'viridis' color map
     colors = [cmap(i) for i in range(cmap.N)]  # Generate colors
     # Convert RGB colors to hex
-    hex_colors = ["#"+"".join([format(int(c*255), '02X') for c in color[:3]]) for color in colors]
+    hex_colors = [
+        "#" + "".join([format(int(c * 255), "02X") for c in color[:3]])
+        for color in colors
+    ]
     return hex_colors
