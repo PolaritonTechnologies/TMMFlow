@@ -68,7 +68,7 @@ app.secret_key = "your secret key"  # replace with your secret key
 my_filter = None
 lib = None
 optimisation_order_file = None
-default_file = "current_structure.json"
+default_file = "demo_test.json"
 num_boxes = None
 colors = None
 heights = None
@@ -95,7 +95,7 @@ def home():
         heights=heights,
         num_legend_items=len(unique_materials),
         unique_materials=unique_materials,
-        legend_colors=colors,
+        legend_colors=legend_colors,
         file_label="Currently loaded "
         + default_file
         + ": Click Browse to select another file",
@@ -148,7 +148,7 @@ def optimize():
         heights=heights,
         num_legend_items=len(unique_materials),
         unique_materials=unique_materials,
-        legend_colors=colors,
+        legend_colors=legend_colors,
     )
 
 
@@ -216,7 +216,7 @@ def upload_file(defaultname=None):
                 heights,
                 len(unique_materials),
                 unique_materials,
-                colors,
+                unique_colors,
             )
 
         else:
@@ -228,7 +228,7 @@ def upload_file(defaultname=None):
                 heights=heights,
                 num_legend_items=len(unique_materials),
                 unique_materials=unique_materials,
-                legend_colors=colors,
+                legend_colors=unique_colors,
                 file_label="Currently loaded: " + filename,
             )
 
@@ -325,7 +325,7 @@ def get_design_data():
             num_legend_items,
             unique_materials,
             legend_colors,
-        ) = upload_file("current_structure.json")
+        ) = upload_file(default_file)
         queue_msg("Updating design...")
         return jsonify(
             {
@@ -334,7 +334,7 @@ def get_design_data():
                 "heights": list(heights),
                 "num_legend_items": len(unique_materials),
                 "unique_materials": list(unique_materials),
-                "legend_colors": list(colors),
+                "legend_colors": list(legend_colors),
             }
         )
 
