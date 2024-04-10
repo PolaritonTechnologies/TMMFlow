@@ -71,7 +71,7 @@
             </form>
         </section>
         <section class="row">
-            <div class="col-3 d-flex justify-content-center align-items-center">
+            <div class="col-4 d-flex justify-content-center align-items-center">
                 <div class="container">
                     {% if num_boxes and colors is defined %}
                     {% for _ in range(num_boxes) %}
@@ -82,7 +82,7 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="col-9">
+            <div class="col-8">
                 <div id="legend">
                     {% if num_legend_items and legend_colors is defined %}
                     {% for i in range(num_legend_items) %}
@@ -104,10 +104,11 @@
     </footer>
 </body>
 <script>
-    document.querySelector('.custom-file-input').addEventListener('change',function(e){
+    document.querySelector('.custom-file-input').addEventListener('change', function (e) {
         var fileName = document.getElementById("customFile").files[0].name;
         var nextSibling = e.target.nextElementSibling
         nextSibling.innerText = fileName
     })
 </script>
+
 </html>
