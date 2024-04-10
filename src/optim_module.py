@@ -79,6 +79,7 @@ class OptimModule:
         self.initial_merit = 0
         self.iteration_no = 0
         self.callback_call = 0
+        self.previous_layer_positions = np.arange(0, np.sum(self.layer_switch_allowed),1)
 
         for target_idx in range(0, np.size(self.type_entries)):
 
@@ -247,17 +248,40 @@ class OptimModule:
                 arr[i] += 1
         return arr
     
-    def generate_layer_order(self, unique_layer_positions):
+    def convert_layer_positions_to_stack_order(self, temp_layer_positions):
+        """
+        Convert for given features that stand for a layer position of a certain
+        layer to a full device stack order.
+        """
+
+        threshold = 5e-1
+
+        # Now ceil or floor values depening on a threshold value (to deal
+        # with the integer character of the features)
+        temp_layer_positions = np.where(temp_layer_positions - self.previous_layer_positions > threshold, np.ceil(temp_layer_positions), np.where(temp_layer_positions - self.previous_layer_positions < threshold, np.floor(temp_layer_positions), temp_layer_positions))
+
+        # Now clamp the integers to the available number of layers
+        temp_layer_positions = np.clip(temp_layer_positions, 0, len(self.initial_thicknesses)).astype(np.int32)
+
+        # If feature 1 has a certain number, the second layer cannot have
+        # the same (one position can only be occupied by one layer)
+        unique_layer_positions = self.ensure_unique(temp_layer_positions)
+
+        # Set previous layer positions to be the current ones
+        self.previous_layer_positions = unique_layer_positions
+
         # Start with the initial order of layers
         layer_order = list(range(len(self.initial_thicknesses)))
 
         # Iterate over each layer
-        for i, allowed in enumerate(self.layer_switch_allowed):
-            if allowed:
+        j= 0
+        for i in range(len(self.layer_switch_allowed)):
+            if self.layer_switch_allowed[i]:
                 # If the layer is allowed to move, remove it from its current
                 # position and insert it at the new position
                 layer_order.remove(i)
-                layer_order.insert(unique_layer_positions[i], i)
+                layer_order.insert(unique_layer_positions[j], i)
+                j += 1
 
         return np.array(layer_order).astype(np.int32)
 
@@ -267,6 +291,7 @@ class OptimModule:
         features list is the layer position parameter. If it is not to be
         optimized all features are thicknesses.
         """
+
         if np.any(self.thickness_opt_allowed) and not np.any(self.layer_switch_allowed):
             # All features are thicknesses
             thicknesses = np.copy(self.initial_thicknesses)
@@ -279,21 +304,9 @@ class OptimModule:
             # All features are layer positions
             thicknesses = np.copy(self.initial_thicknesses)
 
-            # The hard part is to find the correct way of generating a sensible
-            # structure from the feature numbers
-            temp_layer_positions = np.astype(features[:-1 * np.sum(self.layer_switch_allowed)], np.int32)
+            # Transform the layer positions to a full stack order
+            layer_order = self.convert_layer_positions_to_stack_order(features)
 
-            # Now clamp the integers to the available number of layers
-            temp_layer_positions = np.clip(temp_layer_positions, 0, len(self.initial_thicknesses))
-
-            # If feature 1 has a certain number, the second layer cannot have
-            # the same (one position can only be occupied by one layer)
-            unique_layer_positions = self.ensure_unique(temp_layer_positions)
-
-            # Now transform the unique layer positions extracted from the
-            # features to an actual layer order where all layers appead
-            layer_order = self.generate_layer_order(self, unique_layer_positions)
-            
 
             # layer_order = self.allowed_permutations[
                 # self.clamp(features[-1], 0, len(self.allowed_permutations) - 1)
@@ -306,22 +319,12 @@ class OptimModule:
 
             # The hard part is to find the correct way of generating a sensible
             # structure from the feature numbers
-            temp_layer_positions = features[:-1 * np.sum(self.layer_switch_allowed)].astype(np.int32)
+            temp_layer_positions = features[-1 * np.sum(self.layer_switch_allowed):]
 
-            # Now clamp the integers to the available number of layers
-            temp_layer_positions = np.clip(temp_layer_positions, 0, len(self.initial_thicknesses))
+            # Transform the layer positions to a full stack order
+            layer_order = self.convert_layer_positions_to_stack_order(temp_layer_positions)
 
-            # If feature 1 has a certain number, the second layer cannot have
-            # the same (one position can only be occupied by one layer)
-            unique_layer_positions = self.ensure_unique(temp_layer_positions)
 
-            # Now transform the unique layer positions extracted from the
-            # features to an actual layer order where all layers appead
-            layer_order = self.generate_layer_order(unique_layer_positions)
-
-            # layer_order = self.allowed_permutations[
-                # self.clamp(features[-1], 0, len(self.allowed_permutations) - 1)
-            # ].astype(np.int32)
         else:
             # print(
             # "No optimization has been selected for the thicknesses or layer order."
@@ -338,9 +341,8 @@ class OptimModule:
         if f < self.optimum_merit or f == 0:
 
             if np.any(self.layer_switch_allowed) or self.data_order["add_layers"]:
-                current_structure_indices = self.allowed_permutations[
-                    self.clamp(x[-1], 0, len(self.allowed_permutations) - 1)
-                ].astype(np.int32)
+                thicknesses, positions = self.extract_thickness_and_position_from_features(x)
+                current_structure_indices = positions.astype(np.int32)
                 current_structure_materials = []
                 current_structure_thicknesses = []
                 for idx, el in enumerate(current_structure_indices):
@@ -553,7 +555,7 @@ class OptimModule:
         return test_pass
 
     def perform_optimisation(
-        self, optimisation_type, save_optimized_to_file=False, stop_flag=None
+        self, optimisation_type, save_optimized_to_file = True, stop_flag=None
     ):
         self.stop_flag = stop_flag
         start_time = time.time()
@@ -577,7 +579,15 @@ class OptimModule:
         if np.any(self.layer_switch_allowed):
             # If layer switching is allowed add the additional parameter that
             # decides the layer positions
-            x_initial = x_initial + np.arange(0, np.sum(self.layer_switch_allowed), 1).tolist()
+
+            # Evently distribute the initial layer positions over the stack to
+            # minimize interference during optimization
+            initial_positions = np.arange(0, np.size(self.layer_switch_allowed), np.size(self.layer_switch_allowed) / np.floor(np.sum(self.layer_switch_allowed))).tolist()
+            x_initial = x_initial + initial_positions
+
+            # Set the first layer positions to the initial positions
+            self.previous_layer_positions = initial_positions
+
             for i in range(np.sum(self.layer_switch_allowed)):
                 bounds.append(
                     (
@@ -665,7 +675,6 @@ class OptimModule:
         self.log_func("Optimized features: ", ret.x)
         self.log_func("Optimized merit value: ", ret.fun)
         self.log_func("Number of function evaluations: ", ret.nfev)
-
         if save_optimized_to_file:
             optimized_values = []
             optimized_values.append(
