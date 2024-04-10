@@ -200,48 +200,6 @@ class OptimModule:
         # print("target_polar_angle:", self.target_polar_angle)
         # print("target_azimuthal_angle:", self.target_azimuthal_angle)
 
-        if np.any(self.layer_switch_allowed):
-            self.allowed_permutations = self.compute_permutations(
-                np.arange(0, len(self.initial_thicknesses)),
-                np.where(self.layer_switch_allowed)[0],
-            )
-
-            # print(self.allowed_permutations)
-
-    def compute_permutations(self, arr, movable_indices):
-        """
-        Compute all available permutations for a given stack, given the movable
-        layer indices. This is used to permute layers based on a single integer
-        value (single feature that needs to be optimized).
-        """
-        # Remove the movable elements from the array
-        movable_elements = arr[movable_indices]
-        new_arr = np.delete(arr, movable_indices)
-
-        # Generate all possible positions for the movable elements
-        positions = list(itertools.permutations(range(len(arr)), len(movable_elements)))
-
-        # Insert the movable elements into all possible positions
-        result = []
-        for pos in positions:
-            pos = np.array(pos)
-            temp_arr = new_arr.copy()
-            for idx, element in zip(
-                pos[np.argsort(pos)], movable_elements[np.argsort(pos)]
-            ):
-                temp_arr = np.insert(temp_arr, idx, element)
-            result.append(temp_arr)
-
-        return np.array(result)
-
-    def clamp(self, n, minn, maxn):
-        """
-        Clamp integer values to the maximum number of available positions in the
-        stack (given by the number of layers to the power of available movable
-        layers).
-        """
-        return max(min(maxn, int(n)), minn)
-    
     def ensure_unique(self, arr):
         for i in range(1, len(arr)):
             while arr[i] in arr[:i]:
@@ -582,7 +540,7 @@ class OptimModule:
             # decides the layer positions
 
             # Evently distribute the initial layer positions over the stack to
-            # minimize interference during optimization
+            # minimize interference during optimization.
             initial_positions = np.arange(0, np.size(self.layer_switch_allowed), np.size(self.layer_switch_allowed) / np.floor(np.sum(self.layer_switch_allowed))).tolist()
             x_initial = x_initial + initial_positions
 
