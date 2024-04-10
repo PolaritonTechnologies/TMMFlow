@@ -36,6 +36,10 @@ def import_from_open_filter(input_text):
         "wavelength_steps": [],
         "targets_tolerance": [],
         "bounds": [],
+        "add_layers": False,
+        "nb_added_layers": 0,
+        "added_materials": [],
+        "added_layer_bounds": [],
     }
 
     # Go through the open filter file to populate the dictionary
@@ -67,13 +71,24 @@ def import_from_open_filter(input_text):
                 data["targets_type"].append("a")
             if parts[1] == "ReflectionSpectrum":
                 data["targets_type"].append("r")
+            if parts[1] == "Transmission":
+                data["targets_type"].append("t")
+            if parts[1] == "Absorption":
+                data["targets_type"].append("a")
+            if parts[1] == "Reflection":
+                data["targets_type"].append("r")
         if line.startswith("Angle:"):
             parts = line.split(" ")
             data["targets_polar_angle"].append(float(parts[1]))
         if line.startswith("Polarization:"):
             parts = line.split(" ")
+            print(parts)
             if float(parts[1]) == 45.0:
                 data["targets_polarization"].append("")
+            if float(parts[1]) == 90.0:
+                data["targets_polarization"].append("s")
+            if float(parts[1]) == 0.0:
+                data["targets_polarization"].append("p")
         if line.startswith("From:"):
             parts = line.split(" ")
             temp_array = []
@@ -81,6 +96,9 @@ def import_from_open_filter(input_text):
             parts_next_line = lines[idx + 1].split(" ")
             temp_array.append(float(parts_next_line[1]))
             data["targets_wavelengths"].append(temp_array)
+        if line.startswith("Wavelength:"):
+            parts = line.split(" ")
+            data["targets_wavelengths"].append(float(parts[1]))
         if line.startswith("By:"):
             parts = line.split(" ")
             data["wavelength_steps"].append(float(parts[1]))
@@ -93,9 +111,15 @@ def import_from_open_filter(input_text):
         if line.startswith("Inequality:"):
             parts = line.split(" ")
             if parts[1] == "larger":
-                data["targets_condition"][-1] = ">"
+                data["targets_condition"].append(">")
             if parts[1] == "smaller":
-                data["targets_condition"][-1] = "<"
+                data["targets_condition"].append("<")
+        if line.startswith("Value:"):
+            parts = line.split(" ")
+            data["targets_value"].append(float(parts[1]))
+        if line.startswith("Tolerance:"):
+            parts = line.split(" ")
+            data["targets_tolerance"].append(float(parts[1]))
     # Fill other fields by default
     if data["calculation_type"] == "":
         data["calculation_type"] = "t"
@@ -250,14 +274,14 @@ End"""
         output_file.write(to_export)
 
 
-if False:
+if True:
 
-    input_file = "open_filter_project.ofp"
+    input_file = "test_new_core.ofp"
     with open(input_file, "r") as input_file:
         input_text = input_file.read()
     print(import_from_open_filter(input_text))
 
-if True:
+if False:
 
     input_file = "current_structure.json"
     with open(input_file, "r") as input_file:

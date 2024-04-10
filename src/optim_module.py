@@ -47,8 +47,7 @@ class OptimModule:
         self.update_queue = update_queue
         with open(optimisation_order_file) as f:
             self.data_order = json.load(f)
-
-        self.initial_thicknesses = np.array(self.data_order["structure_thicknesses"]) #[ ::-1 ]
+        self.initial_thicknesses = np.array(self.data_order["structure_thicknesses"])
         self.thickness_opt_allowed = np.array(self.data_order["thickness_opt_allowed"])
         self.layer_switch_allowed = np.array(self.data_order["layer_switch_allowed"])
         self.type_entries = np.array(self.data_order["targets_type"])
@@ -63,7 +62,13 @@ class OptimModule:
         self.wavelength_step = np.array(self.data_order["wavelength_steps"])
         self.tolerance_entries = np.array(self.data_order["targets_tolerance"])
         self.bounds = [tuple(x) for x in self.data_order["bounds"]]
-
+        self.core_override = None
+        if self.data_order["core_override"]:
+            self.core_override = self.data_order["core_override"]
+            if self.data_order["core_selected"] == "general":
+                self.is_general_core = True
+            else:
+                self.is_general_core = False
         self.target_wavelength = np.empty(0)
         self.target_weights = np.empty(0)
         self.target_value = np.empty(0)
@@ -77,7 +82,9 @@ class OptimModule:
         self.initial_merit = 0
         self.iteration_no = 0
         self.callback_call = 0
-        self.previous_layer_positions = np.arange(0, np.sum(self.layer_switch_allowed),1)
+        self.previous_layer_positions = np.arange(
+            0, np.sum(self.layer_switch_allowed), 1
+        )
 
         for target_idx in range(0, np.size(self.type_entries)):
 
@@ -203,7 +210,7 @@ class OptimModule:
             while arr[i] in arr[:i]:
                 arr[i] += 1
         return arr
-    
+
     def convert_layer_positions_to_stack_order(self, temp_layer_positions):
         """
         Convert for given features that stand for a layer position of a certain
@@ -218,7 +225,9 @@ class OptimModule:
         temp_layer_positions = np.round(temp_layer_positions, 0)
 
         # Now clamp the integers to the available number of layers
-        temp_layer_positions = np.clip(temp_layer_positions, 0, len(self.initial_thicknesses)).astype(np.int32)
+        temp_layer_positions = np.clip(
+            temp_layer_positions, 0, len(self.initial_thicknesses)
+        ).astype(np.int32)
 
         # If feature 1 has a certain number, the second layer cannot have
         # the same (one position can only be occupied by one layer)
@@ -231,7 +240,7 @@ class OptimModule:
         layer_order = list(range(len(self.initial_thicknesses)))
 
         # Iterate over each layer
-        j= 0
+        j = 0
         for i in range(len(self.layer_switch_allowed)):
             if self.layer_switch_allowed[i]:
                 # If the layer is allowed to move, remove it from its current
@@ -264,23 +273,25 @@ class OptimModule:
             # Transform the layer positions to a full stack order
             layer_order = self.convert_layer_positions_to_stack_order(features)
 
-
             # layer_order = self.allowed_permutations[
-                # self.clamp(features[-1], 0, len(self.allowed_permutations) - 1)
+            # self.clamp(features[-1], 0, len(self.allowed_permutations) - 1)
             # ].astype(np.int32)
         elif np.any(self.thickness_opt_allowed) and np.any(self.layer_switch_allowed):
             # Some features are thicknesses and some are layer positions
             thicknesses = np.copy(self.initial_thicknesses)
-            thicknesses[np.where(self.thickness_opt_allowed)] = features[:-1 * np.sum(self.layer_switch_allowed)]
+            thicknesses[np.where(self.thickness_opt_allowed)] = features[
+                : -1 * np.sum(self.layer_switch_allowed)
+            ]
             thicknesses = thicknesses.astype(np.float64)
 
             # The hard part is to find the correct way of generating a sensible
             # structure from the feature numbers
-            temp_layer_positions = features[-1 * np.sum(self.layer_switch_allowed):]
+            temp_layer_positions = features[-1 * np.sum(self.layer_switch_allowed) :]
 
             # Transform the layer positions to a full stack order
-            layer_order = self.convert_layer_positions_to_stack_order(temp_layer_positions)
-
+            layer_order = self.convert_layer_positions_to_stack_order(
+                temp_layer_positions
+            )
 
         else:
             # print(
@@ -298,7 +309,9 @@ class OptimModule:
         if f < self.optimum_merit or f == 0:
 
             if np.any(self.layer_switch_allowed) or self.data_order["add_layers"]:
-                thicknesses, positions = self.extract_thickness_and_position_from_features(x)
+                thicknesses, positions = (
+                    self.extract_thickness_and_position_from_features(x)
+                )
                 current_structure_indices = positions.astype(np.int32)
                 current_structure_materials = []
                 current_structure_thicknesses = []
@@ -366,6 +379,7 @@ class OptimModule:
             features
         )
         # print(layer_order)
+        # print(layer_order)
 
         # Assemble the whole thicknesses and layer positions from the delivered
         # features. They are set up as follows:
@@ -383,6 +397,19 @@ class OptimModule:
                     self.my_filter, layer_order, int(np.size(layer_order))
                 )
 
+            if self.core_override == None:
+                if self.target_polarization[i] != "s":
+                    self.is_general_core = self.lib.getGeneralMaterialsInStack(
+                        [self.my_filter]
+                    )
+                else:
+                    self.is_general_core = False
+            elif self.core_override != None:
+                if self.core_override == "general":
+                    self.is_general_core = True
+                if self.core_override == "fast":
+                    self.is_general_core = False
+
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,
                 self.target_type[i].encode("utf-8"),
@@ -390,6 +417,7 @@ class OptimModule:
                 float(self.target_wavelength[i]),
                 float(self.target_polar_angle[i]),
                 float(self.target_azimuthal_angle[i]),
+                self.is_general_core,
             )
 
             # print(self.target_wavelength[i], target_calculated)
@@ -438,14 +466,14 @@ class OptimModule:
 
         else:
 
+            # Callback once to save the obtained features
+            if self.iteration_no == 0:
+                raise Exception("Initial features are optimal.")
+
             if self.first_zero:
                 self.first_zero = False
                 self.log_func("Optimization has reached merit 0")
                 self.callback(features, merit, False)
-
-            # Callback once to save the obtained features
-            if self.iteration_no == 0:
-                raise Exception("Initial features are optimal.")
 
             return 0
 
@@ -465,6 +493,7 @@ class OptimModule:
                 self.target_wavelength[i],
                 self.target_polar_angle[i],
                 self.target_azimuthal_angle[i],
+                self.is_general_core,
             )
 
             if self.target_condition[i] == "=" and target_calculated != float(
@@ -512,7 +541,7 @@ class OptimModule:
         return test_pass
 
     def perform_optimisation(
-        self, optimisation_type, save_optimized_to_file = True, stop_flag=None
+        self, optimisation_type, save_optimized_to_file=True, stop_flag=None
     ):
         self.stop_flag = stop_flag
         start_time = time.time()
@@ -539,7 +568,9 @@ class OptimModule:
 
             # Evently distribute the initial layer positions over the stack to
             # minimize interference during optimization.
+
             initial_positions = np.where(self.layer_switch_allowed)[0].tolist()
+
             x_initial = x_initial + initial_positions
 
             # Set the first layer positions to the initial positions
@@ -549,8 +580,7 @@ class OptimModule:
                 bounds.append(
                     (
                         -0.5,
-                        np.size(self.initial_thicknesses)
-                        + 0.5,
+                        np.size(self.initial_thicknesses) + 0.5,
                     )
                 )
 

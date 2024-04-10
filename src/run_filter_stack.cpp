@@ -17,16 +17,21 @@ extern "C"
 		delete filter_stack;
 	}
 
-	double calculate_reflection_transmission_absorption(FilterStack *filter_stack, const char *type, const char *polarization, double wavelength, double theta_0, double phi_0)
+	bool getGeneralMaterialsInStack(FilterStack *filter_stack)
+	{
+		return filter_stack->getGeneralMaterialsInStack();
+	}
+
+	double calculate_reflection_transmission_absorption(FilterStack *filter_stack, const char *type, const char *polarization, double wavelength, double theta_0, double phi_0, bool is_general_case)
 	{
 
-		double values = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0);
+		double values = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0, is_general_case);
 
 		while (std::isnan(values) || values > 1.0)
 		{
 			theta_0 = theta_0 + 0.0001;
 			// std::cout << "Increasing theta_0 by 0.0001 to avoid kz crash. New theta_0: " << theta_0 << std::endl;
-			values = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0);
+			values = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0, is_general_case);
 		}
 
 		return values;

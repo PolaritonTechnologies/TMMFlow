@@ -18,6 +18,7 @@ class CalculationModule:
         plot_done_queue=None,
         log_plot=ignore,
         log_plot_done=ignore,
+        core_selection=None,
         web=True,
     ):
         self.my_filter = my_filter
@@ -27,6 +28,7 @@ class CalculationModule:
         self.log_plot = log_plot
         self.log_plot_done = log_plot_done
         self.web = web
+        self.core_selection = core_selection
 
     def calculate_ar_data(
         self,
@@ -38,6 +40,17 @@ class CalculationModule:
         save_figure=False,
         save_data=False,
     ):
+
+        if self.core_selection == None:
+            if polarization != "s":
+                is_general_core = self.lib.getGeneralMaterialsInStack(self.my_filter)
+            else:
+                is_general_core = False
+        else:
+            if self.core_selection == "general":
+                is_general_core = True
+            if self.core_selection == "fast":
+                is_general_core = False
 
         initial_time = time.time()
         stored_value = pd.DataFrame(columns=polar_angles.astype("U"), index=wavelength)
@@ -53,6 +66,7 @@ class CalculationModule:
                             wavelength,
                             theta,
                             phi,
+                            is_general_core,
                         )
                     )
 

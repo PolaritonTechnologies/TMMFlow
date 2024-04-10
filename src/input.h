@@ -36,8 +36,9 @@ public:
         return permittivity_splines;
     }
 
-    std::vector<tk::spline> importIndexFromFile(const std::string &filename)
+    std::pair<std::vector<tk::spline>,bool> importIndexFromFile(const std::string &filename)
     {
+        bool general_material;
 
         std::string fullfilename = filename + ".csv";
         std::filesystem::path fullpath = std::filesystem::current_path() / "Materials" / fullfilename;
@@ -71,6 +72,7 @@ public:
 
         if (columnCount == 7)
         {
+            general_material = true; // in-plane out of plane anisotropy + in-plane anisotropy
             while (std::getline(file, line))
             {
                 std::istringstream ss(line);
@@ -118,11 +120,12 @@ public:
 
             //returns the permittivity tensors and not the refractive indices
             
-            return permittivity_splines;
+            return std::make_pair(permittivity_splines,general_material);
         }
 
         if (columnCount == 5)
         {
+            general_material = true; // in-plane out-of-plane anisotropy
             while (std::getline(file, line))
             {
                 std::istringstream ss(line);
@@ -162,11 +165,12 @@ public:
 
             //returns the permittivity tensors and not the refractive indices
             
-            return permittivity_splines;
+            return std::make_pair(permittivity_splines,general_material);
         }
 
         if (columnCount == 3)
         {
+            general_material = false; // isotropic
             while (std::getline(file, line))
             {
                 std::istringstream ss(line);
@@ -207,12 +211,12 @@ public:
 
             //returns the permittivity tensors and not the refractive indices
             
-            return permittivity_splines;
+            return std::make_pair(permittivity_splines,general_material);
         }
 
         tk::spline default_spline({0},{0});
-        return {default_spline};
-            
+        std::vector<tk::spline> default_splines(1,default_spline);
+        return std::make_pair(default_splines,false);       
     }
         
 };

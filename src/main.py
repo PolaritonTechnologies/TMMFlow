@@ -24,12 +24,12 @@ features = optimization.perform_optimisation(
 
 #########################
 
-# calculation_order_file_python = "current_structure.json"
+# calculation_order_file_python = "demo_test.json"
 # calculation_order_file = translate_order_for_cpp(calculation_order_file_python)
 # my_filter, lib = create_filter(calculation_order_file)
 
-# Plotting
-plotting = CalculationModule(my_filter, lib, web=False)
+# Plotting - Can also implement core override here if needed
+plotting = CalculationModule(my_filter, lib, core_selection="general", web=False)
 
 with open(optimisation_order_file) as f:
     plot_order = json.load(f)

@@ -61,7 +61,6 @@ def translate_order_for_cpp(optimisation_order_file):
     updated_optimisation_order["thickness_opt_allowed"] = updated_thickness_opt_allowed
     updated_optimisation_order["layer_switch_allowed"] = updated_layer_switch_allowed
     updated_optimisation_order["bounds"] = updated_bounds
-
     if add_layers:
         for i in range(0, optimisation_order["nb_added_layers"]):
             updated_optimisation_order["structure_materials"].append(
