@@ -258,7 +258,8 @@ class OptimModule:
 
         # Now ceil or floor values depening on a threshold value (to deal
         # with the integer character of the features)
-        temp_layer_positions = np.where(temp_layer_positions - self.previous_layer_positions > threshold, np.ceil(temp_layer_positions), np.where(temp_layer_positions - self.previous_layer_positions < threshold, np.floor(temp_layer_positions), temp_layer_positions))
+        # temp_layer_positions = np.where(temp_layer_positions - self.previous_layer_positions > threshold, np.ceil(temp_layer_positions), np.where(temp_layer_positions - self.previous_layer_positions < threshold, np.floor(temp_layer_positions), temp_layer_positions))
+        temp_layer_positions = np.round(temp_layer_positions, 0)
 
         # Now clamp the integers to the available number of layers
         temp_layer_positions = np.clip(temp_layer_positions, 0, len(self.initial_thicknesses)).astype(np.int32)
