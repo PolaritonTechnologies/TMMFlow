@@ -393,22 +393,22 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, 
 {
     // Incident medium and substrate have to be real, diagonal and isotropic
     // incident medium check
-    MatrixXcd firstMatrix = e_list_3x3[0];
-    if (!isRealDiagonalIsotropic(firstMatrix))
+    MatrixXcd lastMatrix = e_list_3x3[e_list_3x3.size() - 1];
+    if (!isRealDiagonalIsotropic(lastMatrix))
     {
         throw std::runtime_error("Incident medium must be real, diagonal and isotropic");
     }
 
-    std::complex<double> n_0 = std::sqrt(firstMatrix(0, 0));
+    std::complex<double> n_0 = std::sqrt(lastMatrix(0, 0));
 
     // substrate check
-    MatrixXcd lastMatrix = e_list_3x3[e_list_3x3.size() - 1];
-    if (!isRealDiagonalIsotropic(lastMatrix))
+    MatrixXcd firstMatrix = e_list_3x3[0];
+    if (!isRealDiagonalIsotropic(firstMatrix))
     {
         throw std::runtime_error("Substrate must be real, diagonal and isotropic");
     }
 
-    std::complex<double> n_s = std::sqrt(lastMatrix(0, 0));
+    std::complex<double> n_s = std::sqrt(firstMatrix(0, 0));
 
     // wavevector modulus and in plane components
     std::complex<double> k0 = 2.0 * M_PI / wavelength;
@@ -426,7 +426,7 @@ std::pair<Matrix2cd, Matrix2cd> calculate_tr(std::vector<Matrix3cd> e_list_3x3, 
 
     // Worked up to here
     // Now iterate over all layers starting from the second last going backwards
-    for (int i = d_list.size() - 2; i >= 0; --i)
+    for (int i = 1; i <= d_list.size() - 1; ++i)
     {
         v_kz1 = kz_eigenvalues(k0, kx, ky, e_list_3x3[i]);
 

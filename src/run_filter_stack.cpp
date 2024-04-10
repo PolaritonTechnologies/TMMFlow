@@ -22,7 +22,7 @@ extern "C"
 
 		double values = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0);
 
-		while (std::isnan(values) || values > 1.0) 
+		while (std::isnan(values) || values > 1.0)
 		{
 			theta_0 = theta_0 + 0.0001;
 			// std::cout << "Increasing theta_0 by 0.0001 to avoid kz crash. New theta_0: " << theta_0 << std::endl;
@@ -46,6 +46,16 @@ extern "C"
 	void reset_filter(FilterStack *filter_stack)
 	{
 		filter_stack->reset_filter();
+	}
+
+	void get_material_order(FilterStack *filter_stack)
+	{
+		filter_stack->get_material_order();
+	}
+
+	void get_thicknesses(FilterStack *filter_stack)
+	{
+		filter_stack->get_thicknesses();
 	}
 };
 

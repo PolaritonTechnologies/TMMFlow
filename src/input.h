@@ -273,10 +273,10 @@ CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
 
     // Reverse "structure_materials" and "structure_thicknesses"
     std::vector<std::string> structure_materials = calculation_order["structure_materials"];
-    std::reverse(structure_materials.begin(), structure_materials.end());
+    // std::reverse(structure_materials.begin(), structure_materials.end());
 
     std::vector<double> structure_thicknesses = calculation_order["structure_thicknesses"];
-    std::reverse(structure_thicknesses.begin(), structure_thicknesses.end());
+    // std::reverse(structure_thicknesses.begin(), structure_thicknesses.end());
 
     CalculationInfo calculation_info(
         calculation_order["calculation_type"],
@@ -304,8 +304,9 @@ std::vector<std::string> getUniqueMembers(const std::vector<std::string> &inputA
     return uniqueVector;
 }
 
-std::vector<Matrix3cd> reverseVector(const std::vector<Matrix3cd> &vec)
-{
-    std::vector<Matrix3cd> reversedVec(vec.rbegin(), vec.rend());
-    return reversedVec;
-}
+// I think this is not needed anymore
+// std::vector<Matrix3cd> reverseVector(const std::vector<Matrix3cd> &vec)
+// {
+//     std::vector<Matrix3cd> reversedVec(vec.rbegin(), vec.rend());
+//     return reversedVec;
+// }

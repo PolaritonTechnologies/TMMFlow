@@ -48,9 +48,7 @@ class OptimModule:
         with open(optimisation_order_file) as f:
             self.data_order = json.load(f)
 
-        self.initial_thicknesses = np.array(self.data_order["structure_thicknesses"])[
-            ::-1
-        ]
+        self.initial_thicknesses = np.array(self.data_order["structure_thicknesses"]) #[ ::-1 ]
         self.thickness_opt_allowed = np.array(self.data_order["thickness_opt_allowed"])
         self.layer_switch_allowed = np.array(self.data_order["layer_switch_allowed"])
         self.type_entries = np.array(self.data_order["targets_type"])
@@ -310,8 +308,8 @@ class OptimModule:
                     )
                     current_structure_thicknesses.append(x[idx])
                 temp_json = self.data_order.copy()
-                temp_json["structure_materials"] = current_structure_materials[::-1]
-                temp_json["structure_thicknesses"] = current_structure_thicknesses[::-1]
+                temp_json["structure_materials"] = current_structure_materials
+                temp_json["structure_thicknesses"] = current_structure_thicknesses
 
                 if self.data_order["add_layers"]:
                     temp_json["add_layers"] = False
@@ -367,7 +365,7 @@ class OptimModule:
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
             features
         )
-        print(layer_order)
+        # print(layer_order)
 
         # Assemble the whole thicknesses and layer positions from the delivered
         # features. They are set up as follows:
@@ -541,7 +539,7 @@ class OptimModule:
 
             # Evently distribute the initial layer positions over the stack to
             # minimize interference during optimization.
-            initial_positions = np.arange(0, np.size(self.layer_switch_allowed), np.size(self.layer_switch_allowed) / np.floor(np.sum(self.layer_switch_allowed))).tolist()
+            initial_positions = np.where(self.layer_switch_allowed)[0].tolist()
             x_initial = x_initial + initial_positions
 
             # Set the first layer positions to the initial positions
@@ -557,9 +555,6 @@ class OptimModule:
                 )
 
         ret = 0
-
-        # Sets the gradient tolerance value for stopping the optimization
-        gtol = 1e-6
 
         # With scipy we cannot do integer optimization
         if optimisation_type == "dual_annealing":
@@ -634,6 +629,7 @@ class OptimModule:
         self.log_func("Optimized features: ", ret.x)
         self.log_func("Optimized merit value: ", ret.fun)
         self.log_func("Number of function evaluations: ", ret.nfev)
+
         if save_optimized_to_file:
             optimized_values = []
             optimized_values.append(

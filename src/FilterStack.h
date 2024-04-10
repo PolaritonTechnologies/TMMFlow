@@ -26,6 +26,9 @@ public:
     void change_material_order(std::vector<int> new_material_order);
     void change_material_thickness(std::vector<double> material_thickness);
 
+    void get_material_order();
+    void get_thicknesses();
+
     void reset_filter();
 
     // Default constructor
@@ -261,13 +264,15 @@ std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, st
 {
     std::vector<Matrix3cd> e_list_3x3;
 
-    // out medium: air
-    Matrix3cd incident_layer_tensor =
-        (Matrix3cd(3, 3) << std::complex<double>(1, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(1, 0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1, 0))
+    // substrate: quartz/glass
+    Matrix3cd substrate_layer_tensor =
+        (Matrix3cd(3, 3) << std::complex<double>(2.25, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(2.25, 0), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(2.25, 0))
             .finished();
-    e_list_3x3.push_back(incident_layer_tensor);
+    e_list_3x3.push_back(substrate_layer_tensor);
+
+    // std::reverse(structure_materials.begin(), structure_materials.end());
 
     for (const auto &material : calculation_order.structure_materials)
     {
@@ -279,13 +284,13 @@ std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, st
         e_list_3x3.push_back(next_layer_tensor);
     }
 
-    // substrate: quartz/glass
-    Matrix3cd substrate_layer_tensor =
-        (Matrix3cd(3, 3) << std::complex<double>(2.25, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(2.25, 0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(2.25, 0))
+    // out medium: air
+    Matrix3cd incident_layer_tensor =
+        (Matrix3cd(3, 3) << std::complex<double>(1, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(1, 0), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1, 0))
             .finished();
-    e_list_3x3.push_back(substrate_layer_tensor);
+    e_list_3x3.push_back(incident_layer_tensor);
 
     // After the line where e_list_3x3 is defined or updated
     // for (const auto &matrix : e_list_3x3) {
@@ -359,5 +364,21 @@ void FilterStack::reset_filter()
     for (int i = 0; i < calculation_order.structure_materials.size(); ++i)
     {
         material_order_int[i] = i;
+    }
+}
+
+void FilterStack::get_material_order()
+{
+    for (int i = 0; i < calculation_order.structure_materials.size(); i++)
+    {
+        std::cout << calculation_order.structure_materials[i] << " ";
+    }
+}
+
+void FilterStack::get_thicknesses()
+{
+    for (int i = 0; i < calculation_order.structure_thicknesses.size(); i++)
+    {
+        std::cout << calculation_order.structure_thicknesses[i] << " ";
     }
 }
