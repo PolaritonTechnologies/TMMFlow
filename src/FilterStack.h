@@ -132,6 +132,13 @@ std::pair<std::map<std::string, std::vector<tk::spline>>, bool> FilterStack::ass
     CalculationInfo calculation_order = loadCalculationInfo(full_path);
 
     std::vector<std::string> unique_materials = getUniqueMembers(calculation_order.structure_materials);
+    // Append substrate
+    unique_materials.push_back(calculation_order.substrateMaterial);
+    // Append incident medium
+    unique_materials.push_back(calculation_order.incidentMediumMaterial);
+    // Append exit medium
+    unique_materials.push_back(calculation_order.exitMediumMaterial);
+
     CSVParser parser;
     std::map<std::string, std::vector<tk::spline>> material_splines;
     bool contains_general_material = false;
