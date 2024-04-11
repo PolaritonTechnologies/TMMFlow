@@ -15,6 +15,7 @@ from scipy.optimize import (
     brute,
 )
 
+
 def ignore(msg=None):
     pass
 
@@ -68,9 +69,7 @@ class FilterStack:
         json_file_path_cpp = self.translate_order_for_cpp(json_file_path)
 
         # Create the filter stack in C++
-        self.my_filter, self.lib = self.create_filter_in_cpp(
-            json_file_path_cpp
-        )
+        self.my_filter, self.lib = self.create_filter_in_cpp(json_file_path_cpp)
 
         # Read in the json file translated for C++ again and restructure a bit
         # for easy handling in python
@@ -166,8 +165,12 @@ class FilterStack:
                 for i in range(nb_layers):
                     updated_structure_materials.append(layer1_mat)
                     updated_structure_materials.append(layer2_mat)
-                    updated_structure_thicknesses.append(structure_thicknesses[m_idx][0])
-                    updated_structure_thicknesses.append(structure_thicknesses[m_idx][1])
+                    updated_structure_thicknesses.append(
+                        structure_thicknesses[m_idx][0]
+                    )
+                    updated_structure_thicknesses.append(
+                        structure_thicknesses[m_idx][1]
+                    )
                     updated_thickness_opt_allowed.append(thickness_opt_allowed[m_idx])
                     updated_thickness_opt_allowed.append(thickness_opt_allowed[m_idx])
                     updated_layer_switch_allowed.append(layer_switch_allowed[m_idx])
@@ -183,9 +186,15 @@ class FilterStack:
                 updated_bounds.append(bounds[m_idx])
 
         updated_optimisation_order["structure_materials"] = updated_structure_materials
-        updated_optimisation_order["structure_thicknesses"] = updated_structure_thicknesses
-        updated_optimisation_order["thickness_opt_allowed"] = updated_thickness_opt_allowed
-        updated_optimisation_order["layer_switch_allowed"] = updated_layer_switch_allowed
+        updated_optimisation_order["structure_thicknesses"] = (
+            updated_structure_thicknesses
+        )
+        updated_optimisation_order["thickness_opt_allowed"] = (
+            updated_thickness_opt_allowed
+        )
+        updated_optimisation_order["layer_switch_allowed"] = (
+            updated_layer_switch_allowed
+        )
         updated_optimisation_order["bounds"] = updated_bounds
         if add_layers:
             for i in range(0, optimisation_order["nb_added_layers"]):
@@ -208,10 +217,10 @@ class FilterStack:
                 updated_optimisation_order["thickness_opt_allowed"].append(True)
                 updated_optimisation_order["layer_switch_allowed"].append(True)
 
-        with open("temp_cpp_order.json", "w") as f:
+        with open("./temp/temp_cpp_order.json", "w") as f:
             json.dump(updated_optimisation_order, f)
 
-        return "temp_cpp_order.json"
+        return "./temp/temp_cpp_order.json"
 
     def create_filter_in_cpp(self, json_file_path_cpp):
         """
@@ -333,7 +342,9 @@ class FilterStack:
             # azimuthal angle treament in case of intervals, each angle is weighted
             # for evaluation with the merit function.
 
-            if isinstance(filter_definition["targets_azimuthal_angle"][target_idx], list):
+            if isinstance(
+                filter_definition["targets_azimuthal_angle"][target_idx], list
+            ):
 
                 azimuthal_entry = np.array(
                     filter_definition["targets_azimuthal_angle"][target_idx]
@@ -349,7 +360,9 @@ class FilterStack:
 
             else:
 
-                interval_azim = [filter_definition["targets_azimuthal_angle"][target_idx]]
+                interval_azim = [
+                    filter_definition["targets_azimuthal_angle"][target_idx]
+                ]
                 weight_azim = 1
 
             # wavelength treament in case of intervals, each wavelength is weighted
@@ -388,9 +401,7 @@ class FilterStack:
 
                         target_wavelength = np.append(target_wavelength, wvl)
 
-                        target_polar_angle = np.append(
-                            target_polar_angle, polar_angle
-                        )
+                        target_polar_angle = np.append(target_polar_angle, polar_angle)
 
                         target_azimuthal_angle = np.append(
                             target_azimuthal_angle, azim_angle
@@ -493,9 +504,9 @@ class FilterStack:
             # Evently distribute the initial layer positions over the stack to
             # minimize interference during optimization.
 
-            initial_positions = np.where(self.filter_definition["layer_switch_allowed"])[
-                0
-            ].tolist()
+            initial_positions = np.where(
+                self.filter_definition["layer_switch_allowed"]
+            )[0].tolist()
 
             x_initial = x_initial + initial_positions
 
@@ -596,7 +607,7 @@ class FilterStack:
             )
             optimized_values.append("Optimized merit value: " + str(ret.fun) + "\n")
             optimized_values.append("Optimized features: " + str(ret.x) + "\n")
-            with open("optimized_values.csv", "w") as the_file:
+            with open("./temp/optimized_values.csv", "w") as the_file:
                 the_file.write("\n".join(optimized_values))
 
         return ret.x
@@ -774,7 +785,7 @@ class FilterStack:
             self.optimum_iteration = self.iteration_no
             self.optimum_number += 1
 
-            with open("current_structure.json", "w") as file:
+            with open("./temp/current_structure.json", "w") as file:
                 json.dump(temp_json, file)
 
         self.callback_call += 1
@@ -823,9 +834,13 @@ class FilterStack:
         ):
             # All features are thicknesses
             thicknesses = np.copy(self.filter_definition["structure_thicknesses"])
-            thicknesses[np.where(self.filter_definition["thickness_opt_allowed"])] = features
+            thicknesses[np.where(self.filter_definition["thickness_opt_allowed"])] = (
+                features
+            )
             thicknesses = thicknesses.astype(np.float64)
-            layer_order = np.arange(0, len(self.filter_definition["structure_thicknesses"]))
+            layer_order = np.arange(
+                0, len(self.filter_definition["structure_thicknesses"])
+            )
         elif not np.any(self.filter_definition["thickness_opt_allowed"]) and np.any(
             self.filter_definition["layer_switch_allowed"]
         ):
@@ -843,9 +858,9 @@ class FilterStack:
         ):
             # Some features are thicknesses and some are layer positions
             thicknesses = np.copy(self.filter_definition["structure_thicknesses"])
-            thicknesses[np.where(self.filter_definition["thickness_opt_allowed"])] = features[
-                : -1 * np.sum(self.filter_definition["layer_switch_allowed"])
-            ]
+            thicknesses[np.where(self.filter_definition["thickness_opt_allowed"])] = (
+                features[: -1 * np.sum(self.filter_definition["layer_switch_allowed"])]
+            )
             thicknesses = thicknesses.astype(np.float64)
 
             # The hard part is to find the correct way of generating a sensible
@@ -891,7 +906,9 @@ class FilterStack:
 
         # Now clamp the integers to the available number of layers
         temp_layer_positions = np.clip(
-            temp_layer_positions, 0, len(self.filter_definition["structure_thicknesses"])
+            temp_layer_positions,
+            0,
+            len(self.filter_definition["structure_thicknesses"]),
         ).astype(np.int32)
 
         # If feature 1 has a certain number, the second layer cannot have
@@ -1055,18 +1072,18 @@ class FilterStack:
 
             if save_figure:
                 # plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
-                plt.savefig("plot.png", format="png", dpi=300)
+                plt.savefig("./temp/plot.png", format="png", dpi=300)
                 # Save X, Y, Z to csv files
             if save_data:
                 header_lines = []
                 header_lines.append("Here we can add some meta data to the header \n")
 
                 # Save header lines indicating what the simulation represents
-                with open("value.csv", "w") as the_file:
+                with open("./temp/value.csv", "w") as the_file:
                     the_file.write("\n".join(header_lines))
 
                 # Save actual data by appending
-                stored_value.to_csv("value.csv", sep=",", header=True, mode="a")
+                stored_value.to_csv("./temp/value.csv", sep=",", header=True, mode="a")
 
             plt.show()
 

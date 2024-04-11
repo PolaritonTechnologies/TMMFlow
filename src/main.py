@@ -1,7 +1,7 @@
 from FilterStack import FilterStack
 
 # Input file
-filter_definition_json_file_path = "demo_test.json"
+filter_definition_json_file_path = "../examples/demo_test.json"
 
 # Create filter stack
 filter_stack = FilterStack(filter_definition_json_file_path)

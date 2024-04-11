@@ -283,7 +283,7 @@ if True:
 
 if False:
 
-    input_file = "current_structure.json"
+    input_file = "./temp/current_structure.json"
     with open(input_file, "r") as input_file:
         input_dic = json.load(input_file)
         print(input_dic)

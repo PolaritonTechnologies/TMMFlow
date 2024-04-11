@@ -17,13 +17,13 @@ import json
 import os
 import numpy as np
 
-from utility import (
+from gui.utility import (
     translate_order_for_cpp,
     create_filter,
     allowed_file,
     generate_colors,
 )
-from optim_module import OptimModule
+from FilterStack import FilterStack
 from calculation_module import CalculationModule
 
 from queue import Queue
@@ -68,7 +68,7 @@ app.secret_key = "your secret key"  # replace with your secret key
 my_filter = None
 lib = None
 optimisation_order_file = None
-default_file = "demo_test.json"
+default_file = "current_structure.json"
 num_boxes = None
 colors = None
 heights = None
@@ -351,8 +351,9 @@ def start_optimization():
     print("Optimization method: ", optimization_method)
 
     def run_optimization(optimization_method):
-        optim_module = OptimModule(
-            "temp_cpp_order.json",
+        global my_filter
+        optim_module = FilterStack(
+            "./temp_cpp_order.json",
             my_filter,
             lib,
             message_queue=message_queue,
@@ -365,6 +366,10 @@ def start_optimization():
             save_optimized_to_file=True,
             stop_flag=lambda: stop_optimization,
         )
+
+        # As we are dealing with global variables the new optimized filter has
+        # to be specifically assigned to the global variable
+        my_filter = optim_module.my_filter
 
     # Run the optimization in a separate thread
     threading.Thread(target=run_optimization, args=(optimization_method,)).start()

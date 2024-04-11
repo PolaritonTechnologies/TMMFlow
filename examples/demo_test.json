@@ -111,6 +111,5 @@
             100
         ]
     ],
-    "core_override": true,
-    "core_selected": "general"
+    "core_selection": "general"
 }

@@ -41,7 +41,7 @@ public:
         bool general_material;
 
         std::string fullfilename = filename + ".csv";
-        std::filesystem::path fullpath = std::filesystem::current_path() / "Materials" / fullfilename;
+        std::filesystem::path fullpath = std::filesystem::current_path().parent_path() / "materials" / fullfilename;
         std::ifstream file(fullpath);
 
         std::vector<double> wavelength;
