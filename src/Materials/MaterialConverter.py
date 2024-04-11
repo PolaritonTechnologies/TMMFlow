@@ -1,11 +1,13 @@
 import pandas as pd
 
-material_name = "Ta2O5"
+material_name = "substrate_24mm_koeln"
 # Read the file
 df = pd.read_csv(f"{material_name}.mat", sep=",", header=None)
 
 # Rename the columns
 df.columns = ["nm", "n", "k"]
+
+material_name = "Glass_substrate_koeln"
 
 # Add a header row
 header = pd.DataFrame(
