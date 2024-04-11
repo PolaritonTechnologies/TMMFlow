@@ -156,15 +156,13 @@ std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, st
 {
     std::vector<Matrix3cd> e_list_3x3;
 
-    // substrate: quartz/glass
+    // substrate
     Matrix3cd substrate_layer_tensor =
-        (Matrix3cd(3, 3) << std::complex<double>(2.25, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(2.25, 0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(2.25, 0))
+        (Matrix3cd(3, 3) << std::complex<double>(material_splines[calculation_order.substrateMaterial][0](wavelength), material_splines[calculation_order.substrateMaterial][1](wavelength)), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[calculation_order.substrateMaterial][0](wavelength), material_splines[calculation_order.substrateMaterial][1](wavelength)), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[calculation_order.substrateMaterial][0](wavelength), material_splines[calculation_order.substrateMaterial][1](wavelength)))
             .finished();
     e_list_3x3.push_back(substrate_layer_tensor);
-
-    // std::reverse(structure_materials.begin(), structure_materials.end());
 
     for (const auto &material : calculation_order.structure_materials)
     {
@@ -176,11 +174,11 @@ std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, st
         e_list_3x3.push_back(next_layer_tensor);
     }
 
-    // out medium: air
+    // incident medium
     Matrix3cd incident_layer_tensor =
-        (Matrix3cd(3, 3) << std::complex<double>(1, 0), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(1, 0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(1, 0))
+        (Matrix3cd(3, 3) << std::complex<double>(material_splines[calculation_order.incidentMediumMaterial][0](wavelength), material_splines[calculation_order.incidentMediumMaterial][1](wavelength)), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[calculation_order.incidentMediumMaterial][0](wavelength), material_splines[calculation_order.incidentMediumMaterial][1](wavelength)), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[calculation_order.incidentMediumMaterial][0](wavelength), material_splines[calculation_order.incidentMediumMaterial][1](wavelength)))
             .finished();
     e_list_3x3.push_back(incident_layer_tensor);
 

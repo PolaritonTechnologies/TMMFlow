@@ -233,10 +233,14 @@ struct CalculationInfo
     double wavelengthMin;
     double wavelengthMax;
     double wavelengthStep;
+    double substrateThickness;
+    std::string substrateMaterial;
     std::vector<std::string> structure_materials;
     std::vector<double> structure_thicknesses;
-    std::string polarization;
     std::vector<double> azimuthalAngles;
+    std::string polarization;
+    std::string incidentMediumMaterial;
+    std::string exitMediumMaterial;
 
     // Default constructor
     CalculationInfo() = default;
@@ -252,9 +256,13 @@ struct CalculationInfo
         double wavelengthMin,
         double wavelengthMax,
         double wavelengthStep,
+        std::string polarization,
         std::vector<std::string> structure_materials,
         std::vector<double> structure_thicknesses,
-        std::string polarization) : calculation_type(calculation_type),
+        std::string substrateMaterial,
+        double substrateThickness,
+        std::string incidentMediumMaterial,
+        std::string exitMediumMaterial) : calculation_type(calculation_type),
                        polarAngleMin(polarAngleMin),
                        polarAngleMax(polarAngleMax),
                        polarAngleStep(polarAngleStep),
@@ -264,9 +272,13 @@ struct CalculationInfo
                        wavelengthMin(wavelengthMin),
                        wavelengthMax(wavelengthMax),
                        wavelengthStep(wavelengthStep),
+                       polarization(polarization),
                        structure_materials(structure_materials),
                        structure_thicknesses(structure_thicknesses),
-                       polarization(polarization) {}
+                       substrateMaterial(substrateMaterial),
+                       substrateThickness(substrateThickness),
+                       incidentMediumMaterial(incidentMediumMaterial),
+                       exitMediumMaterial(exitMediumMaterial) {}
 };
 
 CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
@@ -275,12 +287,8 @@ CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
     json calculation_order;
     file >> calculation_order;
 
-    // Reverse "structure_materials" and "structure_thicknesses"
     std::vector<std::string> structure_materials = calculation_order["structure_materials"];
-    // std::reverse(structure_materials.begin(), structure_materials.end());
-
     std::vector<double> structure_thicknesses = calculation_order["structure_thicknesses"];
-    // std::reverse(structure_thicknesses.begin(), structure_thicknesses.end());
 
     CalculationInfo calculation_info(
         calculation_order["calculation_type"],
@@ -293,9 +301,13 @@ CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
         calculation_order["wavelengthMin"],
         calculation_order["wavelengthMax"],
         calculation_order["wavelengthStep"],
+        calculation_order["polarization"],
         structure_materials,
         structure_thicknesses,
-        calculation_order["polarization"]
+        calculation_order["substrate_material"],
+        calculation_order["substrate_thickness"],
+        calculation_order["incident_medium"],
+        calculation_order["exit_medium"]
         );
 
     return calculation_info;
@@ -307,10 +319,3 @@ std::vector<std::string> getUniqueMembers(const std::vector<std::string> &inputA
     std::vector<std::string> uniqueVector(uniqueSet.begin(), uniqueSet.end());
     return uniqueVector;
 }
-
-// I think this is not needed anymore
-// std::vector<Matrix3cd> reverseVector(const std::vector<Matrix3cd> &vec)
-// {
-//     std::vector<Matrix3cd> reversedVec(vec.rbegin(), vec.rend());
-//     return reversedVec;
-// }

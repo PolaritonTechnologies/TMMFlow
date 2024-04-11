@@ -1,5 +1,6 @@
 {
     "calculation_type": "t",
+    "polarization": "s",
     "polarAngleMin": 40.0,
     "polarAngleMax": 50.0,
     "polarAngleStep": 1.0,
@@ -18,13 +19,16 @@
             65
         ]
     ],
-    "polarization": "s",
     "thickness_opt_allowed": [
         true
     ],
     "layer_switch_allowed": [
         false
     ],
+    "substrate_material": "FusedSilica",
+    "substrate_thickness": 1e6,
+    "incident_medium": "Air",
+    "exit_medium": "Air",
     "targets_type": [
         "t",
         "t",
@@ -107,6 +111,6 @@
             100
         ]
     ],
-	"core_override": true,
-	"core_selected": "general"
+    "core_override": true,
+    "core_selected": "general"
 }
