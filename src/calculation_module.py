@@ -41,15 +41,16 @@ class CalculationModule:
         save_data=False,
     ):
 
-        if self.core_selection == None:
-            if polarization != "s":
-                is_general_core = self.lib.getGeneralMaterialsInStack(self.my_filter)
-            else:
-                is_general_core = False
+        if self.core_selection == "general":
+            is_general_core = True
+        elif self.core_selection == "fast":
+            is_general_core = False
         else:
-            if self.core_selection == "general":
-                is_general_core = True
-            if self.core_selection == "fast":
+            if self.target_polarization[i] != "s":
+                is_general_core = self.lib.getGeneralMaterialsInStack(
+                    [self.my_filter]
+                )
+            else:
                 is_general_core = False
 
         initial_time = time.time()

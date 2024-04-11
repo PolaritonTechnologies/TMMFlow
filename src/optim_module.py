@@ -39,6 +39,8 @@ class OptimModule:
         self.optimum_iteration = None
         self.last_optimum_number = 0
         self.first_zero = True
+        self.is_general_core = True
+
         self.lib = ctypes_lib
         self.my_filter = my_filter
         self.log_func = log_func
@@ -62,13 +64,6 @@ class OptimModule:
         self.wavelength_step = np.array(self.data_order["wavelength_steps"])
         self.tolerance_entries = np.array(self.data_order["targets_tolerance"])
         self.bounds = [tuple(x) for x in self.data_order["bounds"]]
-        self.core_override = None
-        if self.data_order["core_override"]:
-            self.core_override = self.data_order["core_override"]
-            if self.data_order["core_selected"] == "general":
-                self.is_general_core = True
-            else:
-                self.is_general_core = False
         self.target_wavelength = np.empty(0)
         self.target_weights = np.empty(0)
         self.target_value = np.empty(0)
@@ -397,18 +392,18 @@ class OptimModule:
                     self.my_filter, layer_order, int(np.size(layer_order))
                 )
 
-            if self.core_override == None:
+            if self.data_order["core_selection"] == "general":
+                self.is_general_core = True
+            elif self.data_order["core_selection"] == "fast":
+                self.is_general_core = False
+            else:
                 if self.target_polarization[i] != "s":
                     self.is_general_core = self.lib.getGeneralMaterialsInStack(
                         [self.my_filter]
                     )
                 else:
                     self.is_general_core = False
-            elif self.core_override != None:
-                if self.core_override == "general":
-                    self.is_general_core = True
-                if self.core_override == "fast":
-                    self.is_general_core = False
+
 
             target_calculated = self.lib.calculate_reflection_transmission_absorption(
                 self.my_filter,
