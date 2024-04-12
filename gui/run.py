@@ -8,23 +8,29 @@ from flask import (
     jsonify,
     url_for,
 )
+
+# For asynchronous updates
+from flask_socketio import SocketIO, emit
+from flask_cors import CORS
+
+# Plotting graphs
+import plotly.graph_objects as go
+import plotly.io as pio
+
 import threading
 
 # import subprocess
 from werkzeug.utils import secure_filename
 
-import json
 import os
 import numpy as np
+import pandas as pd
 
-from gui.utility import (
-    translate_order_for_cpp,
-    create_filter,
+from utility import (
     allowed_file,
     generate_colors,
 )
 from FilterStack import FilterStack
-from calculation_module import CalculationModule
 
 from queue import Queue
 
@@ -62,18 +68,33 @@ def queue_plot_done():
         plot_done_queue.put(1)
 
 
+# Configure flask app
 app = Flask(__name__)
-app.secret_key = "your secret key"  # replace with your secret key
 
+# Enable CORS for all routes which has to be done for the socketio to work,
+# however, for the production server, it is important that cors_allowed_origins
+# is only set to the server domain
+CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# replace with your secret key
+app.secret_key = "your secret key"
+app.config["UPLOAD_FOLDER"] = "../src/temp/"
+
+# Global variables necessary for calculation (as data is shared)
 my_filter = None
-lib = None
-optimisation_order_file = None
-default_file = "current_structure.json"
+selected_file = None
+default_file = "../examples/demo_test.json"
+
 num_boxes = None
 colors = None
 heights = None
 unique_materials = None
-selected_file = None
+
+
+##############################################
+################## Routing ###################
+##############################################
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -102,36 +123,33 @@ def home():
     )
 
 
-@app.route("/simulate", methods=["GET", "POST"])
+@app.route("/simulate")
 def simulate():
+    global my_filter
 
-    with open(optimisation_order_file) as f:
-        plot_order = json.load(f)
+    if np.all(my_filter.stored_data == None):
+        dataPresent = False
+    else:
+        dataPresent = True
 
-    wavelength = np.arange(
-        plot_order["wavelengthMin"],
-        plot_order["wavelengthMax"] + 1,
-        plot_order["wavelengthStep"],
-    )
-    polar_angles = np.arange(
-        plot_order["polarAngleMin"],
-        plot_order["polarAngleMax"] + 1,
-        plot_order["polarAngleStep"],
-    )
-    azimuthal_angles = np.arange(
-        plot_order["azimAngleMin"],
-        plot_order["azimAngleMax"] + 1,
-        plot_order["azimAngleStep"],
-    )
+    default_values = {
+        "mode": my_filter.filter_definition["calculation_type"],
+        "startAngle": my_filter.filter_definition["polarAngleMin"],
+        "endAngle": my_filter.filter_definition["polarAngleMax"],
+        "stepAngle": my_filter.filter_definition["polarAngleStep"],
+        "startWavelength": my_filter.filter_definition["wavelengthMin"],
+        "endWavelength": my_filter.filter_definition["wavelengthMax"],
+        "stepWavelength": my_filter.filter_definition["wavelengthStep"],
+        "polarization": my_filter.filter_definition["polarization"],
+        "azimuthalAngle": my_filter.filter_definition["azimAngleMin"],
+        "generalCore": my_filter.filter_definition["core_selection"],
+        "dataPresent": dataPresent,
+    }
+
     # Send the image URL back to the client
     return render_template(
         "simulate.html",
-        intensity=[
-            [0 for _ in range(len(polar_angles))] for _ in range(len(wavelength))
-        ],
-        wavelength=list(wavelength),
-        angles=list(polar_angles),
-        azimuthal_angle=0,
+        default_values=default_values,
     )
 
 
@@ -152,9 +170,38 @@ def optimize():
     )
 
 
+##############################################
+################## Home ######################
+##############################################
+
+
 @app.route("/upload_file", methods=["POST"])
 def upload_file(defaultname=None):
+    """
+    Uploads a file to the server and processes it to generate filter stack
+    representation.
+
+    Args:
+        defaultname (str, optional): The name of the default file to be used.
+        Defaults to None.
+
+    Returns:
+        tuple or flask.Response: If defaultname is not None, returns a tuple
+        containing the number of boxes, colors, heights, number of unique
+        materials, unique materials, and unique colors.
+
+        If defaultname is None, returns a flask.Response object with the
+        rendered template.
+
+    Raises:
+        None
+    """
+
     global selected_file
+    global my_filter
+
+    # Let the user upload a file to the server, if no file was chosen to be
+    # uploaded, use the default file instead.
     if defaultname == None:
         if "file" not in request.files:
             flash("No file part")
@@ -163,120 +210,141 @@ def upload_file(defaultname=None):
         if file.filename == "":
             flash("No selected file")
             return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(full_path)
+            selected_file = full_path
     else:
-        file = open(defaultname, "r")
-        file.filename = defaultname
+        # If defaultname is provided, use it as the selected file
+        selected_file = defaultname
 
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        selected_file = filename
-        data = json.load(file)
+    # Create the filter and construct the filter stack representation
+    my_filter = FilterStack(selected_file)
 
-        # Save the data back to a JSON file so that it can be accessed by the C++ code
-        with open(os.path.join("./", "output.json"), "w") as output_file:
-            json.dump(data, output_file)
+    # Now extract the number of layers to construct the number of boxes
+    num_boxes = len(my_filter.filter_definition["structure_thicknesses"])
+    unique_materials = np.unique(my_filter.filter_definition["structure_materials"])
+    unique_colors = generate_colors(len(unique_materials))
+    colors = np.empty(num_boxes, dtype=np.dtype("U7"))
 
-        global my_filter
-        global lib
-        global optimisation_order_file
+    for i in range(len(unique_materials)):
+        colors[
+            np.array(my_filter.filter_definition["structure_materials"])
+            == np.unique(my_filter.filter_definition["structure_materials"])[i]
+        ] = unique_colors[i]
 
-        optimisation_order_file_python = "output.json"
-        optimisation_order_file = translate_order_for_cpp(
-            optimisation_order_file_python
-        )
-        my_filter, lib = create_filter(optimisation_order_file)
+    heights = np.round(
+        np.array(my_filter.filter_definition["structure_thicknesses"])
+        / sum(my_filter.filter_definition["structure_thicknesses"])
+        * 400
+    )
 
-        # Now extract the number of layers to construct the number of boxes
-        with open(os.path.join("./", "temp_cpp_order.json"), "r") as output_file:
-            cpp_rendered_data = json.load(output_file)
-
-        num_boxes = len(cpp_rendered_data["structure_thicknesses"])
-        unique_materials = np.unique(cpp_rendered_data["structure_materials"])
-        unique_colors = generate_colors(len(unique_materials))
-        colors = np.empty(num_boxes, dtype=np.dtype("U7"))
-
-        for i in range(len(unique_materials)):
-            colors[
-                np.array(cpp_rendered_data["structure_materials"])
-                == np.unique(cpp_rendered_data["structure_materials"])[i]
-            ] = unique_colors[i]
-
-        heights = np.round(
-            np.array(cpp_rendered_data["structure_thicknesses"])
-            / sum(cpp_rendered_data["structure_thicknesses"])
-            * 400
+    if defaultname is not None:
+        return (
+            num_boxes,
+            colors,
+            heights,
+            len(unique_materials),
+            unique_materials,
+            unique_colors,
         )
 
-        file.close()
+    else:
 
-        if defaultname is not None:
-            return (
-                num_boxes,
-                colors,
-                heights,
-                len(unique_materials),
-                unique_materials,
-                unique_colors,
-            )
-
-        else:
-
-            return render_template(
-                "home.html",
-                num_boxes=num_boxes,
-                colors=colors,
-                heights=heights,
-                num_legend_items=len(unique_materials),
-                unique_materials=unique_materials,
-                legend_colors=unique_colors,
-                file_label="Currently loaded: " + filename,
-            )
+        return render_template(
+            "home.html",
+            num_boxes=num_boxes,
+            colors=colors,
+            heights=heights,
+            num_legend_items=len(unique_materials),
+            unique_materials=unique_materials,
+            legend_colors=unique_colors,
+            file_label="Currently loaded: " + filename,
+        )
 
 
-@app.route("/calculate_and_plot", methods=["POST"])
-def calculate_and_plot():
+##############################################
+############# Calculate and Plot #############
+##############################################
 
-    plotting = CalculationModule(
-        my_filter,
-        lib,
-        plot_queue,
-        plot_done_queue,
-        log_plot=queue_plot,
-        log_plot_done=queue_plot_done,
+
+@socketio.on("calculate_and_plot")
+def calculate_and_plot(data):
+    """ """
+    global my_filter
+    polar_angles = np.arange(float(data["startAngle"]), float(data["endAngle"]) + float(data["stepAngle"]), float(data["stepAngle"]))
+
+    calculated_data_df = pd.DataFrame()
+
+    for theta in polar_angles:
+        calculated_data_df[theta]= my_filter.calculate_one_angle(
+            float(data["startWavelength"]),
+            float(data["endWavelength"]),
+            float(data["stepWavelength"]),
+            data["mode"],
+            data["polarization"],
+            theta,
+            float(data["azimuthalAngle"]),
+            True if data["generalCore"] == "on" else False
+        )
+
+
+        # Create a Plotly figure using the calculated data
+        angles = calculated_data_df.columns.to_numpy()
+        wavelengths = calculated_data_df.index.to_numpy()
+        color_values = calculated_data_df.to_numpy()
+
+        # The layout is stored in simulate.html
+        heatmap = go.Heatmap(
+            x=angles,
+            y=wavelengths,
+            z=color_values,
+            colorscale='Viridis',
+        )
+
+        fig = go.Figure(data=heatmap)
+
+        # Convert the figure to JSON format
+        fig_json = pio.to_json(fig)
+
+        # Emit the figure in JSON format
+        socketio.emit("update_plot", fig_json)
+    
+    my_filter.stored_data = calculated_data_df
+
+
+@socketio.on("plot")
+def plot():
+    """ """
+    global my_filter
+
+    calculated_data_df = my_filter.stored_data
+
+    # Create a Plotly figure using the calculated data
+    angles = calculated_data_df.columns.to_numpy()
+    wavelengths = calculated_data_df.index.to_numpy()
+    color_values = calculated_data_df.to_numpy()
+
+    # The layout is stored in simulate.html
+    heatmap = go.Heatmap(
+        x=angles,
+        y=wavelengths,
+        z=color_values,
+        colorscale='Viridis',
     )
 
-    with open(optimisation_order_file) as f:
-        plot_order = json.load(f)
+    fig = go.Figure(data=heatmap)
 
-    wavelength = np.arange(
-        plot_order["wavelengthMin"],
-        plot_order["wavelengthMax"] + 1,
-        plot_order["wavelengthStep"],
-    )
-    polar_angles = np.arange(
-        plot_order["polarAngleMin"],
-        plot_order["polarAngleMax"] + 1,
-        plot_order["polarAngleStep"],
-    )
-    azimuthal_angles = np.arange(
-        plot_order["azimAngleMin"],
-        plot_order["azimAngleMax"] + 1,
-        plot_order["azimAngleStep"],
-    )
+    # Convert the figure to JSON format
+    fig_json = pio.to_json(fig)
 
-    plotting.calculate_ar_data(
-        wavelength,
-        polar_angles,
-        azimuthal_angles,
-        plot_order["calculation_type"],
-        plot_order["polarization"],
-        save_figure=True,
-        save_data=True,
-    )
-
-    return "", 204  # Return no content
+    # Emit the figure in JSON format
+    socketio.emit("update_plot", fig_json)
+    
 
 
+"""
 @app.route("/get_plot", methods=["GET"])
 def get_plot():
     with plot_queue_lock:
@@ -292,8 +360,10 @@ def get_plot():
                 "azimuthal_angle": dict_plot["azimuthal_angle"],
             }
         )
+"""
 
 
+"""
 @app.route("/get_plot_done", methods=["GET"])
 def get_plot_done():
     with plot_done_queue_lock:
@@ -303,6 +373,11 @@ def get_plot_done():
         print("Plotting done.")
         return jsonify({"done": True})
 
+"""
+
+##############################################
+################ Optimization  ###############
+##############################################
 
 @app.route("/get_messages", methods=["GET"])
 def get_messages():
@@ -355,7 +430,6 @@ def start_optimization():
         optim_module = FilterStack(
             "./temp_cpp_order.json",
             my_filter,
-            lib,
             message_queue=message_queue,
             update_queue=design_update_queue,
             log_func=queue_msg,
@@ -387,4 +461,4 @@ def stop_optimization():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    socketio.run(app)

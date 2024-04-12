@@ -7,6 +7,9 @@
     <title>Transfer Matrix Method Simulations</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!-- This here is for asynchronous plotting -->
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 
 <body>
@@ -34,92 +37,164 @@
         </div>
     </nav>
     <main>
-        <form action="{{ url_for('calculate_and_plot') }}" method="post">
-            <button type="submit" id="calculateButton" class="btn btn-primary">Calculate and Plot</button>
-        </form>
-        <div id="myDiv"></div>
+        <div class="row align-items-center ">
+            <div class="col-6">
+                <div class="row d-flex align-items-center justify-content-center">
+                    <div id="heatmap"></div>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <div class="row d-flex align-items-center justify-content-center">
+                    <div class="form-group mx-3">
+                        <label for="mode">Mode:</label>
+                        <select id="mode" class="form-control">
+                            <option value="r" {% if default_values.mode=="r" %}selected{% endif %}>
+                                Reflection</option>
+                            <option value="t" {% if default_values.mode=="t" %}selected{% endif %}>Transmission</option>
+                        </select>
+                    </div>
+                    <div class="form-group mx-3">
+                        <label for="polarization">Polarization:</label>
+                        <select id="polarization" class="form-control">
+                            <option value="s" {% if default_values.mode=="s" %}selected{% endif %}>
+                                s</option>
+                            <option value="p" {% if default_values.mode=="p" %}selected{% endif %}>p</option>
+                            <option value="" {% if default_values.mode=="" %}selected{% endif %}>None</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group mx-3">
+                        <label for="azimuthalAngle">Azimuthal Angle:</label>
+                        <input type="number" id="azimuthalAngle" class="form-control" min="0" max="90" step="0.1"
+                            value="{{ default_values.azimuthalAngle }}">
+                    </div>
+                    <div class="form-group mx-3">
+                        <label for="generalCore">General Core:</label>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="generalCore" {% if
+                                default_values.generalCore %}checked{% endif %}>
+                            <label class="custom-control-label" for="generalCore"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row d-flex align-items-center justify-content-center">
+                    <div class="form-group mx-3">
+                        <label for="startAngle">Starting Angle:</label>
+                        <input type="number" id="startAngle" class="form-control" min="0" max="90" step="0.1"
+                            value="{{ default_values.startAngle }}">
+                    </div>
+
+                    <div class="form-group mx-3">
+                        <label for="endAngle">End Angle:</label>
+                        <input type="number" id="endAngle" class="form-control" min="0" max="90" step="0.1"
+                            value="{{ default_values.endAngle }}">
+                    </div>
+
+                    <div class="form-group mx-3">
+                        <label for="stepAngle">Angle step:</label>
+                        <input type="number" id="stepAngle" class="form-control" min="0" max="90" step="0.1"
+                            value="{{ default_values.stepAngle }}">
+                    </div>
+                </div>
+
+
+                <div class="row d-flex align-items-center justify-content-center">
+                    <div class="form-group mx-3">
+                        <label for="startWavelength">Starting Wavelength:</label>
+                        <input type="number" id="startWavelength" class="form-control" min="0" max="90" step="0.1"
+                            value="{{ default_values.startWavelength }}">
+                    </div>
+
+                    <div class="form-group mx-3">
+                        <label for="endWavelength">End Wavelength:</label>
+                        <input type="number" id="endWavelength" class="form-control" min="0" max="90" step="0.1"
+                            value="{{ default_values.endWavelength }}">
+                    </div>
+
+                    <div class="form-group mx-3">
+                        <label for="stepWavelength">Wavelength Step:</label>
+                        <input type="number" id="stepWavelength" class="form-control" min="0" max="90" step="0.1"
+                            value="{{ default_values.stepWavelength }}">
+                    </div>
+                </div>
+
+                <div class="row d-flex align-items-center justify-content-center">
+                    <button id="calculateButton" class="btn btn-primary mx-3">Calculate</button>
+                    <button id="plotButton" class="btn btn-primary mx-3" {% if not default_values.dataPresent
+                        %}disabled{% endif %}>Plot</button>
+                </div>
+            </div>
+        </div>
+
+
     </main>
     <footer>
         <p>© 2024 PolaritonTechnologies</p>
     </footer>
 </body>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
 
-document.getElementById('calculateButton').addEventListener('click', function() {
-    this.disabled = true;
-    fetch('{{ url_for("calculate_and_plot") }}', {method: 'POST'})
-});
-
-var data = [{
-    z: {{ intensity | tojson | safe }},
-    x: {{ angles | tojson | safe }},
-    y: {{ wavelength | tojson | safe }},
-    type: 'heatmap',
-    colorscale: 'Viridis',
-    xmin: Math.min(...{{ angles | tojson | safe }}.flat()),  // minIntensity
-    xmax: Math.max(...{{ angles | tojson | safe }}.flat()),  // maxIntensity
-    ymin: Math.min(...{{ wavelength | tojson | safe }}.flat()),  // minIntensity
-    ymax: Math.max(...{{ wavelength | tojson | safe }}.flat()),  // maxIntensity
-    zmin: 0,  // minIntensity
-    zmax: 1,  // maxIntensity
-}];
-
-var layout = {
-    title: 'Azimuthal Angle: ' + {{ azimuthal_angle | tojson | safe }},
-    xaxis: {title: 'Angles (°)'},
-    yaxis: {title: 'Wavelength (nm)'},
-    coloraxis: {colorbar: {title: 'Intensity'}},
-    autosize: false,
-    width: window.innerWidth * 0.45,
-    height: window.innerHeight * 0.7,
-};
-
-Plotly.newPlot('myDiv', data, layout);
-
-function updatePlot() {
-    fetch('{{ url_for("get_plot") }}')
-        .then(response => response.json())
-        .then(data => {
-            if (Object.keys(data).length === 0) {
-                return;
-            }
-            console.log(data)
-            var xMin = Math.min(...data.angles);
-            var xMax = Math.max(...data.angles);
-            var yMin = Math.min(...data.wavelength);
-            var yMax = Math.max(...data.wavelength);
-            var zMin = Math.min(...data.intensity.flat());
-            var zMax = Math.max(...data.intensity.flat());
-
-            Plotly.react('myDiv', [{
-                z: data.intensity,
-                x: data.angles,
-                y: data.wavelength,
-                type: 'heatmap',
-                colorscale: 'Viridis',
-                zmin: zMin,
-                zmax: zMax,
-            }], {
-                title: 'Azimuthal Angle: ' + data.azimuthal_angle,
-                xaxis: {title: 'Angles', range: [xMin, xMax]},
-                yaxis: {title: 'Wavelength', range: [yMin, yMax]},
-                coloraxis: {colorbar: {title: 'Intensity'}},
-            });
-        });
-    }
-
-function checkPlotDone() {
-    fetch('{{ url_for("get_plot_done") }}')
-        .then(response => response.json())
-        .then(data => {
-            if (Object.keys(data).length !== 0) {
-                document.getElementById('calculateButton').disabled = false;
-            }
-        });
-}
-
-setInterval(checkPlotDone, 1000);
-setInterval(updatePlot, 1000);
-</script>
 </html>
+
+<script>
+    var socket = io.connect("http://localhost:5000");
+
+    // Create a dummy heatmap with all zeros to already be able to show a dummy
+    // graph from the beginning (without any calculation)
+    var dummyData = {
+        z: Array(100).fill().map(() => Array(100).fill(0)),
+        type: 'heatmap',
+        colorscale: 'Viridis'
+    };
+
+    // Create a layout with autosize set to true, aspectmode set to cube, and x-axis and y-axis labels
+    var layout = {
+        autosize: false,
+        width: 800,
+        height: 800,
+        margin: { l: 50, r: 50, b: 100, t: 100, pad: 4 },
+        xaxis: { title: "Angle" },
+        yaxis: { title: "Wavelength" }
+    };
+
+    // Plot the dummy heatmap when the page loads
+    Plotly.newPlot('heatmap', [dummyData], layout);
+
+    document.getElementById("calculateButton").addEventListener("click", function () {
+        var mode = document.getElementById("mode").value;
+        var polarization = document.getElementById("polarization").value;
+        var azimuthalAngle = document.getElementById("azimuthalAngle").value;
+        var generalCore = document.getElementById("generalCore").value;
+        var startAngle = document.getElementById("startAngle").value;
+        var endAngle = document.getElementById("endAngle").value;
+        var stepAngle = document.getElementById("stepAngle").value;
+        var startWavelength = document.getElementById("startWavelength").value;
+        var endWavelength = document.getElementById("endWavelength").value;
+        var stepWavelength = document.getElementById("stepWavelength").value;
+
+        socket.emit("calculate_and_plot", {
+            mode: mode,
+            polarization: polarization,
+            azimuthalAngle: azimuthalAngle,
+            generalCore: generalCore,
+            startAngle: startAngle,
+            endAngle: endAngle,
+            stepAngle: stepAngle,
+            startWavelength: startWavelength,
+            endWavelength: endWavelength,
+            stepWavelength: stepWavelength,
+        });
+
+        document.getElementById("plotButton").disabled = false;
+    });
+
+    document.getElementById("plotButton").addEventListener("click", function () {
+        socket.emit("plot");
+    });
+
+    socket.on("update_plot", function (fig_json) {
+        var fig = JSON.parse(fig_json);
+        Plotly.newPlot("heatmap", fig.data, layout);
+    });
+</script>

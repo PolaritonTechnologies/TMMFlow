@@ -1,8 +1,10 @@
 import ctypes
-import numpy as np
 import json
-import math
+import os
 import time
+
+import numpy as np
+import math
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -109,6 +111,9 @@ class FilterStack:
             0, np.sum(self.filter_definition["layer_switch_allowed"]), 1
         )
 
+        # Store last calculated data in a pandas dataframe (defaults to None)
+        self.stored_data = None
+
         # Logging and queue variables needed for web-based GUI
         self.log_func = log_func
         self.log_design_func = log_design_func
@@ -122,7 +127,14 @@ class FilterStack:
         """
         Translates the optimization order for the C++ code.
 
-        This function reads in a JSON file that specifies the optimization order for the filter stack. It translates the structure of the filter stack, including the materials, thicknesses, and optimization parameters, into a format that can be read by the C++ code. If the structure includes periodic assemblies, these are expanded into individual layers. If additional layers are allowed to be added during optimization, these are also included in the translated order. The translated order is then written to a temporary JSON file, which is returned by the function.
+        This function reads in a JSON file that specifies the optimization order
+        for the filter stack. It translates the structure of the filter stack,
+        including the materials, thicknesses, and optimization parameters, into
+        a format that can be read by the C++ code. If the structure includes
+        periodic assemblies, these are expanded into individual layers. If
+        additional layers are allowed to be added during optimization, these are
+        also included in the translated order. The translated order is then
+        written to a temporary JSON file, which is returned by the function.
 
         Parameters:
         json_file_path (str): The path to the JSON file that specifies the optimization order.
@@ -217,10 +229,15 @@ class FilterStack:
                 updated_optimisation_order["thickness_opt_allowed"].append(True)
                 updated_optimisation_order["layer_switch_allowed"].append(True)
 
-        with open("./temp/temp_cpp_order.json", "w") as f:
+        # Generate file path relative to this file
+        file_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "./temp/temp_cpp_order.json"
+        )
+
+        with open(file_path, "w") as f:
             json.dump(updated_optimisation_order, f)
 
-        return "./temp/temp_cpp_order.json"
+        return file_path
 
     def create_filter_in_cpp(self, json_file_path_cpp):
         """
@@ -243,7 +260,11 @@ class FilterStack:
         """
 
         # Link C++ functions and create filter
-        lib = ctypes.CDLL("./run_filter_stack.so")
+        lib = ctypes.CDLL(
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "./run_filter_stack.so"
+            )
+        )
 
         FilterStack = ctypes.POINTER(ctypes.c_char)
 
@@ -607,7 +628,11 @@ class FilterStack:
             )
             optimized_values.append("Optimized merit value: " + str(ret.fun) + "\n")
             optimized_values.append("Optimized features: " + str(ret.x) + "\n")
-            with open("./temp/optimized_values.csv", "w") as the_file:
+            temp_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                "./temp/optimized_values.csv",
+            )
+            with open(temp_path, "w") as the_file:
                 the_file.write("\n".join(optimized_values))
 
         return ret.x
@@ -785,7 +810,11 @@ class FilterStack:
             self.optimum_iteration = self.iteration_no
             self.optimum_number += 1
 
-            with open("./temp/current_structure.json", "w") as file:
+            temp_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                "./temp/current_structure.json",
+            )
+            with open(temp_path, "w") as file:
                 json.dump(temp_json, file)
 
         self.callback_call += 1
@@ -955,6 +984,44 @@ class FilterStack:
     ########## Plotting and calculation area ############
     #####################################################
 
+    def calculate_one_angle(
+        self,
+        minimum_wavelength,
+        maximum_wavelength,
+        wavelength_step,
+        target_type,
+        polarization,
+        polar_angle,
+        azimuthal_angle,
+        is_general_core,
+    ):
+        """
+        Function to only get the results for one particular angle given a wavelength range
+        """
+
+        # Create an array of wavelength from the minimum to the maximum with a step
+        wavelengths = np.arange(
+            minimum_wavelength, maximum_wavelength + 1, wavelength_step
+        )
+
+        # Create a dataframe to store the results in 
+        stored_value = pd.Series(index=wavelengths)
+
+        for wavelength in stored_value.index:
+            stored_value.loc[stored_value.index == wavelength] = (
+                self.lib.calculate_reflection_transmission_absorption(
+                    self.my_filter,
+                    target_type.encode("utf-8"),
+                    polarization.encode("utf-8"),
+                    wavelength,
+                    polar_angle,
+                    azimuthal_angle,
+                    is_general_core,
+                )
+            )
+        
+        return stored_value
+
     def calculate_ar_data(
         self,
         wavelength=None,
@@ -1035,19 +1102,21 @@ class FilterStack:
                         )
                     )
 
-                if web:
-                    self.log_func(
-                        {
-                            "intensity": np.nan_to_num(
-                                stored_value.to_numpy(float)
-                            ).tolist(),
-                            "wavelength": stored_value.index.astype(float).tolist(),
-                            "angles": stored_value.columns.astype(float).tolist(),
-                            "azimuthal_angle": phi,
-                        }
-                    )
+        #         if web:
+        #             self.log_func(
+        #                 {
+        #                     "intensity": np.nan_to_num(
+        #                         stored_value.to_numpy(float)
+        #                     ).tolist(),
+        #                     "wavelength": stored_value.index.astype(float).tolist(),
+        #                     "angles": stored_value.columns.astype(float).tolist(),
+        #                     "azimuthal_angle": phi,
+        #                 }
+        #             )
 
-        self.log_design_func()
+        # self.log_design_func()
+
+        self.stored_data = stored_value
 
         if not web:
             # Print time elapsed for the generation of the reflectivity matrix
@@ -1072,18 +1141,24 @@ class FilterStack:
 
             if save_figure:
                 # plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
-                plt.savefig("./temp/plot.png", format="png", dpi=300)
+                temp_path = os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)), "./temp/plot.png"
+                )
+                plt.savefig("temp_path", format="png", dpi=300)
                 # Save X, Y, Z to csv files
             if save_data:
                 header_lines = []
                 header_lines.append("Here we can add some meta data to the header \n")
 
                 # Save header lines indicating what the simulation represents
-                with open("./temp/value.csv", "w") as the_file:
+                temp_path = os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)), "./temp/value.csv"
+                )
+                with open(temp_path, "w") as the_file:
                     the_file.write("\n".join(header_lines))
 
                 # Save actual data by appending
-                stored_value.to_csv("./temp/value.csv", sep=",", header=True, mode="a")
+                stored_value.to_csv(temp_path, sep=",", header=True, mode="a")
 
             plt.show()
 
