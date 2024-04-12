@@ -30,48 +30,30 @@
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
                     <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
                 </li>
-                <!-- Dropdown
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Dropdown
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                        <a class="dropdown-item" href="#">Action</a>
-                        <a class="dropdown-item" href="#">Another action</a>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="#">Something else here</a>
-                    </div>
-                </li> -->
+                <li class="nav-item {{ 'active' if request.endpoint == 'stack_editor' else '' }}">
+                    <a class="nav-link" href="{{ url_for('stack_editor') }}">Stack Editor</a>
+                </li>
+
+
             </ul>
-            <!-- Search form -->
-            <!-- <form class="form-inline ml-auto">
-                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-            </form> -->
+
         </div>
     </nav>
-    <!-- <nav>
-        <ul>
-            <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ simulate }}">Simulate</a></li>
-            <li><a href="{{ optimize }}">Optimize</a></li>
-        </ul>
-    </nav> -->
-    <main>
-        <section>
+
+    <main class="container">
+        <section class="text-center my-5">
             <h2>Upload your Filter Design</h2>
             <p>Upload a .json file containing your filter design.</p>
             <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
                 <div class="custom-file">
-                    <input type="file" class="custom-file-input" id="customFile" name="file" style="display: none;">
+                    <input type="file" class="custom-file-input" id="customFile" name="file">
                     <label class="custom-file-label" for="customFile">{{ file_label }}</label>
                 </div>
-                <button type="submit" class="btn btn-primary" value="upload">Upload</button>
+                <button type="submit" class="btn btn-primary mt-3" value="upload">Upload</button>
             </form>
         </section>
-        <section class="row">
-            <div class="col-4 d-flex justify-content-center align-items-center">
+        <section class="row justify-content-center">
+            <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
                 <div class="container">
                     {% if num_boxes and colors is defined %}
                     {% for _ in range(num_boxes) %}
@@ -82,11 +64,11 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="col-8">
+            <div class="col-lg-2 col-md-6">
                 <div id="legend">
                     {% if num_legend_items and legend_colors is defined %}
                     {% for i in range(num_legend_items) %}
-                    <div class="legend-item row d-flex align-items-center justify-content-start">
+                    <div class="legend-item row d-flex align-items-center justify-content-start my-2">
                         <div class="box"
                             style="background-color: {{ legend_colors[i] }}; height: 20px; margin-right: 10px; width: 5em;">
                         </div>
@@ -97,12 +79,15 @@
                 </div>
             </div>
         </section>
+
     </main>
     <footer>
         <p>© 2024 PolaritonTechnologies</p>
     </footer>
     </footer>
 </body>
+
+</html>
 <script>
     document.querySelector('.custom-file-input').addEventListener('change', function (e) {
         var fileName = document.getElementById("customFile").files[0].name;
@@ -110,5 +95,3 @@
         nextSibling.innerText = fileName
     })
 </script>
-
-</html>

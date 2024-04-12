@@ -17,56 +17,24 @@ from flask_cors import CORS
 import plotly.graph_objects as go
 import plotly.io as pio
 
+# Threading computationally intensive tasks
 import threading
 
 # import subprocess
 from werkzeug.utils import secure_filename
 
 import os
+import time
+
 import numpy as np
 import pandas as pd
+import json
 
 from utility import (
     allowed_file,
     generate_colors,
 )
 from FilterStack import FilterStack
-
-from queue import Queue
-
-# Create global queues
-message_queue = Queue()
-design_update_queue = Queue()
-plot_queue = Queue()
-plot_done_queue = Queue()
-
-# Create a lock for the queue
-message_queue_lock = threading.Lock()
-design_update_queue_lock = threading.Lock()
-plot_queue_lock = threading.Lock()
-plot_done_queue_lock = threading.Lock()
-
-
-def queue_update():
-    print("Queueing design update...")
-    with design_update_queue_lock:
-        design_update_queue.put(1)
-
-
-def queue_msg(msg):
-    with message_queue_lock:
-        message_queue.put(msg)
-
-
-def queue_plot(plot_dic):
-    with plot_queue_lock:
-        plot_queue.put(plot_dic)
-
-
-def queue_plot_done():
-    with plot_done_queue_lock:
-        plot_done_queue.put(1)
-
 
 # Configure flask app
 app = Flask(__name__)
@@ -86,10 +54,10 @@ my_filter = None
 selected_file = None
 default_file = "../examples/demo_test.json"
 
-num_boxes = None
-colors = None
-heights = None
-unique_materials = None
+# num_boxes = None
+# colors = None
+# heights = None
+# unique_materials = None
 
 
 ##############################################
@@ -99,24 +67,38 @@ unique_materials = None
 
 @app.route("/", methods=["GET", "POST"])
 def home():
-    global num_boxes
-    global colors
-    global heights
-    global unique_materials
-    global selected_file
+    global my_filter
+    global default_file
 
-    num_boxes, colors, heights, num_legend_items, unique_materials, legend_colors = (
-        upload_file(default_file)
-    )
-    selected_file = default_file
+    # If filter has not yet been selected, load the default filter and display
+    # its structure, else
+    if my_filter is None:
+        (
+            num_boxes,
+            colors,
+            heights,
+            num_legend_items,
+            unique_materials,
+            unique_colors,
+        ) = upload_file(default_file)
+    else:
+        (
+            num_boxes,
+            colors,
+            heights,
+            num_legend_items,
+            unique_materials,
+            unique_colors,
+        ) = extract_filter_design(my_filter)
+
     return render_template(
         "home.html",
         num_boxes=num_boxes,
         colors=colors,
         heights=heights,
-        num_legend_items=len(unique_materials),
+        num_legend_items=num_legend_items,
         unique_materials=unique_materials,
-        legend_colors=legend_colors,
+        legend_colors=unique_colors,
         file_label="Currently loaded "
         + default_file
         + ": Click Browse to select another file",
@@ -155,18 +137,65 @@ def simulate():
 
 @app.route("/optimize", methods=["GET", "POST"])
 def optimize():
-    global selected_file
-    num_boxes, colors, heights, num_legend_items, unique_materials, legend_colors = (
-        upload_file(selected_file)
-    )
+    global my_filter
+    global default_file
+
+    if my_filter is None:
+        (
+            num_boxes,
+            colors,
+            heights,
+            num_legend_items,
+            unique_materials,
+            unique_colors,
+        ) = upload_file(default_file)
+    else:
+        (
+            num_boxes,
+            colors,
+            heights,
+            num_legend_items,
+            unique_materials,
+            unique_colors,
+        ) = extract_filter_design(my_filter)
+
     return render_template(
         "optimize.html",
         num_boxes=num_boxes,
         colors=colors,
         heights=heights,
-        num_legend_items=len(unique_materials),
+        num_legend_items=num_legend_items,
         unique_materials=unique_materials,
-        legend_colors=legend_colors,
+        legend_colors=unique_colors,
+    )
+
+@app.route("/stack_editor")
+def stack_editor():
+    global my_filter
+
+    if np.all(my_filter.stored_data == None):
+        dataPresent = False
+    else:
+        dataPresent = True
+
+    # default_values = {
+    #     "mode": my_filter.filter_definition["calculation_type"],
+    #     "startAngle": my_filter.filter_definition["polarAngleMin"],
+    #     "endAngle": my_filter.filter_definition["polarAngleMax"],
+    #     "stepAngle": my_filter.filter_definition["polarAngleStep"],
+    #     "startWavelength": my_filter.filter_definition["wavelengthMin"],
+    #     "endWavelength": my_filter.filter_definition["wavelengthMax"],
+    #     "stepWavelength": my_filter.filter_definition["wavelengthStep"],
+    #     "polarization": my_filter.filter_definition["polarization"],
+    #     "azimuthalAngle": my_filter.filter_definition["azimAngleMin"],
+    #     "generalCore": my_filter.filter_definition["core_selection"],
+    #     "dataPresent": dataPresent,
+    # }
+
+    # Send the image URL back to the client
+    return render_template(
+        "stack_editor.html",
+        # default_values=default_values,
     )
 
 
@@ -218,50 +247,84 @@ def upload_file(defaultname=None):
     else:
         # If defaultname is provided, use it as the selected file
         selected_file = defaultname
+        filename = defaultname
 
     # Create the filter and construct the filter stack representation
     my_filter = FilterStack(selected_file)
-
-    # Now extract the number of layers to construct the number of boxes
-    num_boxes = len(my_filter.filter_definition["structure_thicknesses"])
-    unique_materials = np.unique(my_filter.filter_definition["structure_materials"])
-    unique_colors = generate_colors(len(unique_materials))
-    colors = np.empty(num_boxes, dtype=np.dtype("U7"))
-
-    for i in range(len(unique_materials)):
-        colors[
-            np.array(my_filter.filter_definition["structure_materials"])
-            == np.unique(my_filter.filter_definition["structure_materials"])[i]
-        ] = unique_colors[i]
-
-    heights = np.round(
-        np.array(my_filter.filter_definition["structure_thicknesses"])
-        / sum(my_filter.filter_definition["structure_thicknesses"])
-        * 400
-    )
+    (
+        num_boxes,
+        colors,
+        heights,
+        number_unique_materials,
+        unique_materials,
+        unique_colors,
+    ) = extract_filter_design(my_filter)
 
     if defaultname is not None:
         return (
             num_boxes,
             colors,
             heights,
-            len(unique_materials),
+            number_unique_materials,
             unique_materials,
             unique_colors,
         )
 
     else:
-
         return render_template(
             "home.html",
             num_boxes=num_boxes,
             colors=colors,
             heights=heights,
-            num_legend_items=len(unique_materials),
+            num_legend_items=number_unique_materials,
             unique_materials=unique_materials,
             legend_colors=unique_colors,
             file_label="Currently loaded: " + filename,
         )
+
+
+def extract_filter_design(filter):
+    """
+    Extracts the filter design information.
+
+    Args:
+        filter: The filter object containing the filter definition.
+
+    Returns:
+        A tuple containing the following information:
+        - num_boxes: The number of boxes in the filter.
+        - colors: An array of colors corresponding to each box.
+        - heights: An array of heights corresponding to each box.
+        - num_materials: The number of unique materials in the filter.
+        - unique_materials: An array of unique materials in the filter.
+        - unique_colors: An array of unique colors corresponding to each material.
+    """
+
+    # Now extract the number of layers to construct the number of boxes
+    num_boxes = len(filter.filter_definition["structure_thicknesses"])
+    unique_materials = np.unique(filter.filter_definition["structure_materials"])
+    unique_colors = generate_colors(len(unique_materials))
+    colors = np.empty(num_boxes, dtype=np.dtype("U7"))
+
+    for i in range(len(unique_materials)):
+        colors[
+            np.array(filter.filter_definition["structure_materials"])
+            == np.unique(filter.filter_definition["structure_materials"])[i]
+        ] = unique_colors[i]
+
+    heights = np.round(
+        np.array(filter.filter_definition["structure_thicknesses"])
+        / sum(filter.filter_definition["structure_thicknesses"])
+        * 300
+    )
+    return (
+        num_boxes,
+        colors.tolist(),
+        heights.tolist(),
+        len(unique_materials),
+        unique_materials.tolist(),
+        unique_colors,
+    )
 
 
 ##############################################
@@ -273,12 +336,16 @@ def upload_file(defaultname=None):
 def calculate_and_plot(data):
     """ """
     global my_filter
-    polar_angles = np.arange(float(data["startAngle"]), float(data["endAngle"]) + float(data["stepAngle"]), float(data["stepAngle"]))
+    polar_angles = np.arange(
+        float(data["startAngle"]),
+        float(data["endAngle"]) + float(data["stepAngle"]),
+        float(data["stepAngle"]),
+    )
 
     calculated_data_df = pd.DataFrame()
 
     for theta in polar_angles:
-        calculated_data_df[theta]= my_filter.calculate_one_angle(
+        calculated_data_df[theta] = my_filter.calculate_one_angle(
             float(data["startWavelength"]),
             float(data["endWavelength"]),
             float(data["stepWavelength"]),
@@ -286,9 +353,8 @@ def calculate_and_plot(data):
             data["polarization"],
             theta,
             float(data["azimuthalAngle"]),
-            True if data["generalCore"] == "on" else False
+            True if data["generalCore"] == "on" else False,
         )
-
 
         # Create a Plotly figure using the calculated data
         angles = calculated_data_df.columns.to_numpy()
@@ -300,7 +366,7 @@ def calculate_and_plot(data):
             x=angles,
             y=wavelengths,
             z=color_values,
-            colorscale='Viridis',
+            colorscale="Viridis",
         )
 
         fig = go.Figure(data=heatmap)
@@ -310,7 +376,7 @@ def calculate_and_plot(data):
 
         # Emit the figure in JSON format
         socketio.emit("update_plot", fig_json)
-    
+
     my_filter.stored_data = calculated_data_df
 
 
@@ -331,7 +397,7 @@ def plot():
         x=angles,
         y=wavelengths,
         z=color_values,
-        colorscale='Viridis',
+        colorscale="Viridis",
     )
 
     fig = go.Figure(data=heatmap)
@@ -341,123 +407,80 @@ def plot():
 
     # Emit the figure in JSON format
     socketio.emit("update_plot", fig_json)
-    
 
-
-"""
-@app.route("/get_plot", methods=["GET"])
-def get_plot():
-    with plot_queue_lock:
-        if plot_queue.empty():
-            return jsonify({})
-        dict_plot = plot_queue.get()
-        print("Updating plot...")
-        return jsonify(
-            {
-                "intensity": dict_plot["intensity"],
-                "wavelength": dict_plot["wavelength"],
-                "angles": dict_plot["angles"],
-                "azimuthal_angle": dict_plot["azimuthal_angle"],
-            }
-        )
-"""
-
-
-"""
-@app.route("/get_plot_done", methods=["GET"])
-def get_plot_done():
-    with plot_done_queue_lock:
-        if plot_done_queue.empty():
-            return jsonify({})
-        plot_done_queue.get()
-        print("Plotting done.")
-        return jsonify({"done": True})
-
-"""
 
 ##############################################
 ################ Optimization  ###############
 ##############################################
 
-@app.route("/get_messages", methods=["GET"])
-def get_messages():
-    messages = []
-    while not message_queue.empty():
-        messages.append(message_queue.get())
-    return jsonify(messages)
 
+@socketio.on("start_optimization")
+def start_optimization(data):
+    """ """
+    global my_filter
 
-@app.route("/get_design_data", methods=["GET"])
-def get_design_data():
-    with design_update_queue_lock:
-        if design_update_queue.empty():
-            return jsonify({})
-        design_update_queue.get()
+    # my_filter.perform_optimisation(
+    # data["optimizationMethod"],
+    # save_optimized_to_file=True,
+    # )
+    thread = threading.Thread(
+        target=my_filter.perform_optimisation, args=(data["optimizationMethod"],)
+    )
+    thread.start()
+
+    merit_time_series = []
+    iteration_value = []
+
+    time.sleep(1)
+
+    while not my_filter.stop_flag:
+        merit_time_series.append(my_filter.optimum_merit)
+        iteration_value.append(my_filter.optimum_iteration)
+
+        # Create a Plotly figure using the data
+        fig = go.Figure(data=go.Scatter(x=iteration_value, y=merit_time_series))
+
+        # Convert the figure to JSON format
+        fig_json = pio.to_json(fig)
+
+        # Emit the figure to the client
+        socketio.emit("update_merit_graph", fig_json)
+
+        # Update the stack representation
         (
             num_boxes,
             colors,
             heights,
-            num_legend_items,
+            number_unique_materials,
             unique_materials,
-            legend_colors,
-        ) = upload_file(default_file)
-        queue_msg("Updating design...")
-        return jsonify(
-            {
-                "num_boxes": num_boxes,
-                "colors": list(colors),
-                "heights": list(heights),
-                "num_legend_items": len(unique_materials),
-                "unique_materials": list(unique_materials),
-                "legend_colors": list(legend_colors),
-            }
-        )
+            unique_colors,
+        ) = extract_filter_design(my_filter)
+
+        # Package the values into a dictionary
+        filter_representation = {
+            'num_boxes': num_boxes,
+            'colors': colors,
+            'heights': heights,
+            'number_unique_materials': number_unique_materials,
+            'unique_materials': unique_materials,
+            'unique_colors': unique_colors
+        }
+
+        # Convert the dictionary to a JSON string
+        filter_json = json.dumps(filter_representation)
+
+        # Emit the JSON string
+        socketio.emit("update_filter_representation", filter_json)
+
+        time.sleep(1)
 
 
-@app.route("/start_optimization", methods=["POST"])
-def start_optimization():
-    queue_msg("Starting optimization...")
-    global stop_optimization
-    stop_optimization = False
-
-    # Get the value of optimizationMethod outside of the new thread
-    data = request.get_json()
-    optimization_method = data.get("optimizationMethod")
-    print("Optimization method: ", optimization_method)
-
-    def run_optimization(optimization_method):
-        global my_filter
-        optim_module = FilterStack(
-            "./temp_cpp_order.json",
-            my_filter,
-            message_queue=message_queue,
-            update_queue=design_update_queue,
-            log_func=queue_msg,
-            log_design_func=queue_update,
-        )
-        optim_module.perform_optimisation(
-            optimization_method,
-            save_optimized_to_file=True,
-            stop_flag=lambda: stop_optimization,
-        )
-
-        # As we are dealing with global variables the new optimized filter has
-        # to be specifically assigned to the global variable
-        my_filter = optim_module.my_filter
-
-    # Run the optimization in a separate thread
-    threading.Thread(target=run_optimization, args=(optimization_method,)).start()
-
-    return "", 204  # Return no content
-
-
-@app.route("/stop_optimization", methods=["POST"])
+@socketio.on("stop_optimization")
 def stop_optimization():
-    queue_msg("Stopping optimization...")
-    global stop_optimization
-    stop_optimization = True
+    """ """
+    global my_filter
 
-    return "", 204  # Return no content
+    my_filter.stop_flag = True
 
 
 if __name__ == "__main__":

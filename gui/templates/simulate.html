@@ -33,6 +33,10 @@
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
                     <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
                 </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'stack_editor' else '' }}">
+                    <a class="nav-link" href="{{ url_for('stack_editor') }}">Stack Editor</a>
+                </li>
+
             </ul>
         </div>
     </nav>
@@ -154,8 +158,8 @@
         width: 800,
         height: 800,
         margin: { l: 50, r: 50, b: 100, t: 100, pad: 4 },
-        xaxis: { title: "Angle" },
-        yaxis: { title: "Wavelength" }
+        xaxis: { title: "Angle (°)" },
+        yaxis: { title: "Wavelength (nm)" },
     };
 
     // Plot the dummy heatmap when the page loads

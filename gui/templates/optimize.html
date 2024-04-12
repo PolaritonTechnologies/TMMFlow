@@ -7,6 +7,9 @@
     <title>Transfer Matrix Method Simulations</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 
 <body>
@@ -30,43 +33,53 @@
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
                     <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
                 </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'stack_editor' else '' }}">
+                    <a class="nav-link" href="{{ url_for('stack_editor') }}">Stack Editor</a>
+                </li>
+
             </ul>
         </div>
     </nav>
     <main>
-        <form action="{{ url_for('start_optimization') }}" method="post">
-            <div class="form-group">
-                <label for="optimizationMethod">Select Optimization Method</label>
-                <select class="form-control" id="optimizationMethod" name="optimizationMethod">
-                    <option value="minimize">Nelder-Mead</option>
-                    <option value="dual_annealing">Dual annealing</option>
-                    <option value="basinhopping">Basin Hopping</option>
-                </select>
-            </div>
-        </form>
         <div class="container-fluid">
-            <div class="row mb-3">
-                <div class="col-3">
-                    <form method="post" class="w-100">
-                        <button type="submit" class="btn btn-primary w-100" id="startOptimization" {{ 'disabled' if optimization_running }}>Start Optimization</button>
-                        <input type="hidden" id="hiddenOptimizationMethod" name="optimizationMethod">
-                    </form>
-                </div>
-                <div class="col-3">
-                    <form method="post" class="w-100">
-                        <button type="submit" class="btn btn-danger w-100" id="stopOptimization" {{ 'disabled' if not optimization_running }}>Stop Optimization</button>
-                    </form>
-                </div>
-            </div>
-            <div class="row">
+            <div class="row align-items-center">
+                <!-- Part 1 -->
                 <div class="col-6">
-                    <div id="logPanel" style="height: 50vh; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;">
+                    <div class="row mb-3">
+                        <div class="col-10 offset-1">
+                            <form action="{{ url_for('optimize') }}" method="post">
+                                <div class="form-group">
+                                    <label for="optimizationMethod">Select Optimization Method</label>
+                                    <select class="form-control" id="optimizationMethod" name="optimizationMethod">
+                                        <option value="minimize">Nelder-Mead</option>
+                                        <option value="dual_annealing">Dual annealing</option>
+                                        <option value="basinhopping">Basin Hopping</option>
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-5 offset-1">
+                            <form method="post" class="w-100">
+                                <button type="submit" class="btn btn-primary w-100" id="startOptimization" {{ 'disabled'
+                                    if optimization_running }}>Start Optimization</button>
+                            </form>
+                        </div>
+                        <div class="col-5">
+                            <form method="post" class="w-100">
+                                <button type="submit" class="btn btn-danger w-100" id="stopOptimization" {{ 'disabled'
+                                    if not optimization_running }}>Stop Optimization</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Part 2 -->
                 <div class="col-6">
-                    <div class="row">
-                        <div class="col-6 d-flex justify-content-center align-items-center">
-                            <div class="container" id="design_container">
+                    <section class="row justify-content-center">
+                        <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
+                            <div class="container">
                                 {% if num_boxes and colors is defined %}
                                 {% for _ in range(num_boxes) %}
                                 <div class="box"
@@ -76,121 +89,129 @@
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="col-6">
+                        <div class="col-lg-6 col-md-6">
                             <div id="legend">
                                 {% if num_legend_items and legend_colors is defined %}
                                 {% for i in range(num_legend_items) %}
-                                <!-- legend items -->
+                                <div class="legend-item row d-flex align-items-center justify-content-start my-2">
+                                    <div class="box"
+                                        style="background-color: {{ legend_colors[i] }}; height: 20px; margin-right: 10px; width: 5em;">
+                                    </div>
+                                    <span>{{ unique_materials[i] }}</span>
+                                </div>
                                 {% endfor %}
                                 {% endif %}
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </div>
             </div>
         </div>
+        <div id="merit_graph"></div>
+
     </main>
     <footer>
         <p>© 2024 PolaritonTechnologies</p>
     </footer>
 </body>
-<script>
-    document.getElementById('startOptimization').addEventListener('click', function() {
-        // Prevent the form from being submitted
-        event.preventDefault();
-        var optimizationMethod = document.getElementById('optimizationMethod').value;
-        document.getElementById('hiddenOptimizationMethod').value = optimizationMethod;
-        fetch('{{ url_for("start_optimization") }}', {
-            method: 'POST',
-            body: JSON.stringify({
-                optimizationMethod: optimizationMethod
-            }),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        }).then(response => {
-            if (response.ok) {
-                this.disabled = true;
-                document.getElementById('stopOptimization').disabled = false;
-            }
-        });
-    });
-
-    document.getElementById('stopOptimization').addEventListener('click', function() {
-        // Prevent the form from being submitted
-        event.preventDefault();
-        fetch('{{ url_for("stop_optimization") }}', {
-            method: 'POST',
-        }).then(response => {
-            if (response.ok) {
-                this.disabled = true;
-                document.getElementById('startOptimization').disabled = false;
-            }
-        });
-    });
-
-    function updateLogPanel() {
-        fetch('{{ url_for("get_messages") }}')
-            .then(response => response.json())
-            .then(messages => {
-                var logPanel = document.getElementById('logPanel');
-                messages.forEach(message => {
-                    var newLogMessage = document.createElement('p');
-                    newLogMessage.textContent = message;
-                    logPanel.appendChild(newLogMessage);
-                });
-                logPanel.scrollTop = logPanel.scrollHeight;
-            });
-    }
-    function updateDesign() {
-    fetch('{{ url_for("get_design_data") }}')
-        .then(response => response.json())
-        .then(data => {
-            if (Object.keys(data).length === 0) {
-                // No new design data
-                return;
-            }
-            console.log("attempting design update")
-            var container = document.getElementById('design_container');
-            container.innerHTML = '';
-
-            // var updateTime = new Date().toLocaleTimeString();
-            // var updateTimeDiv = document.createElement('div');
-            // updateTimeDiv.textContent = 'Updated at ' + updateTime;
-            // container.prepend(updateTimeDiv);
-            
-            for (var i = 0; i < data.num_boxes; i++) {
-                var box = document.createElement('div');
-                box.className = 'box';
-                box.style.backgroundColor = data.colors[i % data.colors.length];
-                box.style.height = data.heights[i % data.heights.length] + 'px';
-                container.appendChild(box);
-            }
-
-            var legend = document.getElementById('legend');
-            legend.innerHTML = '';
-            for (var i = 0; i < data.num_legend_items; i++) {
-                var legendItem = document.createElement('div');
-                legendItem.className = 'legend-item row d-flex align-items-center justify-content-start';
-
-                var box = document.createElement('div');
-                box.className = 'box';
-                box.style.backgroundColor = data.legend_colors[i];
-                box.style.height = '20px';
-                box.style.marginRight = '10px';
-                box.style.width = '5em';
-                legendItem.appendChild(box);
-
-                var span = document.createElement('span');
-                span.textContent = data.unique_materials[i];
-                legendItem.appendChild(span);
-
-                legend.appendChild(legendItem);
-            }
-        });
-    }
-    setInterval(updateDesign, 5000);
-    setInterval(updateLogPanel, 1000);
-</script>
 
 </html>
+<script>
+    var socket = io.connect('http://localhost:5000');
+
+    // Create a dummy graph
+    var trace = {
+        x: [],
+        y: [],
+        mode: 'lines+markers',
+        type: 'scatter',
+        marker: {
+            size: 10,
+            color: 'rgba(255, 182, 193, .9)',
+            line: {
+                width: 2
+            }
+        },
+        line: {
+            color: 'rgb(0, 0, 0)',
+            width: 2
+        }
+    };
+
+    var layout = {
+        xaxis: {
+            title: 'Iteration',
+            showgrid: true,
+            zeroline: true
+        },
+        yaxis: {
+            title: 'Merit',
+            type: 'log',
+            showline: true
+        },
+        showlegend: true,
+        hovermode: 'closest',
+        plot_bgcolor: 'rgb(223, 232, 243)'
+    };
+
+
+    var data = [trace];
+
+    Plotly.newPlot('merit_graph', data, layout);
+
+    document.getElementById('startOptimization').addEventListener('click', function (e) {
+        e.preventDefault();
+
+        var optimizationMethod = document.getElementById('optimizationMethod').value;
+
+        // Emit a custom event with the selected optimization method
+        socket.emit('start_optimization', { optimizationMethod: optimizationMethod });
+        document.getElementById("stopOptimization").disabled = false;
+    });
+
+    document.getElementById('stopOptimization').addEventListener('click', function (e) {
+        // Prevent form submission and page reload
+        e.preventDefault();
+
+        socket.emit('stop_optimization');
+    });
+
+    socket.on('update_merit_graph', function (fig_json) {
+        var fig = JSON.parse(fig_json);
+
+        // Merge the incoming layout with the initial layout
+        var updatedLayout = Object.assign({}, layout, fig.layout);
+
+        Plotly.react('merit_graph', fig.data, updatedLayout);
+    });
+
+    socket.on('update_filter_representation', function (filter_json) {
+        var filter_representation = JSON.parse(filter_json);
+
+        // Access the values
+        var num_boxes = filter_representation.num_boxes;
+        var colors = filter_representation.colors;
+        var heights = filter_representation.heights;
+        var number_unique_materials = filter_representation.number_unique_materials;
+        var unique_materials = filter_representation.unique_materials;
+        var unique_colors = filter_representation.unique_colors;
+
+        // Get the container element
+        var container = document.querySelector('.container');
+
+        // Remove existing boxes
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
+        // Create new boxes
+        for (var i = 0; i < num_boxes; i++) {
+            var div = document.createElement('div');
+            div.className = 'box';
+            div.style.backgroundColor = colors[i];
+            div.style.height = heights[i] + 'px';
+            container.appendChild(div);
+        }
+    });
+
+</script>

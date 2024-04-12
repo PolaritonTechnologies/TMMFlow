@@ -78,6 +78,14 @@ class FilterStack:
         with open(json_file_path_cpp) as f:
             self.filter_definition = json.load(f)
 
+        self.initial_structure_thicknesses = np.copy(
+            np.array(self.filter_definition["structure_thicknesses"])
+        )
+
+        self.initial_structure_materials = np.copy(
+            np.array(self.filter_definition["structure_materials"])
+        )
+
         self.filter_definition["structure_thicknesses"] = np.array(
             self.filter_definition["structure_thicknesses"]
         )
@@ -103,6 +111,7 @@ class FilterStack:
         self.last_optimum_number = 0
         self.first_zero = True
         self.is_general_core = True
+        self.stop_flag = False
 
         self.initial_merit = 0
         self.iteration_no = 0
@@ -467,13 +476,33 @@ class FilterStack:
             target_type,
         )
 
+    def reset_filter(self):
+        """
+        Reset filter to initial thickness and order
+        """
+        self.filter_definition["structure_thicknesses"] = (
+            self.initial_structure_thicknesses
+        )
+        self.lib.change_material_thickness(
+            self.my_filter,
+            self.initial_structure_thicknesses,
+            int(np.size(self.initial_structure_thicknesses)),
+        )
+        layer_order = np.arange(
+            0, np.sum(self.filter_definition["layer_switch_allowed"]), 1
+        )
+        self.filter_definition["structure_materials"] = [
+            self.initial_structure_materials[el] for el in layer_order
+        ]
+        self.lib.change_material_order(
+            self.my_filter, layer_order, int(np.size(layer_order))
+        )
+
     #####################################################
     ############# Filter Optimization Area ##############
     #####################################################
 
-    def perform_optimisation(
-        self, optimisation_type, save_optimized_to_file=True, stop_flag=None
-    ):
+    def perform_optimisation(self, optimisation_type, save_optimized_to_file=True):
         """
         Performs the optimization process based on the specified optimization
         type. This function sets up the initial conditions and bounds for the
@@ -497,7 +526,13 @@ class FilterStack:
         """
 
         print("running optimisation...")
-        self.stop_flag = stop_flag
+
+        # Reset some variables
+        self.stop_flag = False
+        self.initial_merit = 0
+        self.iteration_no = 0
+        self.callback_call = 0
+
         start_time = time.time()
 
         x_initial = []
@@ -538,7 +573,7 @@ class FilterStack:
                 bounds.append(
                     (
                         -0.5,
-                        np.size(self.filter_definition["structure_thicknesses"]) + 0.5,
+                        np.size(self.initial_structure_thicknesses) + 0.5,
                     )
                 )
 
@@ -601,17 +636,21 @@ class FilterStack:
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
             ret.x
         )
+
+        # Change the filter stack to the optimized values (in C++ and in python)
+        self.filter_definition["structure_thicknesses"] = thicknesses
         self.lib.change_material_thickness(
             self.my_filter, thicknesses, int(np.size(thicknesses))
         )
+        self.filter_definition["structure_materials"] = [
+            self.initial_structure_materials[el] for el in layer_order
+        ]
         self.lib.change_material_order(
             self.my_filter, layer_order, int(np.size(layer_order))
         )
 
-        # Set initial merit back to zero
-        self.initial_merit = 0
-        self.iteration_no = 0
-        self.callback_call = 0
+        # The stop flag is also be used as an "optimization done" indicator
+        self.stop_flag = True
 
         self.log_func("Optimization time: ", time.time() - start_time, "s")
         self.log_func("Optimized features: ", ret.x)
@@ -668,12 +707,16 @@ class FilterStack:
 
             # Change material thickness
             if np.any(self.filter_definition["thickness_opt_allowed"]):
+                self.filter_definition["structure_thicknesses"] = thicknesses
                 self.lib.change_material_thickness(
                     self.my_filter, thicknesses, int(np.size(thicknesses))
                 )
 
             # Change layer switch allowed
             if np.any(self.filter_definition["layer_switch_allowed"]):
+                self.filter_definition["structure_materials"] = [
+                    self.initial_structure_materials[el] for el in layer_order
+                ]
                 self.lib.change_material_order(
                     self.my_filter, layer_order, int(np.size(layer_order))
                 )
@@ -794,7 +837,7 @@ class FilterStack:
                 )
                 current_structure_indices = positions.astype(np.int32)
                 current_structure_materials = [
-                    self.filter_definition["structure_materials"][el]
+                    self.initial_structure_materials[el]
                     for el in current_structure_indices
                 ]
                 current_structure_thicknesses = list(x)
@@ -836,7 +879,7 @@ class FilterStack:
 
         # If the merit function is close to zero (within the tolerance) or the
         # stop flag is true, stop the optimization.
-        if self.stop_flag() or math.isclose(f, 0, abs_tol=1e-6):
+        if self.stop_flag or math.isclose(f, 0, abs_tol=1e-6):
             return True
         else:
             return False
@@ -862,19 +905,17 @@ class FilterStack:
             self.filter_definition["layer_switch_allowed"]
         ):
             # All features are thicknesses
-            thicknesses = np.copy(self.filter_definition["structure_thicknesses"])
+            thicknesses = np.copy(self.initial_structure_thicknesses)
             thicknesses[np.where(self.filter_definition["thickness_opt_allowed"])] = (
                 features
             )
             thicknesses = thicknesses.astype(np.float64)
-            layer_order = np.arange(
-                0, len(self.filter_definition["structure_thicknesses"])
-            )
+            layer_order = np.arange(0, len(self.initial_structure_thicknesses))
         elif not np.any(self.filter_definition["thickness_opt_allowed"]) and np.any(
             self.filter_definition["layer_switch_allowed"]
         ):
             # All features are layer positions
-            thicknesses = np.copy(self.filter_definition["structure_thicknesses"])
+            thicknesses = np.copy(self.initial_structure_thicknesses)
 
             # Transform the layer positions to a full stack order
             layer_order = self.convert_layer_positions_to_stack_order(features)
@@ -886,7 +927,7 @@ class FilterStack:
             self.filter_definition["layer_switch_allowed"]
         ):
             # Some features are thicknesses and some are layer positions
-            thicknesses = np.copy(self.filter_definition["structure_thicknesses"])
+            thicknesses = np.copy(self.initial_structure_thicknesses)
             thicknesses[np.where(self.filter_definition["thickness_opt_allowed"])] = (
                 features[: -1 * np.sum(self.filter_definition["layer_switch_allowed"])]
             )
@@ -937,7 +978,7 @@ class FilterStack:
         temp_layer_positions = np.clip(
             temp_layer_positions,
             0,
-            len(self.filter_definition["structure_thicknesses"]),
+            len(self.initial_structure_thicknesses),
         ).astype(np.int32)
 
         # If feature 1 has a certain number, the second layer cannot have
@@ -948,7 +989,7 @@ class FilterStack:
         self.previous_layer_positions = unique_layer_positions
 
         # Start with the initial order of layers
-        layer_order = list(range(len(self.filter_definition["structure_thicknesses"])))
+        layer_order = list(range(len(self.initial_structure_thicknesses)))
 
         # Iterate over each layer
         j = 0
@@ -1004,7 +1045,7 @@ class FilterStack:
             minimum_wavelength, maximum_wavelength + 1, wavelength_step
         )
 
-        # Create a dataframe to store the results in 
+        # Create a dataframe to store the results in
         stored_value = pd.Series(index=wavelengths)
 
         for wavelength in stored_value.index:
@@ -1019,7 +1060,7 @@ class FilterStack:
                     is_general_core,
                 )
             )
-        
+
         return stored_value
 
     def calculate_ar_data(

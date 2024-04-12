@@ -72,3 +72,7 @@ footer {
 button:disabled {
     background-color: grey;
 }
+
+#merit_graph {
+    margin-bottom: 5em;  /* Adjust as needed */
+}

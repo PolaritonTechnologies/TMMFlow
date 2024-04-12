@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Matrix Method Simulations</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+
+<body>
+    <header>
+        <h1>PolaritonTechnologies - Transfer Matrix Method (TMM) Optimization</h1>
+    </header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">PolaritonTechnologies</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item {{ 'active' if request.endpoint == 'home' else '' }}">
+                    <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'simulate' else '' }}">
+                    <a class="nav-link" href="{{ url_for('simulate') }}">Simulate</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
+                    <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'stack_editor' else '' }}">
+                    <a class="nav-link" href="{{ url_for('optimize') }}">Stack Editor</a>
+                </li>
+
+            </ul>
+
+        </div>
+    </nav>
+
+    <main class="container">
+
+    </main>
+    <footer>
+        <p>© 2024 PolaritonTechnologies</p>
+    </footer>
+    </footer>
+</body>
+
+</html>
