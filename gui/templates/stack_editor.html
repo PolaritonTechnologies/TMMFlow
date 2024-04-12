@@ -41,6 +41,130 @@
 
     <main class="container">
 
+        <form action="/update_json" method="post" class="form-horizontal">
+            <table class="table">
+                <tr>
+                    <th>Attribute</th>
+                    <th>Value/Minimum</th>
+                    <th>Maximum</th>
+                    <th>Step</th>
+                </tr>
+                <tr>
+                    <td><label for="calculation_type">Calculation Type:</label></td>
+                    <td>
+                        <select id="calculation_type" name="calculation_type" class="form-control">
+                            <option value="option1">Option 1</option>
+                            <option value="option2">Option 2</option>
+                            <!-- Add more options as needed... -->
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="polarization">Polarization:</label></td>
+                    <td>
+                        <select id="polarization" name="polarization" class="form-control">
+                            <option value="option1">Option 1</option>
+                            <option value="option2">Option 2</option>
+                            <!-- Add more options as needed... -->
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="calculation_wavelength_min">Calculation Wavelength:</label></td>
+                    <td><input type="number" id="calculation_wavelength_min" name="calculation_wavelength_min"
+                            class="form-control"></td>
+                    <td><input type="number" id="calculation_wavelength_max" name="calculation_wavelength_max"
+                            class="form-control"></td>
+                    <td><input type="number" id="calculation_wavelength_step" name="calculation_wavelength_step"
+                            class="form-control"></td>
+                </tr>
+                <tr>
+                    <td><label for="polar_angle_min">Polar Angle:</label></td>
+                    <td><input type="number" id="polar_angle_min" name="polar_angle_min" class="form-control"></td>
+                    <td><input type="number" id="polar_angle_max" name="polar_angle_max" class="form-control"></td>
+                    <td><input type="number" id="polar_angle_step" name="polar_angle_step" class="form-control"></td>
+                </tr>
+                <tr>
+                    <td><label for="azimuthal_angle_min">Azimuthal Angle:</label></td>
+                    <td><input type="number" id="azimuthal_angle_min" name="azimuthal_angle_min" class="form-control">
+                    </td>
+                    <td><input type="number" id="azimuthal_angle_max" name="azimuthal_angle_max" class="form-control">
+                    </td>
+                    <td><input type="number" id="azimuthal_angle_step" name="azimuthal_angle_step" class="form-control">
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="substrate_material_type">Substrate Material Type:</label></td>
+                    <td><input type="text" id="substrate_material_type" name="substrate_material_type"
+                            class="form-control"></td>
+                </tr>
+                <tr>
+                    <td><label for="substrate_thickness">Substrate Thickness:</label></td>
+                    <td><input type="number" id="substrate_thickness" name="substrate_thickness" class="form-control">
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="incident_medium">Incident Medium:</label></td>
+                    <td><input type="text" id="incident_medium" name="incident_medium" class="form-control"></td>
+                </tr>
+                <tr>
+                    <td><label for="exit_medium">Exit Medium:</label></td>
+                    <td><input type="text" id="exit_medium" name="exit_medium" class="form-control"></td>
+                </tr>
+                <tr>
+                    <td><label for="general_core">General Core:</label></td>
+                    <td>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="general_core">
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="4">
+                        <table id="layers" class="table">
+                            <tr>
+                                <th>Layer</th>
+                                <th>Value</th>
+                                <th>Thickness</th>
+                                <th>Thickness Opt</th>
+                                <th>Position Opt</th>
+                            </tr>
+                            <!-- Rows will be added here... -->
+                        </table>
+                        <button id="add_layer" type="button" class="btn btn-primary">Add Layer</button>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="4">
+                        <table id="target" class="table">
+                            <tr>
+                                <th>Target</th>
+                                <th>Value</th>
+                                <th>Tolerance</th>
+                                <th>Type</th>
+                                <th>Polarization</th>
+                                <th>Condition</th>
+                                <th>Polar Angle</th>
+                                <th>Azimuthal Angle</th>
+                                <th>Wavelength</th>
+                                <th>Bound</th>
+                            </tr>
+                            <!-- Rows will be added here... -->
+                        </table>
+                        <button id="add_target" type="button" class="btn btn-primary">Add Target</button>
+                    </td>
+                </tr>
+
+                <!-- Repeat for other range fields... -->
+            </table>
+            <input type="submit" value="Submit" class="btn btn-primary">
+        </form>
+
+        <button type="button" id="save_button" class="btn btn-primary">Save</button>
+
+
     </main>
     <footer>
         <p>© 2024 PolaritonTechnologies</p>
@@ -49,3 +173,66 @@
 </body>
 
 </html>
+
+<script>
+    document.getElementById('add_layer').addEventListener('click', function () {
+        var table = document.getElementById('layers');
+        var row = table.insertRow(-1);
+        var cell1 = row.insertCell(0);
+        var cell2 = row.insertCell(1);
+        var cell3 = row.insertCell(2);
+        var cell4 = row.insertCell(3);
+        var cell5 = row.insertCell(4);
+        cell1.textContent = (table.rows.length - 1);
+        cell2.innerHTML = '<input type="number" class="form-control">';
+        cell3.innerHTML = '<input type="number" class="form-control">';
+        cell4.innerHTML = `
+            <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input" id="checkbox4">
+                <label class="custom-control-label" for="checkbox4"></label>
+            </div>
+        `;
+
+        cell5.innerHTML = `
+            <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input" id="checkbox5">
+                <label class="custom-control-label" for="checkbox5"></label>
+            </div>
+        `;
+    });
+
+    document.getElementById('add_target').addEventListener('click', function () {
+        var table = document.getElementById('target');
+        var row = table.insertRow(-1);
+        var cells = [];
+        for (var i = 0; i <= 9; i++) {
+            cells[i] = row.insertCell(i);
+        }
+        cells[0].textContent = (table.rows.length - 1);
+        cells[1].innerHTML = '<input type="number" class="form-control">';
+        cells[2].innerHTML = '<input type="number" class="form-control">';
+        cells[3].innerHTML = `
+        <select class="form-control">
+            <option value="t">t</option>
+            <option value="r">r</option>
+        </select>
+    `;
+        cells[4].innerHTML = `
+        <select class="form-control">
+            <option value="s">s</option>
+            <option value="p">p</option>
+        </select>
+    `;
+        cells[5].innerHTML = `
+        <select class="form-control">
+            <option value="<"><</option>
+            <option value=">">></option>
+            <option value="=">=</option>
+        </select>
+    `;
+        cells[6].innerHTML = '<input type="text" class="form-control">';
+        cells[7].innerHTML = '<input type="text" class="form-control">';
+        cells[8].innerHTML = '<input type="text" class="form-control">';
+        cells[9].innerHTML = '<input type="text" class="form-control">';
+    });
+</script>
