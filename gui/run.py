@@ -10,7 +10,7 @@ from flask import (
 )
 
 # For asynchronous updates
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from flask_cors import CORS
 
 # Plotting graphs
@@ -66,7 +66,7 @@ default_file = "../examples/demo_test.json"
 
 
 @app.route("/", methods=["GET", "POST"])
-def home():
+def stack():
     global my_filter
     global default_file
 
@@ -91,17 +91,21 @@ def home():
             unique_colors,
         ) = extract_filter_design(my_filter)
 
+    default_values = {
+        "num_boxes": num_boxes,
+        "colors": colors,
+        "heights": heights,
+        "num_legend_items": num_legend_items,
+        "unique_materials": unique_materials,
+        "legend_colors": unique_colors,
+        "file_label": default_file,
+        "substrate_material_type": my_filter.filter_definition["substrate_material"],
+    }
+
+
     return render_template(
-        "home.html",
-        num_boxes=num_boxes,
-        colors=colors,
-        heights=heights,
-        num_legend_items=num_legend_items,
-        unique_materials=unique_materials,
-        legend_colors=unique_colors,
-        file_label="Currently loaded "
-        + default_file
-        + ": Click Browse to select another file",
+        "stack.html",
+        default_values = default_values,
     )
 
 
@@ -200,7 +204,7 @@ def stack_editor():
 
 
 ##############################################
-################## Home ######################
+################## Stack ######################
 ##############################################
 
 
@@ -272,7 +276,7 @@ def upload_file(defaultname=None):
 
     else:
         return render_template(
-            "home.html",
+            "stack.html",
             num_boxes=num_boxes,
             colors=colors,
             heights=heights,

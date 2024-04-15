@@ -21,17 +21,14 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
-                <li class="nav-item {{ 'active' if request.endpoint == 'home' else '' }}">
-                    <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                <li class="nav-item {{ 'active' if request.endpoint == 'stack' else '' }}">
+                    <a class="nav-link" href="{{ url_for('stack') }}">Stack</a>
                 </li>
                 <li class="nav-item {{ 'active' if request.endpoint == 'simulate' else '' }}">
                     <a class="nav-link" href="{{ url_for('simulate') }}">Simulate</a>
                 </li>
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
                     <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
-                </li>
-                <li class="nav-item {{ 'active' if request.endpoint == 'stack_editor' else '' }}">
-                    <a class="nav-link" href="{{ url_for('optimize') }}">Stack Editor</a>
                 </li>
 
             </ul>
@@ -40,6 +37,47 @@
     </nav>
 
     <main class="container">
+        <h2>Upload your Filter Design</h2>
+        <p>Upload a .json or .ofp file containing your filter design.</p>
+        <section class="text-center my-5">
+            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" id="customFile" name="file">
+                    <label class="custom-file-label" for="customFile">{{ default_values.file_label }}</label>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3" value="upload">Upload</button>
+            </form>
+        </section>
+        <section class="row justify-content-center">
+            <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
+                <div class="container">
+                    {% if default_values.num_boxes and default_values.colors is defined %}
+                    {% for _ in range(default_values.num_boxes) %}
+                    <div class="box"
+                        style="background-color: {{ default_values.colors[loop.index0 % default_values.colors|length] }}; height: {{ default_values.heights[loop.index0 % default_values.heights|length] }}px;">
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-6">
+                <div id="legend">
+                    {% if default_values.num_legend_items and default_values.legend_colors is defined %}
+                    {% for i in range(default_values.num_legend_items) %}
+                    <div class="legend-item row d-flex align-items-center justify-content-start my-2">
+                        <div class="box"
+                            style="background-color: {{ default_values.legend_colors[i] }}; height: 20px; margin-right: 10px; width: 5em;">
+                        </div>
+                        <span>{{ default_values.unique_materials[i] }}</span>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <h2>Filter Definition</h2>
+        <p>Check and change the definition of the filter stack from the .json file. </p>
 
         <form action="/update_json" method="post" class="form-horizontal">
             <table class="table">
@@ -55,7 +93,6 @@
                         <select id="calculation_type" name="calculation_type" class="form-control">
                             <option value="option1">Option 1</option>
                             <option value="option2">Option 2</option>
-                            <!-- Add more options as needed... -->
                         </select>
                     </td>
                 </tr>
@@ -96,26 +133,29 @@
                 <tr>
                     <td><label for="substrate_material_type">Substrate Material Type:</label></td>
                     <td><input type="text" id="substrate_material_type" name="substrate_material_type"
-                            class="form-control"></td>
+                            class="form-control" value="{{ default_values.substrate_material_type }}"></td>
                 </tr>
                 <tr>
                     <td><label for="substrate_thickness">Substrate Thickness:</label></td>
-                    <td><input type="number" id="substrate_thickness" name="substrate_thickness" class="form-control">
-                    </td>
+                    <td><input type="number" id="substrate_thickness" name="substrate_thickness" class="form-control"
+                            value="{{ default_values.substrate_thickness }}"></td>
                 </tr>
                 <tr>
                     <td><label for="incident_medium">Incident Medium:</label></td>
-                    <td><input type="text" id="incident_medium" name="incident_medium" class="form-control"></td>
+                    <td><input type="text" id="incident_medium" name="incident_medium" class="form-control"
+                            value="{{ default_values.incident_medium }}"></td>
                 </tr>
                 <tr>
                     <td><label for="exit_medium">Exit Medium:</label></td>
-                    <td><input type="text" id="exit_medium" name="exit_medium" class="form-control"></td>
+                    <td><input type="text" id="exit_medium" name="exit_medium" class="form-control"
+                            value="{{ default_values.exit_medium }}"></td>
                 </tr>
                 <tr>
                     <td><label for="general_core">General Core:</label></td>
                     <td>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" id="general_core">
+                            <input class="form-check-input" type="checkbox" value="" id="general_core" {% if
+                                default_values.general_core %} checked {% endif %}>
                         </div>
                     </td>
                 </tr>
@@ -159,11 +199,10 @@
 
                 <!-- Repeat for other range fields... -->
             </table>
-            <input type="submit" value="Submit" class="btn btn-primary">
+            <section class="text-center my-5">
+                <input type="submit" value="Save" class="btn btn-primary" style="margin-bottom: 5em;">
+            </section>
         </form>
-
-        <button type="button" id="save_button" class="btn btn-primary">Save</button>
-
 
     </main>
     <footer>
@@ -173,6 +212,14 @@
 </body>
 
 </html>
+<script>
+    document.querySelector('.custom-file-input').addEventListener('change', function (e) {
+        var fileName = document.getElementById("customFile").files[0].name;
+        var nextSibling = e.target.nextElementSibling
+        nextSibling.innerText = fileName
+    })
+</script>
+
 
 <script>
     document.getElementById('add_layer').addEventListener('click', function () {
