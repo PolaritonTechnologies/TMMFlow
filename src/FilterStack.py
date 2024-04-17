@@ -275,7 +275,7 @@ class FilterStack:
             )
         )
 
-        FilterStack = ctypes.POINTER(ctypes.c_char)
+        c_string_array = ctypes.POINTER(ctypes.c_char_p)
 
         c_double_array = np.ctypeslib.ndpointer(
             dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"
@@ -286,29 +286,64 @@ class FilterStack:
         )
 
         lib.createFilterStack.argtypes = [ctypes.c_char_p]
-        lib.createFilterStack.restype = FilterStack
+        lib.createFilterStack.restype = c_string_array
 
-        lib.destroyFilterStack.argtypes = [FilterStack]
+        lib.destroyFilterStack.argtypes = [c_string_array]
 
         lib.calculate_reflection_transmission_absorption.argtypes = [
-            FilterStack,
+            c_string_array,
             ctypes.c_char_p,
             ctypes.c_char_p,
             ctypes.c_double,
             ctypes.c_double,
             ctypes.c_double,
+            ctypes.c_bool,
         ]
         lib.calculate_reflection_transmission_absorption.restype = ctypes.c_double
 
+        lib.calculate_reflection_transmission_absorption_para.argtypes = [
+            c_string_array,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            c_double_array,
+            ctypes.c_size_t,
+            c_double_array,
+            ctypes.c_size_t,
+            c_double_array,
+            ctypes.c_size_t,
+            ctypes.c_bool,
+        ]
+        lib.calculate_reflection_transmission_absorption_para.restype = ctypes.c_char_p
+
         lib.change_material_thickness.argtypes = [
-            FilterStack,
+            c_string_array,
             c_double_array,
             ctypes.c_size_t,
         ]
-        lib.change_material_order.argtypes = [FilterStack, c_int_array, ctypes.c_size_t]
-        lib.reset_filter.argtypes = [FilterStack]
-        lib.get_material_order.argtypes = [FilterStack]
-        lib.get_thicknesses.argtypes = [FilterStack]
+        lib.change_material_order.argtypes = [
+            c_string_array,
+            c_int_array,
+            ctypes.c_size_t,
+        ]
+
+        lib.calculate_merit.argtypes = [
+            c_string_array,
+            c_string_array,
+            c_string_array,
+            c_double_array,
+            c_double_array,
+            c_double_array,
+            c_double_array,
+            c_double_array,
+            c_string_array,
+            c_double_array,
+            ctypes.c_size_t,
+        ]
+        lib.calculate_merit.restype = ctypes.c_double
+
+        lib.reset_filter.argtypes = [c_string_array]
+        lib.get_material_order.argtypes = [c_string_array]
+        lib.get_thicknesses.argtypes = [c_string_array]
 
         my_filter = lib.createFilterStack(json_file_path_cpp.encode("utf-8"))
 
@@ -702,78 +737,43 @@ class FilterStack:
             features
         )
 
-        # Loop over targets
-        for i in range(0, np.size(self.target_value)):
-
-            # Change material thickness
-            if np.any(self.filter_definition["thickness_opt_allowed"]):
-                self.filter_definition["structure_thicknesses"] = thicknesses
-                self.lib.change_material_thickness(
-                    self.my_filter, thicknesses, int(np.size(thicknesses))
-                )
-
-            # Change layer switch allowed
-            if np.any(self.filter_definition["layer_switch_allowed"]):
-                self.filter_definition["structure_materials"] = [
-                    self.initial_structure_materials[el] for el in layer_order
-                ]
-                self.lib.change_material_order(
-                    self.my_filter, layer_order, int(np.size(layer_order))
-                )
-
-            # Select which core to use
-            if self.filter_definition["core_selection"] == "general":
-                self.is_general_core = True
-            elif self.filter_definition["core_selection"] == "fast":
-                self.is_general_core = False
-            else:
-                if self.target_polarization[i] != "s":
-                    self.is_general_core = self.lib.getGeneralMaterialsInStack(
-                        [self.my_filter]
-                    )
-                else:
-                    self.is_general_core = False
-
-            # Calculate actual value
-            target_calculated = self.lib.calculate_reflection_transmission_absorption(
-                self.my_filter,
-                self.target_type[i].encode("utf-8"),
-                self.target_polarization[i].encode("utf-8"),
-                float(self.target_wavelength[i]),
-                float(self.target_polar_angle[i]),
-                float(self.target_azimuthal_angle[i]),
-                self.is_general_core,
+        # Change material thickness
+        if np.any(self.filter_definition["thickness_opt_allowed"]):
+            self.filter_definition["structure_thicknesses"] = thicknesses
+            self.lib.change_material_thickness(
+                self.my_filter, thicknesses, int(np.size(thicknesses))
             )
 
-            # Calculate merit for equal condition
-            if self.target_condition[i] == "=" and target_calculated != float(
-                self.target_value[i]
-            ):
+        # Change layer switch allowed
+        if np.any(self.filter_definition["layer_switch_allowed"]):
+            self.filter_definition["structure_materials"] = [
+                self.initial_structure_materials[el] for el in layer_order
+            ]
+            self.lib.change_material_order(
+                self.my_filter, layer_order, int(np.size(layer_order))
+            )
 
-                merit += (
-                    (target_calculated - self.target_value[i])
-                    / float(self.target_tolerance[i])
-                ) ** 2 * self.target_weights[i]
-
-            # Calculate merit for larger condition
-            if self.target_condition[i] == ">" and target_calculated < float(
-                self.target_value[i]
-            ):
-
-                merit += (
-                    (target_calculated - self.target_value[i])
-                    / float(self.target_tolerance[i])
-                ) ** 2 * self.target_weights[i]
-
-            # Calculate merit for smaller condition
-            if self.target_condition[i] == "<" and target_calculated > float(
-                self.target_value[i]
-            ):
-
-                merit += (
-                    (target_calculated - self.target_value[i])
-                    / float(self.target_tolerance[i])
-                ) ** 2 * self.target_weights[i]
+        # Calculate merit
+        merit = self.lib.calculate_merit(
+            self.my_filter,
+            (ctypes.c_char_p * len(self.target_type.tolist()))(
+                *[s.encode("utf-8") for s in self.target_type.tolist()]
+            ),
+            (ctypes.c_char_p * len(self.target_polarization.tolist()))(
+                *[s.encode("utf-8") for s in self.target_polarization.tolist()]
+            ),
+            self.target_value,
+            self.target_wavelength,
+            self.target_polar_angle,
+            self.target_azimuthal_angle,
+            self.target_weights,
+            (ctypes.c_char_p * len(self.target_condition.tolist()))(
+                *[s.encode("utf-8") for s in self.target_condition.tolist()]
+            ),
+            self.target_tolerance,
+            int(np.size(self.target_value)),
+            self.filter_definition["core_selection"],
+        )
 
         # If merit is zero, the optimization has reached the target
         if merit == 0:
@@ -1025,6 +1025,30 @@ class FilterStack:
     ########## Plotting and calculation area ############
     #####################################################
 
+    def read_results_from_cpp(
+        self, result_string, wavelengths, polar_angles, azim_angles
+    ):
+        """
+        Reads the results from the C++ calculation and returns them as a
+        pandas DataFrame.
+        """
+        stored_values = []
+
+        azim_angle_split_arrays = result_string.decode("utf-8").split("=")
+        for azim_angle_split_array in azim_angle_split_arrays:
+            stored_value = pd.DataFrame(
+                columns=polar_angles.astype("U"), index=wavelengths
+            )
+            theta_angle_split_arrays = azim_angle_split_array.split("+")
+            for n, theta_angle_split_array in enumerate(theta_angle_split_arrays):
+                stored_value.loc[:, str(polar_angles[n])] = np.array(
+                    theta_angle_split_array.split("--"),
+                    dtype=np.float64,
+                )
+            stored_values.append(stored_value)
+
+        return stored_values
+
     def calculate_one_angle(
         self,
         minimum_wavelength,
@@ -1040,28 +1064,27 @@ class FilterStack:
         Function to only get the results for one particular angle given a wavelength range
         """
 
-        # Create an array of wavelength from the minimum to the maximum with a step
         wavelengths = np.arange(
             minimum_wavelength, maximum_wavelength + 1, wavelength_step
         )
 
-        # Create a dataframe to store the results in
-        stored_value = pd.Series(index=wavelengths)
+        result_string = self.lib.calculate_reflection_transmission_absorption_para(
+            self.my_filter,
+            target_type.encode("utf-8"),
+            polarization.encode("utf-8"),
+            np.ascontiguousarray(wavelengths).astype(np.float64),
+            int(np.size(wavelengths)),
+            np.ascontiguousarray(polar_angle).astype(np.float64),
+            1,
+            np.ascontiguousarray(azimuthal_angle).astype(np.float64),
+            1,
+            is_general_core,
+        )
 
-        for wavelength in stored_value.index:
-            stored_value.loc[stored_value.index == wavelength] = (
-                self.lib.calculate_reflection_transmission_absorption(
-                    self.my_filter,
-                    target_type.encode("utf-8"),
-                    polarization.encode("utf-8"),
-                    wavelength,
-                    polar_angle,
-                    azimuthal_angle,
-                    is_general_core,
-                )
-            )
-
-        return stored_value
+        return pd.Series(
+            np.array(result_string.decode("utf-8").split("--"), dtype=np.float64),
+            index=wavelengths,
+        )
 
     def calculate_ar_data(
         self,
@@ -1120,64 +1143,48 @@ class FilterStack:
         elif self.filter_definition["core_selection"] == "fast":
             is_general_core = False
         else:
-            if polarization:
-                is_general_core = self.lib.getGeneralMaterialsInStack([self.my_filter])
+            if polarization != "s":
+                is_general_core = self.lib.getGeneralMaterialsInStack()
             else:
                 is_general_core = False
 
         initial_time = time.time()
-        stored_value = pd.DataFrame(columns=polar_angles.astype("U"), index=wavelength)
-        for phi in azimuthal_angles:
-            for theta in polar_angles:
-                print("Polar angle: ", theta, "Azimuthal angle: ", phi)
-                for wavelength in stored_value.index:
-                    stored_value.loc[stored_value.index == wavelength, str(theta)] = (
-                        self.lib.calculate_reflection_transmission_absorption(
-                            self.my_filter,
-                            target_type.encode("utf-8"),
-                            polarization.encode("utf-8"),
-                            wavelength,
-                            theta,
-                            phi,
-                            is_general_core,
-                        )
-                    )
 
-        #         if web:
-        #             self.log_func(
-        #                 {
-        #                     "intensity": np.nan_to_num(
-        #                         stored_value.to_numpy(float)
-        #                     ).tolist(),
-        #                     "wavelength": stored_value.index.astype(float).tolist(),
-        #                     "angles": stored_value.columns.astype(float).tolist(),
-        #                     "azimuthal_angle": phi,
-        #                 }
-        #             )
+        result_string = self.lib.calculate_reflection_transmission_absorption_para(
+            self.my_filter,
+            target_type.encode("utf-8"),
+            polarization.encode("utf-8"),
+            np.ascontiguousarray(wavelength).astype(np.float64),
+            int(np.size(wavelength)),
+            np.ascontiguousarray(polar_angles).astype(np.float64),
+            int(np.size(polar_angles)),
+            np.ascontiguousarray(azimuthal_angles).astype(np.float64),
+            int(np.size(azimuthal_angles)),
+            is_general_core,
+        )
 
-        # self.log_design_func()
-
-        self.stored_data = stored_value
+        self.stored_data = self.read_results_from_cpp(
+            result_string, wavelength, polar_angles, azimuthal_angles
+        )
 
         if not web:
             # Print time elapsed for the generation of the reflectivity matrix
             print(time.time() - initial_time)
-            # Plotting
+            # Plotting - right now, on the first azimuthal angle
             plt.close()
             X, Y = np.meshgrid(
-                stored_value.columns.astype(float),
-                stored_value.index.astype(float),
+                self.stored_data[0].columns.astype(float),
+                self.stored_data[0].index.astype(float),
             )
             # Prepare data for 3D plot where each column contains the same data for
             # the different angles
-            Z = stored_value.to_numpy(float)
+            Z = self.stored_data[0].to_numpy(float)
             plt.pcolormesh(X, Y, Z, shading="auto")
             # Add a colorbar
             plt.colorbar(label="Intensity (a.u.)")
             # Visuals
             plt.xlabel("Polar Angle (°)")
             plt.ylabel("Wavelength (nm)")
-            plt.title(f"Calculation for Azimuthal Angle {phi}°")
             # Save the figure before showing it
 
             if save_figure:
@@ -1185,7 +1192,7 @@ class FilterStack:
                 temp_path = os.path.join(
                     os.path.dirname(os.path.realpath(__file__)), "./temp/plot.png"
                 )
-                plt.savefig("temp_path", format="png", dpi=300)
+                plt.savefig(temp_path, format="png", dpi=300)
                 # Save X, Y, Z to csv files
             if save_data:
                 header_lines = []
@@ -1199,7 +1206,7 @@ class FilterStack:
                     the_file.write("\n".join(header_lines))
 
                 # Save actual data by appending
-                stored_value.to_csv(temp_path, sep=",", header=True, mode="a")
+                self.stored_data[0].to_csv(temp_path, sep=",", header=True, mode="a")
 
             plt.show()
 

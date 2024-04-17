@@ -391,10 +391,304 @@ bool isRealDiagonalIsotropic(const MatrixXcd &matrix)
     return diag_flag && iso_flag && real_flag;
 }
 
-std::tuple<double, double, double, double> calculate_tr( std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0, bool general_case)
+std::tuple<double, double> calculate_rt_s( std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0, double n_exit_medium, bool general_case)
 {
-    // std::cout << "wavelength: " << wavelength << std::endl;
-    // std::cout << "theta_0: " << theta_0 << std::endl;
+
+    // Incident medium and substrate have to be real, diagonal and isotropic
+    // incident medium check
+    MatrixXcd lastMatrix = e_list_3x3[e_list_3x3.size() - 1];
+    if (!isRealDiagonalIsotropic(lastMatrix))
+    {
+        throw std::runtime_error("Incident medium must be real, diagonal and isotropic");
+    }
+
+    // substrate check
+    MatrixXcd firstMatrix = e_list_3x3[0];
+    if (!isRealDiagonalIsotropic(firstMatrix))
+    {
+        throw std::runtime_error("Substrate must be real, diagonal and isotropic");
+    }
+
+    std::complex<double> n_s = std::sqrt(firstMatrix(0, 0));
+    std::complex<double> n_0 = std::sqrt(lastMatrix(0, 0));
+
+    Matrix2cd m_r_ps = Matrix2cd::Zero();
+    Matrix2cd m_t_ps = Matrix2cd::Zero();
+
+    double reflectivity_s;
+    double transmissivity_s;
+
+    if (general_case) {
+
+        // wavevector modulus and in plane components
+        std::complex<double> k0 = 2.0 * M_PI / wavelength;
+        std::complex<double> kx = -k0 * n_0.real() * sin(theta_0) * cos(phi_0);
+        std::complex<double> ky = -k0 * n_0.real() * sin(theta_0) * sin(phi_0);
+
+        Vector4cd v_kz1 = kz_eigenvalues(k0, kx, ky, e_list_3x3.back());
+        auto [v_e, v_kz] = kz_eigenvectors(k0, kx, ky, v_kz1, e_list_3x3.back());
+
+        Matrix2cd m_T = Matrix2cd::Identity();
+        Matrix2cd m_R_np1 = Matrix2cd::Zero();
+        Matrix2cd m_R_0 = Matrix2cd::Zero();
+
+        auto [m_a_np1, m_b_np1, m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1, m_c12_np1, m_c34_np1] = m_abc(k0, kx, ky, v_kz, v_e, d_list.back());
+
+        // Now iterate over all layers starting from the second last going backwards
+        for (int i = 1; i <= d_list.size() - 1; ++i)
+        {
+            v_kz1 = kz_eigenvalues(k0, kx, ky, e_list_3x3[i]);
+
+            auto [v_e, v_kz] = kz_eigenvectors(k0, kx, ky, v_kz1, e_list_3x3[i]);
+
+            auto [m_a, m_b, m_a12, m_a34, m_b12, m_b34, m_c12, m_c34] = m_abc(k0, kx, ky, v_kz, v_e, d_list[i]);
+
+            std::pair<Matrix2cd, Matrix2cd> result3 = calculate_tr_per_layer(m_a12, m_a34, m_b12, m_b34, m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1, m_c12_np1, m_c34_np1, m_R_np1, m_T);
+
+            Matrix2cd m_R = result3.first;
+            m_T = result3.second;
+
+            if (i == 0)
+            {
+                m_R_0 = m_R;
+            }
+
+            // In the next iteration m_a12 --> m_a12_np1, similarly m_R --> m_R_np1.
+            m_a12_np1 = m_a12;
+            m_a34_np1 = m_a34;
+            m_b12_np1 = m_b12;
+            m_b34_np1 = m_b34;
+            m_c12_np1 = m_c12;
+            m_c34_np1 = m_c34;
+            m_R_np1 = m_R;
+        }
+    
+        // This has to be calculated outside the loop
+        // rotating m_R to the s,p states
+        Matrix2cd p_inc = Matrix2cd::Zero();
+        p_inc(0, 0) = cos(theta_0) * cos(phi_0);
+        p_inc(0, 1) = -sin(phi_0);
+        p_inc(1, 0) = cos(theta_0) * sin(phi_0);
+        p_inc(1, 1) = cos(phi_0);
+        Matrix2cd p_inc_inv = p_inc.inverse();
+
+        // rotating m_T to the s,p states
+        double theta_s = asin(real_if_close(sin(theta_0) * n_0.real() / n_s.real()));
+        Matrix2cd p_sub = Matrix2cd::Zero();
+        p_sub(0, 0) = cos(theta_s) * cos(phi_0);
+        p_sub(0, 1) = -sin(phi_0);
+        p_sub(1, 0) = cos(theta_s) * sin(phi_0);
+        p_sub(1, 1) = cos(phi_0);
+        Matrix2cd p_sub_inv = p_sub.inverse();
+
+        // The reflection matrix
+        m_r_ps = p_inc_inv * m_R_0 * p_inc;
+
+        // The transmission matrix
+        m_t_ps = p_sub_inv * m_T * p_inc;
+
+        reflectivity_s = m_r_ps.cwiseAbs2()(1, 1);
+
+    }   else {
+
+        //F. Abeles formalism
+        Matrix2cd total_Matrix_s = Matrix2cd::Identity();
+        double alpha = n_0.real() * std::sin(theta_0); // Descartes' law for conservation on the incident medium
+        Eigen::Matrix2cd layer_Matrix_s;
+        // Iterate over all layers starting from the second last going backwards and
+        // omitting the very first one
+        for (int i = d_list.size() - 2; i > 0; --i)
+        {
+            // Calculate n_i and Phi_i based on the given formulas - more efficient
+            std::complex<double> neff_i_s = std::sqrt(e_list_3x3[i](1,1) - alpha * alpha); // for s polarization, extract the y component since isotropic or s-pol (materials that are aligned are aligned along y-axis)
+            std::complex<double> Pseudo_i = (2 * M_PI / wavelength) * neff_i_s * d_list[i] ;
+            // Multiply the total matrix by the layer matrix
+            layer_Matrix_s << std::cos(Pseudo_i), (std::complex<double>(0,1) / neff_i_s) * std::sin(Pseudo_i),
+                            std::complex<double>(0,1) * neff_i_s * std::sin(Pseudo_i), std::cos(Pseudo_i);
+            total_Matrix_s *= layer_Matrix_s;
+        }
+        std::complex<double> neff_inc_s = -std::sqrt(n_0 * n_0 - alpha * alpha);
+        std::complex<double> neff_sub_s = -std::sqrt(n_s * n_s - alpha * alpha);
+        std::complex<double> reflectivity_s_coeff, reflectivity_s_no_backside_reverse_coeff, transmissivity_s_coeff, transmissivity_s_no_backside_reverse_coeff;
+        double reflectivity_s_no_backside, transmissivity_s_no_backside, reflectivity_s_no_backside_reverse, transmissivity_s_no_backside_reverse;
+                      
+        reflectivity_s_coeff = (neff_inc_s * total_Matrix_s(0,0) - neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) - total_Matrix_s(1,0)) / (neff_inc_s * total_Matrix_s(0,0) + neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) + total_Matrix_s(1,0));
+        transmissivity_s_coeff = (std::complex<double>(2,0) * neff_inc_s) / (neff_inc_s * total_Matrix_s(0,0) + neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) + total_Matrix_s(1,0));
+        reflectivity_s_no_backside = (reflectivity_s_coeff * std::conj(reflectivity_s_coeff)).real();
+        transmissivity_s_no_backside = ((n_s)/(n_0) * (transmissivity_s_coeff * std::conj(transmissivity_s_coeff))).real();
+        // Backside consideration
+        reflectivity_s_no_backside_reverse_coeff = (neff_sub_s * total_Matrix_s(1,1) - neff_inc_s * total_Matrix_s(0,0) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) - total_Matrix_s(1,0)) / (neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * total_Matrix_s(0,0) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) + total_Matrix_s(1,0));
+        transmissivity_s_no_backside_reverse_coeff = (std::complex<double>(2,0) * neff_sub_s) / (neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * total_Matrix_s(0,0) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) + total_Matrix_s(1,0));
+        reflectivity_s_no_backside_reverse = (reflectivity_s_no_backside_reverse_coeff * std::conj(reflectivity_s_no_backside_reverse_coeff)).real();
+        transmissivity_s_no_backside_reverse = ((n_0)/(n_s) * (transmissivity_s_no_backside_reverse_coeff * std::conj(transmissivity_s_no_backside_reverse_coeff))).real();
+        double beta = ((2 * M_PI / wavelength) * std::sqrt((n_s * n_s - alpha * alpha))  * d_list[0]).imag();
+        // propagation angle in the substrate
+        double cos_theta_sub = std::sqrt(1 - (alpha / n_s.real()) * (alpha / n_s.real()));
+        //coefficient from reflectivity and transmissivity to the exit medium from the substrate
+        double r_s_subs_exit = (n_s.real() * cos_theta_sub - n_exit_medium * std::cos(theta_0)) / (n_s.real() * cos_theta_sub + n_exit_medium * std::cos(theta_0));
+        double R_s_subs_exit = r_s_subs_exit * r_s_subs_exit;
+        double T_s_subs_exit = 1 - R_s_subs_exit;
+        reflectivity_s = reflectivity_s_no_backside + (transmissivity_s_no_backside * transmissivity_s_no_backside_reverse * R_s_subs_exit * std::exp(4 * beta)) / (1 - reflectivity_s_no_backside_reverse * R_s_subs_exit * std::exp(4 * beta));  
+        transmissivity_s = (transmissivity_s_no_backside * T_s_subs_exit * std::exp(2 * beta)) / (1 - reflectivity_s_no_backside_reverse * R_s_subs_exit * std::exp(4 * beta));
+    }    
+
+    return {reflectivity_s, transmissivity_s};
+};
+
+std::tuple<double, double> calculate_rt_p( std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0, double n_exit_medium, bool general_case)
+{
+    
+    // Incident medium and substrate have to be real, diagonal and isotropic
+    // incident medium check
+    MatrixXcd lastMatrix = e_list_3x3[e_list_3x3.size() - 1];
+    if (!isRealDiagonalIsotropic(lastMatrix))
+    {
+        throw std::runtime_error("Incident medium must be real, diagonal and isotropic");
+    }
+
+    // substrate check
+    MatrixXcd firstMatrix = e_list_3x3[0];
+    if (!isRealDiagonalIsotropic(firstMatrix))
+    {
+        throw std::runtime_error("Substrate must be real, diagonal and isotropic");
+    }
+
+    std::complex<double> n_s = std::sqrt(firstMatrix(0, 0));
+    std::complex<double> n_0 = std::sqrt(lastMatrix(0, 0));
+
+    Matrix2cd m_r_ps = Matrix2cd::Zero();
+    Matrix2cd m_t_ps = Matrix2cd::Zero();
+
+    double reflectivity_p = 0;
+    double transmissivity_p = 0;
+
+    if (general_case) {
+
+        // wavevector modulus and in plane components
+        std::complex<double> k0 = 2.0 * M_PI / wavelength;
+        std::complex<double> kx = -k0 * n_0.real() * sin(theta_0) * cos(phi_0);
+        std::complex<double> ky = -k0 * n_0.real() * sin(theta_0) * sin(phi_0);
+
+        Vector4cd v_kz1 = kz_eigenvalues(k0, kx, ky, e_list_3x3.back());
+        auto [v_e, v_kz] = kz_eigenvectors(k0, kx, ky, v_kz1, e_list_3x3.back());
+
+        Matrix2cd m_T = Matrix2cd::Identity();
+        Matrix2cd m_R_np1 = Matrix2cd::Zero();
+        Matrix2cd m_R_0 = Matrix2cd::Zero();
+
+        auto [m_a_np1, m_b_np1, m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1, m_c12_np1, m_c34_np1] = m_abc(k0, kx, ky, v_kz, v_e, d_list.back());
+
+        // Now iterate over all layers starting from the second last going backwards
+        for (int i = 1; i <= d_list.size() - 1; ++i)
+        {
+            v_kz1 = kz_eigenvalues(k0, kx, ky, e_list_3x3[i]);
+
+            auto [v_e, v_kz] = kz_eigenvectors(k0, kx, ky, v_kz1, e_list_3x3[i]);
+
+            auto [m_a, m_b, m_a12, m_a34, m_b12, m_b34, m_c12, m_c34] = m_abc(k0, kx, ky, v_kz, v_e, d_list[i]);
+
+            std::pair<Matrix2cd, Matrix2cd> result3 = calculate_tr_per_layer(m_a12, m_a34, m_b12, m_b34, m_a12_np1, m_a34_np1, m_b12_np1, m_b34_np1, m_c12_np1, m_c34_np1, m_R_np1, m_T);
+
+            Matrix2cd m_R = result3.first;
+            m_T = result3.second;
+
+            if (i == 0)
+            {
+                m_R_0 = m_R;
+            }
+
+            // In the next iteration m_a12 --> m_a12_np1, similarly m_R --> m_R_np1.
+            m_a12_np1 = m_a12;
+            m_a34_np1 = m_a34;
+            m_b12_np1 = m_b12;
+            m_b34_np1 = m_b34;
+            m_c12_np1 = m_c12;
+            m_c34_np1 = m_c34;
+            m_R_np1 = m_R;
+        }
+    
+        // This has to be calculated outside the loop
+        // rotating m_R to the s,p states
+        Matrix2cd p_inc = Matrix2cd::Zero();
+        p_inc(0, 0) = cos(theta_0) * cos(phi_0);
+        p_inc(0, 1) = -sin(phi_0);
+        p_inc(1, 0) = cos(theta_0) * sin(phi_0);
+        p_inc(1, 1) = cos(phi_0);
+        Matrix2cd p_inc_inv = p_inc.inverse();
+
+        // rotating m_T to the s,p states
+        double theta_s = asin(real_if_close(sin(theta_0) * n_0.real() / n_s.real()));
+        Matrix2cd p_sub = Matrix2cd::Zero();
+        p_sub(0, 0) = cos(theta_s) * cos(phi_0);
+        p_sub(0, 1) = -sin(phi_0);
+        p_sub(1, 0) = cos(theta_s) * sin(phi_0);
+        p_sub(1, 1) = cos(phi_0);
+        Matrix2cd p_sub_inv = p_sub.inverse();
+
+        // The reflection matrix
+        m_r_ps = p_inc_inv * m_R_0 * p_inc;
+
+        // The transmission matrix
+        m_t_ps = p_sub_inv * m_T * p_inc;
+
+        reflectivity_p = m_r_ps.cwiseAbs2()(0, 0);
+        transmissivity_p = m_t_ps.cwiseAbs2()(0, 0);
+
+    }   else {
+
+        //F. Abeles approach
+
+        Matrix2cd total_Matrix_p = Matrix2cd::Identity();
+        double alpha = n_0.real() * std::sin(theta_0); // Descartes' law for conservation on the incident medium
+
+        // Iterate over all layers starting from the second last going backwards and
+        // omitting the very first one
+        for (int i = d_list.size() - 2; i > 0; --i)
+        {
+            // Calculate n_i and Phi_i based on the given formulas - more efficient
+            std::complex<double> neff_i_p = (e_list_3x3[i](1,1)) / std::sqrt(e_list_3x3[i](1,1) - alpha * alpha); // for p polarization
+            std::complex<double> Pseudo_i = (2 * M_PI / wavelength) * std::sqrt(e_list_3x3[i](1,1) - alpha * alpha) * d_list[i] ;
+            // Multiply the total matrix by the layer matrix
+            Eigen::Matrix2cd layer_Matrix_p;
+            layer_Matrix_p << std::cos(Pseudo_i), (std::complex<double>(0,1) / neff_i_p) * std::sin(Pseudo_i),
+                            std::complex<double>(0,1) * neff_i_p * std::sin(Pseudo_i), std::cos(Pseudo_i);
+            total_Matrix_p *= layer_Matrix_p;
+        }
+
+        double reflectivity_p_no_backside, transmissivity_p_no_backside, reflectivity_p_no_backside_reverse, transmissivity_p_no_backside_reverse;
+        std::complex<double> reflectivity_p_no_backside_reverse_coeff, transmissivity_p_no_backside_reverse_coeff;
+       
+        std::complex<double> neff_inc_p = n_0 * n_0 / (-std::sqrt(n_0 * n_0 - alpha * alpha));
+        std::complex<double> neff_sub_p = n_s * n_s / (-std::sqrt(n_s * n_s - alpha * alpha));
+        std::complex<double> reflectivity_p_coeff, transmissivity_p_coeff;
+        reflectivity_p_coeff = (neff_inc_p * total_Matrix_p(0,0) - neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) - total_Matrix_p(1,0)) / (neff_inc_p * total_Matrix_p(0,0) + neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
+        transmissivity_p_coeff = (std::complex<double>(2,0) * neff_inc_p) / (neff_inc_p * total_Matrix_p(0,0) + neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
+        reflectivity_p_no_backside = (reflectivity_p_coeff * std::conj(reflectivity_p_coeff)).real();
+        transmissivity_p_no_backside = ((n_s)/(n_0) * (transmissivity_p_coeff * std::conj(transmissivity_p_coeff))).real();
+        // Backside consideration
+        reflectivity_p_no_backside_reverse_coeff = (neff_sub_p * total_Matrix_p(1,1) - neff_inc_p * total_Matrix_p(0,0) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) - total_Matrix_p(1,0)) / (neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * total_Matrix_p(0,0) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
+        transmissivity_p_no_backside_reverse_coeff = (std::complex<double>(2,0) * neff_sub_p) / (neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * total_Matrix_p(0,0) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
+        reflectivity_p_no_backside_reverse = (reflectivity_p_no_backside_reverse_coeff * std::conj(reflectivity_p_no_backside_reverse_coeff)).real();
+        transmissivity_p_no_backside_reverse = ((n_0)/(n_s) * (transmissivity_p_no_backside_reverse_coeff * std::conj(transmissivity_p_no_backside_reverse_coeff))).real();
+        double beta = ((2 * M_PI / wavelength) * std::sqrt((n_s * n_s - alpha * alpha))  * d_list[0]).imag();
+        // propagation angle in the substrate
+        double cos_theta_sub = std::sqrt(1 - (alpha / n_s.real()) * (alpha / n_s.real()));
+        //coefficient from reflectivity and transmissivity to the exit medium from the substrate
+        double r_p_subs_exit = (n_s.real() * cos(theta_0) - n_exit_medium * cos_theta_sub)  / (n_s.real() * cos(theta_0) + n_exit_medium * cos_theta_sub);
+        double R_p_subs_exit = r_p_subs_exit * r_p_subs_exit;
+        double T_p_subs_exit = 1 - R_p_subs_exit;
+
+        reflectivity_p = reflectivity_p_no_backside + (transmissivity_p_no_backside * transmissivity_p_no_backside_reverse * R_p_subs_exit * std::exp(4 * beta)) / (1 - reflectivity_p_no_backside_reverse * R_p_subs_exit * std::exp(4 * beta));
+        transmissivity_p = (transmissivity_p_no_backside * T_p_subs_exit * std::exp(2 * beta)) / (1 - reflectivity_p_no_backside_reverse * R_p_subs_exit * std::exp(4 * beta));
+
+    }    
+
+    return {reflectivity_p, transmissivity_p};
+};
+
+std::tuple<double, double> calculate_rt( std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0, double n_exit_medium, bool general_case)
+{
+    
     // Incident medium and substrate have to be real, diagonal and isotropic
     // incident medium check
     MatrixXcd lastMatrix = e_list_3x3[e_list_3x3.size() - 1];
@@ -490,107 +784,85 @@ std::tuple<double, double, double, double> calculate_tr( std::vector<Matrix3cd> 
         // The transmission matrix
         m_t_ps = p_sub_inv * m_T * p_inc;
 
-        reflectivity_s = m_r_ps.cwiseAbs2()(1, 1);
         reflectivity_p = m_r_ps.cwiseAbs2()(0, 0);
-        transmissivity_s = m_t_ps.cwiseAbs2()(1, 1);
         transmissivity_p = m_t_ps.cwiseAbs2()(0, 0);
 
     }   else {
 
-        //abeles approach
+        //F. Abeles approach
 
-        Matrix2cd total_Matrix_s = Matrix2cd::Identity();
         Matrix2cd total_Matrix_p = Matrix2cd::Identity();
-        double alpha = n_0.real() * sin(theta_0); // Descartes' law for conservation
+        Matrix2cd total_Matrix_s = Matrix2cd::Identity();
+        double alpha = n_0.real() * std::sin(theta_0); // Descartes' law for conservation on the incident medium
 
         // Iterate over all layers starting from the second last going backwards and
         // omitting the very first one
         for (int i = d_list.size() - 2; i > 0; --i)
         {
             // Calculate n_i and Phi_i based on the given formulas - more efficient
+            std::complex<double> neff_i_p = (e_list_3x3[i](1,1)) / std::sqrt(e_list_3x3[i](1,1) - alpha * alpha); // for p polarization
             std::complex<double> neff_i_s = std::sqrt(e_list_3x3[i](1,1) - alpha * alpha); // for s polarization, extract the y component since isotropic or s-pol (materials that are aligned are aligned along y-axis)
-            std::complex<double> neff_i_p = (e_list_3x3[i](1,1)) / neff_i_s; // for p polarization
-            std::complex<double> Pseudo_i = (2 * M_PI / wavelength) * neff_i_s * d_list[i];
-
-            // Define the matrices for s and p polarization
-            Matrix2cd M_s_i = Matrix2cd::Zero();
-            M_s_i << cos(Pseudo_i), (std::complex<double>(0,1) / neff_i_s) * sin(Pseudo_i),
-                    std::complex<double>(0,1) * neff_i_s * sin(Pseudo_i), cos(Pseudo_i);
-            Matrix2cd M_p_i = Matrix2cd::Zero();
-            M_p_i << cos(Pseudo_i), (std::complex<double>(0,1) / neff_i_p) * sin(Pseudo_i),
-                    std::complex<double>(0,1) * neff_i_p * sin(Pseudo_i), cos(Pseudo_i);
+            std::complex<double> Pseudo_i = (2 * M_PI / wavelength) * std::sqrt(e_list_3x3[i](1,1) - alpha * alpha) * d_list[i] ;
             // Multiply the total matrix by the layer matrix
-            total_Matrix_s *= M_s_i;
-            total_Matrix_p *= M_p_i;
+            Eigen::Matrix2cd layer_Matrix_p;
+            layer_Matrix_p << std::cos(Pseudo_i), (std::complex<double>(0,1) / neff_i_p) * std::sin(Pseudo_i),
+                            std::complex<double>(0,1) * neff_i_p * std::sin(Pseudo_i), std::cos(Pseudo_i);
+            total_Matrix_p *= layer_Matrix_p;
+            Eigen::Matrix2cd layer_Matrix_s;
+            // Multiply the total matrix by the layer matrix
+            layer_Matrix_s << std::cos(Pseudo_i), (std::complex<double>(0,1) / neff_i_s) * std::sin(Pseudo_i),
+                            std::complex<double>(0,1) * neff_i_s * std::sin(Pseudo_i), std::cos(Pseudo_i);
+            total_Matrix_s *= layer_Matrix_s;
         }
-        std::complex<double> neff_inc_s = std::sqrt(e_list_3x3.back()(1,1) - alpha * alpha);
-        std::complex<double> neff_inc_p = (e_list_3x3.back()(1,1)) / neff_inc_s;
-        std::complex<double> neff_sub_s = std::sqrt(e_list_3x3[0](1,1) - alpha * alpha);
-        std::complex<double> neff_sub_p = (e_list_3x3[0](1,1)) / neff_inc_s;
 
-        std::complex<double> reflectivity_s_coeff, reflectivity_p_coeff, transmissivity_s_coeff, transmissivity_p_coeff;
+        double reflectivity_p_no_backside, transmissivity_p_no_backside, reflectivity_p_no_backside_reverse, transmissivity_p_no_backside_reverse;
+        std::complex<double> reflectivity_p_no_backside_reverse_coeff, transmissivity_p_no_backside_reverse_coeff;
+        double reflectivity_s_no_backside, transmissivity_s_no_backside, reflectivity_s_no_backside_reverse, transmissivity_s_no_backside_reverse;
+        std::complex<double> reflectivity_s_no_backside_reverse_coeff, transmissivity_s_no_backside_reverse_coeff;
+
+        std::complex<double> neff_inc_s = -std::sqrt(n_0 * n_0 - alpha * alpha);
+        std::complex<double> neff_sub_s = -std::sqrt(n_s * n_s - alpha * alpha);
+        std::complex<double> neff_inc_p = n_0 * n_0 / neff_inc_s;
+        std::complex<double> neff_sub_p = n_s * n_s / neff_sub_s;
+
+        std::complex<double> reflectivity_p_coeff, transmissivity_p_coeff, reflectivity_s_coeff, transmissivity_s_coeff;
+        
         reflectivity_s_coeff = (neff_inc_s * total_Matrix_s(0,0) - neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) - total_Matrix_s(1,0)) / (neff_inc_s * total_Matrix_s(0,0) + neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) + total_Matrix_s(1,0));
-        reflectivity_p_coeff = (neff_inc_p * total_Matrix_p(0,0) - neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) - total_Matrix_p(1,0)) / (neff_inc_p * total_Matrix_p(0,0) + neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
-        transmissivity_s_coeff = (std::complex<double>(2,0) * neff_inc_p) / (neff_inc_p * total_Matrix_p(0,0) + neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
-        transmissivity_p_coeff = (std::complex<double>(2,0) * neff_inc_p) / (neff_inc_p * total_Matrix_p(0,0) + neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
-        
-        double reflectivity_s_no_backside, reflectivity_p_no_backside, transmissivity_s_no_backside, transmissivity_p_no_backside;
+        transmissivity_s_coeff = (std::complex<double>(2,0) * neff_inc_s) / (neff_inc_s * total_Matrix_s(0,0) + neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) + total_Matrix_s(1,0));
         reflectivity_s_no_backside = (reflectivity_s_coeff * std::conj(reflectivity_s_coeff)).real();
+        transmissivity_s_no_backside = ((n_s)/(n_0) * (transmissivity_s_coeff * std::conj(transmissivity_s_coeff))).real();
+        reflectivity_p_coeff = (neff_inc_p * total_Matrix_p(0,0) - neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) - total_Matrix_p(1,0)) / (neff_inc_p * total_Matrix_p(0,0) + neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
+        transmissivity_p_coeff = (std::complex<double>(2,0) * neff_inc_p) / (neff_inc_p * total_Matrix_p(0,0) + neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
         reflectivity_p_no_backside = (reflectivity_p_coeff * std::conj(reflectivity_p_coeff)).real();
-        transmissivity_s_no_backside = ((neff_sub_s)/(neff_inc_s) * (transmissivity_s_coeff * std::conj(transmissivity_s_coeff))).real();
-        transmissivity_p_no_backside = ((neff_sub_p)/(neff_inc_p) * (transmissivity_p_coeff * std::conj(transmissivity_p_coeff))).real();
-
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and reflectivity_p: " << reflectivity_p_no_backside << std::endl;
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and reflectivity_s: " << reflectivity_s_no_backside << std::endl;
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and transmissivity_p: " << transmissivity_p_no_backside << std::endl;
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and transmissivity_s: " << transmissivity_s_no_backside << std::endl;
-        
+        transmissivity_p_no_backside = ((n_s)/(n_0) * (transmissivity_p_coeff * std::conj(transmissivity_p_coeff))).real();
+          
         // Backside consideration
-        std::complex<double> reflectivity_s_no_backside_reverse_coeff, reflectivity_p_no_backside_reverse_coeff, transmissivity_s_no_backside_reverse_coeff, transmissivity_p_no_backside_reverse_coeff;
         reflectivity_s_no_backside_reverse_coeff = (neff_sub_s * total_Matrix_s(1,1) - neff_inc_s * total_Matrix_s(0,0) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) - total_Matrix_s(1,0)) / (neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * total_Matrix_s(0,0) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) + total_Matrix_s(1,0));
-        reflectivity_p_no_backside_reverse_coeff = (neff_sub_p * total_Matrix_p(1,1) - neff_inc_p * total_Matrix_p(0,0) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) - total_Matrix_p(1,0)) / (neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * total_Matrix_p(0,0) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
         transmissivity_s_no_backside_reverse_coeff = (std::complex<double>(2,0) * neff_sub_s) / (neff_sub_s * total_Matrix_s(1,1) + neff_inc_s * total_Matrix_s(0,0) + neff_inc_s * neff_sub_s * total_Matrix_s(0,1) + total_Matrix_s(1,0));
-        transmissivity_p_no_backside_reverse_coeff = (std::complex<double>(2,0) * neff_sub_p) / (neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * total_Matrix_p(0,0) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
-
-        double reflectivity_s_no_backside_reverse, reflectivity_p_no_backside_reverse, transmissivity_s_no_backside_reverse, transmissivity_p_no_backside_reverse;
         reflectivity_s_no_backside_reverse = (reflectivity_s_no_backside_reverse_coeff * std::conj(reflectivity_s_no_backside_reverse_coeff)).real();
+        transmissivity_s_no_backside_reverse = ((n_0)/(n_s) * (transmissivity_s_no_backside_reverse_coeff * std::conj(transmissivity_s_no_backside_reverse_coeff))).real();
+        reflectivity_p_no_backside_reverse_coeff = (neff_sub_p * total_Matrix_p(1,1) - neff_inc_p * total_Matrix_p(0,0) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) - total_Matrix_p(1,0)) / (neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * total_Matrix_p(0,0) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
+        transmissivity_p_no_backside_reverse_coeff = (std::complex<double>(2,0) * neff_sub_p) / (neff_sub_p * total_Matrix_p(1,1) + neff_inc_p * total_Matrix_p(0,0) + neff_inc_p * neff_sub_p * total_Matrix_p(0,1) + total_Matrix_p(1,0));
         reflectivity_p_no_backside_reverse = (reflectivity_p_no_backside_reverse_coeff * std::conj(reflectivity_p_no_backside_reverse_coeff)).real();
-        transmissivity_s_no_backside_reverse = ((neff_inc_s)/(neff_sub_s) * (transmissivity_s_no_backside_reverse)).real();
-        transmissivity_p_no_backside_reverse = ((neff_inc_p)/(neff_sub_p) * (transmissivity_p_no_backside_reverse)).real();
-
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and reflectivity_p reversed: " << reflectivity_s_no_backside_reverse << std::endl;
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and reflectivity_s reversed: " << reflectivity_p_no_backside_reverse << std::endl;
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and transmissivity_p reversed: " << transmissivity_s_no_backside_reverse << std::endl;
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and transmissivity_s reversed: " << transmissivity_p_no_backside_reverse << std::endl;
-        
-        double d_sub = 1e6; // thickness of the substrate
-        double beta = ((2 * M_PI / wavelength) * std::sqrt((n_s * n_s - alpha * alpha))  * d_sub).imag();
-        double n_exit_medium = 1; // air after substrate
-        
+        transmissivity_p_no_backside_reverse = ((n_0)/(n_s) * (transmissivity_p_no_backside_reverse_coeff * std::conj(transmissivity_p_no_backside_reverse_coeff))).real();
+       
+        double beta = ((2 * M_PI / wavelength) * std::sqrt((n_s * n_s - alpha * alpha))  * d_list[0]).imag();
         // propagation angle in the substrate
-        double sin_theta_sub = n_0.real() * std::sin(theta_0) / n_s.real();
-        double cos_theta_sub = std::sqrt(1 - sin_theta_sub * sin_theta_sub);
-
+        double cos_theta_sub = std::sqrt(1 - (alpha / n_s.real()) * (alpha / n_s.real()));
         //coefficient from reflectivity and transmissivity to the exit medium from the substrate
-        double r_s_subs_exit = (n_s.real() * cos_theta_sub - n_exit_medium) / (n_s.real() * cos_theta_sub + n_exit_medium);
+        double r_s_subs_exit = (n_s.real() * cos_theta_sub - n_exit_medium * std::cos(theta_0)) / (n_s.real() * cos_theta_sub + n_exit_medium * std::cos(theta_0));
         double R_s_subs_exit = r_s_subs_exit * r_s_subs_exit;
-        double r_p_subs_exit = (n_s.real() * cos_theta_sub - n_exit_medium * cos(theta_0) / (n_s.real() * cos_theta_sub + n_exit_medium * cos(theta_0)));
-        double R_p_subs_exit = r_p_subs_exit * r_p_subs_exit;
-
         double T_s_subs_exit = 1 - R_s_subs_exit;
+        double r_p_subs_exit = (n_s.real() * cos(theta_0) - n_exit_medium * cos_theta_sub)  / (n_s.real() * cos(theta_0) + n_exit_medium * cos_theta_sub);
+        double R_p_subs_exit = r_p_subs_exit * r_p_subs_exit;
         double T_p_subs_exit = 1 - R_p_subs_exit;
-
-        reflectivity_s = reflectivity_s_no_backside + (transmissivity_s_no_backside * transmissivity_s_no_backside_reverse * R_s_subs_exit * std::exp(4 * beta)) / (1 - reflectivity_s_no_backside_reverse * R_s_subs_exit * std::exp(4 * beta));
+        
+        reflectivity_s = reflectivity_s_no_backside + (transmissivity_s_no_backside * transmissivity_s_no_backside_reverse * R_s_subs_exit * std::exp(4 * beta)) / (1 - reflectivity_s_no_backside_reverse * R_s_subs_exit * std::exp(4 * beta));       
+        transmissivity_s = (transmissivity_s_no_backside * T_s_subs_exit * std::exp(2 * beta)) / (1 - reflectivity_s_no_backside_reverse * R_s_subs_exit * std::exp(4 * beta));                  
         reflectivity_p = reflectivity_p_no_backside + (transmissivity_p_no_backside * transmissivity_p_no_backside_reverse * R_p_subs_exit * std::exp(4 * beta)) / (1 - reflectivity_p_no_backside_reverse * R_p_subs_exit * std::exp(4 * beta));
-        transmissivity_s = (transmissivity_s_no_backside * T_s_subs_exit * std::exp(2 * beta)) / (1 - reflectivity_s_no_backside_reverse * R_s_subs_exit * std::exp(4 * beta));
         transmissivity_p = (transmissivity_p_no_backside * T_p_subs_exit * std::exp(2 * beta)) / (1 - reflectivity_p_no_backside_reverse * R_p_subs_exit * std::exp(4 * beta));
 
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and reflectivity_p: " << reflectivity_p << std::endl;
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and reflectivity_s: " << reflectivity_s << std::endl;
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and transmissivity_p: " << transmissivity_p << std::endl;
-        std::cout << "theta: " << theta_0 << " and wavelength: " << wavelength << " and transmissivity_s: " << transmissivity_s << std::endl;
-        
     }    
 
-    return {reflectivity_s, reflectivity_p,transmissivity_s,transmissivity_p};
+    return {0.5 *(reflectivity_s + reflectivity_p), 0.5 *(transmissivity_p + reflectivity_p)};
 };
