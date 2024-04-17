@@ -6,7 +6,7 @@
   "polarAngleStep": 1.0,
   "azimAngleMin": 0.0,
   "azimAngleMax": 1.0,
-  "azimAngleStep": 0.1,
+  "azimAngleStep": 2.0,
   "wavelengthMin": 400.0,
   "wavelengthMax": 550.0,
   "wavelengthStep": 1.0,
@@ -14,7 +14,7 @@
   "substrate_thickness": 1000000.0,
   "incident_medium": "Air",
   "exit_medium": "Air",
-  "core_selection": "general",
+  "core_selection": "fast",
   "structure_materials": [
     "10_Ta2O5_SiO2",
     "Ta2O5",

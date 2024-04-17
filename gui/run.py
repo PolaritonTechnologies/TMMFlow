@@ -484,48 +484,83 @@ def download_file():
 def calculate_and_plot(data):
     """ """
     global my_filter
+    wavelengths = np.arange(
+        float(data["startWavelength"]),
+        float(data["endWavelength"]) + float(data["stepWavelength"]),
+        float(data["stepWavelength"]),
+    )
     polar_angles = np.arange(
         float(data["startAngle"]),
         float(data["endAngle"]) + float(data["stepAngle"]),
         float(data["stepAngle"]),
     )
+    # azimuthal_angles = np.arange(
+    #     float(data["startAzimuthalAngle"]),
+    #     float(data["endAzimuthalAngle"]) + float(data["stepAzimuthalAngle"]),
+    #     float(data["stepAzimuthalAngle"]),
+    # )
+    target_type = data["mode"]
+    polarization = data["polarization"]
 
-    calculated_data_df = pd.DataFrame()
+    my_filter.calculate_ar_data(wavelengths, polar_angles, target_type=target_type, polarization=polarization, web=True)
+    calculated_data_df = my_filter.stored_data[0]
 
-    for theta in polar_angles:
-        calculated_data_df[theta] = my_filter.calculate_one_angle(
-            float(data["startWavelength"]),
-            float(data["endWavelength"]),
-            float(data["stepWavelength"]),
-            data["mode"],
-            data["polarization"],
-            theta,
-            float(data["azimuthalAngle"]),
-            True if data["generalCore"] == "on" else False,
-        )
+    # Create a Plotly figure using the calculated data
+    angles = calculated_data_df.columns.to_numpy()
+    wavelengths = calculated_data_df.index.to_numpy()
+    color_values = calculated_data_df.to_numpy()
 
-        # Create a Plotly figure using the calculated data
-        angles = calculated_data_df.columns.to_numpy()
-        wavelengths = calculated_data_df.index.to_numpy()
-        color_values = calculated_data_df.to_numpy()
+    # The layout is stored in simulate.html
+    heatmap = go.Heatmap(
+        x=angles,
+        y=wavelengths,
+        z=color_values,
+        colorscale="Viridis",
+    )
 
-        # The layout is stored in simulate.html
-        heatmap = go.Heatmap(
-            x=angles,
-            y=wavelengths,
-            z=color_values,
-            colorscale="Viridis",
-        )
+    fig = go.Figure(data=heatmap)
 
-        fig = go.Figure(data=heatmap)
+    # Convert the figure to JSON format
+    fig_json = pio.to_json(fig)
 
-        # Convert the figure to JSON format
-        fig_json = pio.to_json(fig)
+    # Emit the figure in JSON format
+    socketio.emit("update_plot", fig_json)
 
-        # Emit the figure in JSON format
-        socketio.emit("update_plot", fig_json)
+    # calculated_data_df = pd.DataFrame()
+    # for theta in polar_angles:
+    #     calculated_data_df[theta] = my_filter.calculate_one_angle(
+    #         float(data["startWavelength"]),
+    #         float(data["endWavelength"]),
+    #         float(data["stepWavelength"]),
+    #         data["mode"],
+    #         data["polarization"],
+    #         theta,
+    #         float(data["azimuthalAngle"]),
+    #         True if data["generalCore"] == "on" else False,
+    #     )
 
-    my_filter.stored_data = calculated_data_df
+    #     # Create a Plotly figure using the calculated data
+    #     angles = calculated_data_df.columns.to_numpy()
+    #     wavelengths = calculated_data_df.index.to_numpy()
+    #     color_values = calculated_data_df.to_numpy()
+
+    #     # The layout is stored in simulate.html
+    #     heatmap = go.Heatmap(
+    #         x=angles,
+    #         y=wavelengths,
+    #         z=color_values,
+    #         colorscale="Viridis",
+    #     )
+
+    #     fig = go.Figure(data=heatmap)
+
+    #     # Convert the figure to JSON format
+    #     fig_json = pio.to_json(fig)
+
+    #     # Emit the figure in JSON format
+    #     socketio.emit("update_plot", fig_json)
+
+    # my_filter.stored_data = calculated_data_df
 
 
 @socketio.on("plot")
