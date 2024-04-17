@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {"json"}
+    ALLOWED_EXTENSIONS = {"json", "ofp"}
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 

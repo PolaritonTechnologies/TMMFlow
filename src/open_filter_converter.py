@@ -2,7 +2,9 @@ import json
 import numpy as np
 
 
-def import_from_open_filter(input_text):
+def import_from_open_filter(input_file):
+    with open(input_file, "r") as input_file:
+        input_text = input_file.read()
 
     # Initial read of the import open filter project
     lines = [line.replace("\t", "") for line in input_text.split("\n")]
@@ -36,10 +38,11 @@ def import_from_open_filter(input_text):
         "wavelength_steps": [],
         "targets_tolerance": [],
         "bounds": [],
-        "add_layers": False,
-        "nb_added_layers": 0,
-        "added_materials": [],
-        "added_layer_bounds": [],
+        "substrate_material": None,
+        "substrate_thickness": None,
+        "incident_medium": None,
+        "exit_medium": None,
+        "core_selection": None 
     }
 
     # Go through the open filter file to populate the dictionary
@@ -120,6 +123,23 @@ def import_from_open_filter(input_text):
         if line.startswith("Tolerance:"):
             parts = line.split(" ")
             data["targets_tolerance"].append(float(parts[1]))
+        if line.startswith("Substrate:"):
+            parts = line.split(" ")
+            data["substrate_material"] = str(parts[1])
+            data["substrate_thickness"] = float(parts[2])
+        if line.startswith("FrontMedium:"):
+            parts = line.split(" ")
+            if parts[1] == "void":
+                data["incident_medium"] = "Air"
+            else:
+                data["incident_medium"] = str(parts[1])
+        if line.startswith("BackMedium:"):
+            parts = line.split(" ")
+            if parts[1] == "void":
+                data["exit_medium"] = "Air" 
+            else:
+                data["exit_medium"] = str(parts[1])
+
     # Fill other fields by default
     if data["calculation_type"] == "":
         data["calculation_type"] = "t"
@@ -149,10 +169,23 @@ def import_from_open_filter(input_text):
         data["azimuthal_angle_steps"] = list(np.ones_like(data["targets_tolerance"]))
     if data["bounds"] == []:
         data["bounds"] = [[0, 200]] * len(data["structure_materials"])
-    print(data)
+    if data["substrate_material"] is None:
+        data["substrate_material"] = "FusedSilica" 
+    if data["substrate_thickness"] is None:
+        data["substrate_thickness"] = 1000000.0 
+    if data["incident_medium"] is None:
+        data["incident_medium"] = "Air" 
+    if data["exit_medium"] is None:
+        data["exit_medium"] = "Air" 
+    if data["core_selection"] is None:
+        data["core_selection"] = "fast" 
+
     # Write to JSON file
-    with open("converted_open_filter.json", "w") as output_file:
+    saving_path = input_file.name[:-3] + "json"
+    with open(saving_path, "w") as output_file:
         json.dump(data, output_file)
+    
+    return saving_path 
 
 
 def export_to_open_filter(dictionary_input):
@@ -160,27 +193,27 @@ def export_to_open_filter(dictionary_input):
     to_export = ""
 
     header = """Version: 1.1.1
-Comment:
-End
-Filter:
-    Substrate: substrate_24mm_koeln 1000000.000000
-    FrontMedium: void
-    BackMedium: void
-    CenterWavelength: 450.000000
-    WavelengthRange: 300.000000 1000.000000 1.000000
-    DontConsiderSubstrate: 0
-    StepSpacing: 0.010000
-    MinimumThickness: 0.000000
-    Illuminant: CIE-D65
-    Observer: CIE-1931
-    ConsiderBackside: 1
-    EllipsometerType: 1
-    DeltaMin: -90.000000
-    ConsiderBacksideOnMonitoring: 1
-    MonitoringEllipsometerType: 1
-    MonitoringDeltaMin: -90.000000
-    MonitoringSublayerThickness: 1.000000
-"""
+            Comment:
+            End
+            Filter:
+                Substrate: substrate_24mm_koeln 1000000.000000
+                FrontMedium: void
+                BackMedium: void
+                CenterWavelength: 450.000000
+                WavelengthRange: 300.000000 1000.000000 1.000000
+                DontConsiderSubstrate: 0
+                StepSpacing: 0.010000
+                MinimumThickness: 0.000000
+                Illuminant: CIE-D65
+                Observer: CIE-1931
+                ConsiderBackside: 1
+                EllipsometerType: 1
+                DeltaMin: -90.000000
+                ConsiderBacksideOnMonitoring: 1
+                MonitoringEllipsometerType: 1
+                MonitoringDeltaMin: -90.000000
+                MonitoringSublayerThickness: 1.000000
+            """
 
     to_export = to_export + header
 
@@ -274,17 +307,17 @@ End"""
         output_file.write(to_export)
 
 
-if True:
+# if True:
 
-    input_file = "test_new_core.ofp"
-    with open(input_file, "r") as input_file:
-        input_text = input_file.read()
-    print(import_from_open_filter(input_text))
+#     input_file = "test_new_core.ofp"
+#     with open(input_file, "r") as input_file:
+#         input_text = input_file.read()
+#     print(import_from_open_filter(input_text))
 
-if False:
+# if False:
 
-    input_file = "./temp/current_structure.json"
-    with open(input_file, "r") as input_file:
-        input_dic = json.load(input_file)
-        print(input_dic)
-    print(export_to_open_filter(input_dic))
+#     input_file = "./temp/current_structure.json"
+#     with open(input_file, "r") as input_file:
+#         input_dic = json.load(input_file)
+#         print(input_dic)
+#     print(export_to_open_filter(input_dic))

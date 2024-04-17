@@ -41,6 +41,11 @@ section {
     margin-bottom: 20px;
 }
 
+.container-custom {
+    max-width: 80%; /* Adjust this to your liking */
+    margin: auto;
+}
+
 footer {
     background-color: #333;
     color: white;
@@ -75,4 +80,19 @@ button:disabled {
 
 #merit_graph {
     margin-bottom: 5em;  /* Adjust as needed */
+}
+
+/* Hide the up and down arrows from number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.select2-container {
+    width: 100% !important;
 }

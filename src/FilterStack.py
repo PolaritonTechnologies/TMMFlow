@@ -66,9 +66,13 @@ class FilterStack:
         messages. Defaults to an ignore function that does nothing.
         """
 
+
+        with open(json_file_path, "r") as json_file_path:
+            filter_definition_by_user = json.load(json_file_path)
+
         # translate json file to a readable format for the C++ code that does
         # not involve abbreviations that we use for filter design
-        json_file_path_cpp = self.translate_order_for_cpp(json_file_path)
+        json_file_path_cpp = self.translate_order_for_cpp(filter_definition_by_user)
 
         # Create the filter stack in C++
         self.my_filter, self.lib = self.create_filter_in_cpp(json_file_path_cpp)
@@ -85,6 +89,10 @@ class FilterStack:
         self.initial_structure_materials = np.copy(
             np.array(self.filter_definition["structure_materials"])
         )
+        self.structure_materials_by_user = filter_definition_by_user["structure_materials"]
+        self.structure_thicknesses_by_user = filter_definition_by_user["structure_thicknesses"]
+        self.thickness_opt_allowed_by_user = filter_definition_by_user["thickness_opt_allowed"]
+        self.layer_switch_allowed_by_user = filter_definition_by_user["layer_switch_allowed"]
 
         self.filter_definition["structure_thicknesses"] = np.array(
             self.filter_definition["structure_thicknesses"]
@@ -132,7 +140,7 @@ class FilterStack:
     #####################################################
     ######### Initialization and C++ Interfacing ########
     #####################################################
-    def translate_order_for_cpp(self, json_file_path):
+    def translate_order_for_cpp(self, optimisation_order):
         """
         Translates the optimization order for the C++ code.
 
@@ -152,8 +160,6 @@ class FilterStack:
         str: The path to the temporary JSON file that contains the translated optimization order.
         """
 
-        with open(json_file_path, "r") as json_file_path:
-            optimisation_order = json.load(json_file_path)
 
         updated_optimisation_order = optimisation_order.copy()
 
@@ -163,7 +169,7 @@ class FilterStack:
         structure_thicknesses = optimisation_order["structure_thicknesses"]
         thickness_opt_allowed = optimisation_order["thickness_opt_allowed"]
         layer_switch_allowed = optimisation_order["layer_switch_allowed"]
-        add_layers = optimisation_order["add_layers"]
+        # add_layers = optimisation_order["add_layers"]
         bounds = optimisation_order["bounds"]
 
         updated_structure_materials = []
@@ -217,6 +223,7 @@ class FilterStack:
             updated_layer_switch_allowed
         )
         updated_optimisation_order["bounds"] = updated_bounds
+        """
         if add_layers:
             for i in range(0, optimisation_order["nb_added_layers"]):
                 updated_optimisation_order["structure_materials"].append(
@@ -237,6 +244,7 @@ class FilterStack:
                 )
                 updated_optimisation_order["thickness_opt_allowed"].append(True)
                 updated_optimisation_order["layer_switch_allowed"].append(True)
+        """
 
         # Generate file path relative to this file
         file_path = os.path.join(
@@ -830,7 +838,7 @@ class FilterStack:
             temp_json = self.filter_definition.copy()
             if (
                 np.any(self.filter_definition["layer_switch_allowed"])
-                or self.filter_definition["add_layers"]
+                # or self.filter_definition["add_layers"]
             ):
                 thicknesses, positions = (
                     self.extract_thickness_and_position_from_features(x)
@@ -844,8 +852,8 @@ class FilterStack:
                 temp_json["structure_materials"] = current_structure_materials
                 temp_json["structure_thicknesses"] = current_structure_thicknesses
 
-                if self.filter_definition["add_layers"]:
-                    temp_json["add_layers"] = False
+                # if self.filter_definition["add_layers"]:
+                    # temp_json["add_layers"] = False
             else:
                 temp_json["structure_thicknesses"] = list(x)
 

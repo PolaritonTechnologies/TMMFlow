@@ -6,7 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transfer Matrix Method Simulations</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
+
+    <!-- Include Bootstrap -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+    <!-- Add jQuery UI CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-theme/0.1.0-beta.10/select2-bootstrap.min.css"
+        rel="stylesheet" />
+
+
+    <!-- Add jQuery, jQuery UI and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
 </head>
 
 <body>
@@ -30,13 +45,16 @@
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
                     <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
                 </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'materials' else '' }}">
+                    <a class="nav-link" href="{{ url_for('materials') }}">Materials</a>
+                </li>
 
             </ul>
 
         </div>
     </nav>
 
-    <main class="container">
+    <main class="container-custom">
         <h2>Upload your Filter Design</h2>
         <p>Upload a .json or .ofp file containing your filter design.</p>
         <section class="text-center my-5">
@@ -79,8 +97,8 @@
         <h2>Filter Definition</h2>
         <p>Check and change the definition of the filter stack from the .json file. </p>
 
-        <form action="/update_json" method="post" class="form-horizontal">
-            <table class="table">
+        <form class="form-horizontal">
+            <table class="table" , id="jsonTable">
                 <tr>
                     <th>Attribute</th>
                     <th>Value/Minimum</th>
@@ -91,8 +109,12 @@
                     <td><label for="calculation_type">Calculation Type:</label></td>
                     <td>
                         <select id="calculation_type" name="calculation_type" class="form-control">
-                            <option value="option1">Option 1</option>
-                            <option value="option2">Option 2</option>
+                            <option value="t" {% if default_values.calculation_type=='t' %}selected{% endif %}>
+                                Transmission</option>
+                            <option value="r" {% if default_values.calculation_type=='r' %}selected{% endif %}>
+                                Reflection</option>
+                            <option value="a" {% if default_values.calculation_type=='a' %}selected{% endif %}>
+                                Absorption</option>
                         </select>
                     </td>
                 </tr>
@@ -100,41 +122,55 @@
                     <td><label for="polarization">Polarization:</label></td>
                     <td>
                         <select id="polarization" name="polarization" class="form-control">
-                            <option value="option1">Option 1</option>
-                            <option value="option2">Option 2</option>
-                            <!-- Add more options as needed... -->
+                            <option value="s" {% if default_values.polarization=='s' %}selected{% endif %}>s</option>
+                            <option value="p" {% if default_values.polarization=='p' %}selected{% endif %}>p</option>
+                            <option value="" {% if default_values.polarization=='' %}selected{% endif %}>None</option>
                         </select>
                     </td>
                 </tr>
                 <tr>
                     <td><label for="calculation_wavelength_min">Calculation Wavelength:</label></td>
                     <td><input type="number" id="calculation_wavelength_min" name="calculation_wavelength_min"
-                            class="form-control"></td>
+                            class="form-control" value="{{ default_values.wavelengthMin }}"></td>
                     <td><input type="number" id="calculation_wavelength_max" name="calculation_wavelength_max"
-                            class="form-control"></td>
+                            class="form-control" value="{{ default_values.wavelengthMax }}"></td>
                     <td><input type="number" id="calculation_wavelength_step" name="calculation_wavelength_step"
-                            class="form-control"></td>
+                            class="form-control" value="{{ default_values.wavelengthStep }}"></td>
                 </tr>
                 <tr>
                     <td><label for="polar_angle_min">Polar Angle:</label></td>
-                    <td><input type="number" id="polar_angle_min" name="polar_angle_min" class="form-control"></td>
-                    <td><input type="number" id="polar_angle_max" name="polar_angle_max" class="form-control"></td>
-                    <td><input type="number" id="polar_angle_step" name="polar_angle_step" class="form-control"></td>
+                    <td><input type="number" id="polar_angle_min" name="polar_angle_min" class="form-control"
+                            value="{{ default_values.polarAngleMin }}"></td>
+                    <td><input type="number" id="polar_angle_max" name="polar_angle_max" class="form-control"
+                            value="{{ default_values.polarAngleMax }}"></td>
+                    <td><input type="number" id="polar_angle_step" name="polar_angle_step" class="form-control"
+                            value="{{ default_values.polarAngleStep }}"></td>
                 </tr>
                 <tr>
                     <td><label for="azimuthal_angle_min">Azimuthal Angle:</label></td>
-                    <td><input type="number" id="azimuthal_angle_min" name="azimuthal_angle_min" class="form-control">
-                    </td>
-                    <td><input type="number" id="azimuthal_angle_max" name="azimuthal_angle_max" class="form-control">
-                    </td>
-                    <td><input type="number" id="azimuthal_angle_step" name="azimuthal_angle_step" class="form-control">
-                    </td>
+                    <td><input type="number" id="azimuthal_angle_min" name="azimuthal_angle_min" class="form-control"
+                            value="{{ default_values.azimAngleMin }}"></td>
+                    <td><input type="number" id="azimuthal_angle_max" name="azimuthal_angle_max" class="form-control"
+                            value="{{ default_values.azimAngleMax }}"></td>
+                    <td><input type="number" id="azimuthal_angle_step" name="azimuthal_angle_step" class="form-control"
+                            value="{{ default_values.azimAngleStep }}"></td>
                 </tr>
                 <tr>
                     <td><label for="substrate_material_type">Substrate Material Type:</label></td>
-                    <td><input type="text" id="substrate_material_type" name="substrate_material_type"
-                            class="form-control" value="{{ default_values.substrate_material_type }}"></td>
+                    <td>
+                        <select id="substrate_material_type" name="substrate_material_type"
+                            class="form-control select2">
+                            {% for material in default_values.available_materials %}
+                            {% if material == default_values.substrate_material %}
+                            <option value="{{ material }}" selected>{{ material }}</option>
+                            {% else %}
+                            <option value="{{ material }}">{{ material }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </td>
                 </tr>
+
                 <tr>
                     <td><label for="substrate_thickness">Substrate Thickness:</label></td>
                     <td><input type="number" id="substrate_thickness" name="substrate_thickness" class="form-control"
@@ -142,24 +178,41 @@
                 </tr>
                 <tr>
                     <td><label for="incident_medium">Incident Medium:</label></td>
-                    <td><input type="text" id="incident_medium" name="incident_medium" class="form-control"
-                            value="{{ default_values.incident_medium }}"></td>
+                    <td>
+                        <select id="incident_medium" name="incident_medium" class="form-control select2">
+                            {% for material in default_values.available_materials %}
+                            {% if material == default_values.incident_medium %}
+                            <option value="{{ material }}" selected>{{ material }}</option>
+                            {% else %}
+                            <option value="{{ material }}">{{ material }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </td>
                 </tr>
                 <tr>
                     <td><label for="exit_medium">Exit Medium:</label></td>
-                    <td><input type="text" id="exit_medium" name="exit_medium" class="form-control"
-                            value="{{ default_values.exit_medium }}"></td>
+                    <td>
+                        <select id="exit_medium" name="exit_medium" class="form-control select2">
+                            {% for material in default_values.available_materials %}
+                            {% if material == default_values.exit_medium %}
+                            <option value="{{ material }}" selected>{{ material }}</option>
+                            {% else %}
+                            <option value="{{ material }}">{{ material }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </td>
                 </tr>
                 <tr>
                     <td><label for="general_core">General Core:</label></td>
                     <td>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="" id="general_core" {% if
-                                default_values.general_core %} checked {% endif %}>
+                                default_values.core_selection=="general" %} checked {% endif %}>
                         </div>
                     </td>
                 </tr>
-
                 <tr>
                     <td colspan="4">
                         <table id="layers" class="table">
@@ -168,42 +221,184 @@
                                 <th>Value</th>
                                 <th>Thickness</th>
                                 <th>Thickness Opt</th>
+                                <th>Thickness Bounds</th>
                                 <th>Position Opt</th>
                             </tr>
-                            <!-- Rows will be added here... -->
+                            {% for i in range(default_values.structure_materials|length) %}
+                            <tr class="draggable">
+                                <td>{{ i+1 }}</td>
+                                <td>
+                                    <select class="form-control select2">
+                                        <!-- Add an option for the selected material -->
+                                        <option value="{{ default_values.structure_materials[i] }}" selected>{{
+                                            default_values.structure_materials[i] }}</option>
+
+                                        {% for material in default_values.available_materials %}
+                                        <!-- Only add an option for the material if it is not the selected material -->
+                                        {% if material != default_values.structure_materials[i] %}
+                                        <option value="{{ material }}">{{ material }}</option>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td><input type="text" class="form-control"
+                                        value="{{ default_values.structure_thicknesses[i] }}"></td>
+                                <td>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input"
+                                            id="checkbox_thickness_opt_{{ i }}" {% if
+                                            default_values.thickness_opt_allowed[i] %}checked{% endif %}>
+                                        <label class="custom-control-label"
+                                            for="checkbox_thickness_opt_{{ i }}"></label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" placeholder="Min"
+                                            value="{{ default_values.bounds[i][0] }}">
+                                        <input type="number" class="form-control" placeholder="Max"
+                                            value="{{ default_values.bounds[i][1] }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input"
+                                            name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}" {%
+                                            if default_values.layer_switch_allowed[i] %}checked{% endif %}>
+                                        <label class="custom-control-label" for="checkbox_layer_switch_{{ i }}"></label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-danger delete-row">Delete</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
                         </table>
                         <button id="add_layer" type="button" class="btn btn-primary">Add Layer</button>
                     </td>
                 </tr>
 
                 <tr>
-                    <td colspan="4">
+                    <td colspan="10">
                         <table id="target" class="table">
                             <tr>
                                 <th>Target</th>
-                                <th>Value</th>
-                                <th>Tolerance</th>
                                 <th>Type</th>
-                                <th>Polarization</th>
-                                <th>Condition</th>
+                                <th>Polar.</th>
                                 <th>Polar Angle</th>
                                 <th>Azimuthal Angle</th>
                                 <th>Wavelength</th>
-                                <th>Bound</th>
+                                <th>Cond.</th>
+                                <th>Value</th>
+                                <th>Tolerance</th>
                             </tr>
-                            <!-- Rows will be added here... -->
+                            {% for i in range(default_values.targets_value|length) %}
+                            <tr class="draggable">
+                                <td>{{ i+1 }}</td>
+
+                                <td>
+                                    <select class="form-control">
+                                        <option value="t" {% if default_values.targets_type[i]=='t' %}selected{% endif
+                                            %}>t</option>
+                                        <option value="r" {% if default_values.targets_type[i]=='r' %}selected{% endif
+                                            %}>r</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-control">
+                                        <option value="s" {% if default_values.targets_polarization[i]=='s' %}selected{%
+                                            endif %}>s</option>
+                                        <option value="p" {% if default_values.targets_polarization[i]=='p' %}selected{%
+                                            endif %}>p</option>
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" placeholder="Min"
+                                            value="{{ default_values.targets_polar_angle[i][0] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else default_values.targets_polar_angle[i] }}">
+                                        <input type="number" class="form-control" placeholder="Max"
+                                            value="{{ default_values.targets_polar_angle[i][1] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else '' }}">
+                                        <input type="number" class="form-control" placeholder="Step"
+                                            value="{{ default_values.polar_angle_steps[i] }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" placeholder="Min"
+                                            value="{{ default_values.targets_azimuthal_angle[i][0] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else default_values.targets_azimuthal_angle[i] }}">
+                                        <input type="number" class="form-control" placeholder="Max"
+                                            value="{{ default_values.targets_azimuthal_angle[i][1] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else '' }}">
+                                        <input type="number" class="form-control" placeholder="Step"
+                                            value="{{ default_values.azimuthal_angle_steps[i] }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" placeholder="Min"
+                                            value="{{ default_values.targets_wavelengths[i][0] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else default_values.targets_wavelengths[i] }}">
+                                        <input type="number" class="form-control" placeholder="Max"
+                                            value="{{ default_values.targets_wavelengths[i][1] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else '' }}">
+                                        <input type="number" class="form-control" placeholder="Step"
+                                            value="{{ default_values.wavelength_steps[i] }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <select class="form-control">
+                                        <option value="<" {% if default_values.targets_condition[i]=='<' %}selected{%
+                                            endif %}>
+                                            < </option>
+                                        <option value=">" {% if default_values.targets_condition[i]=='>' %}selected{%
+                                            endif %}>></option>
+                                        <option value="=" {% if default_values.targets_condition[i]=='=' %}selected{%
+                                            endif %}>=</option>
+                                    </select>
+                                </td>
+                                <td><input type="number" class="form-control"
+                                        value="{{ default_values.targets_value[i] }}"></td>
+                                <td><input type="number" class="form-control"
+                                        value="{{ default_values.targets_tolerance[i] }}"></td>
+
+
+                                <td>
+                                    <button class="btn btn-danger delete-row">Delete</button>
+                                </td>
+
+                            </tr>
+                            {% endfor %}
                         </table>
                         <button id="add_target" type="button" class="btn btn-primary">Add Target</button>
                     </td>
                 </tr>
 
-                <!-- Repeat for other range fields... -->
+
             </table>
             <section class="text-center my-5">
-                <input type="submit" value="Save" class="btn btn-primary" style="margin-bottom: 5em;">
-            </section>
-        </form>
+                <input type="submit" value="Save" class="btn btn-primary" style="margin-right: 1em; margin-bottom: 5em;"
+                    id="saveButton">
+                <a id="downloadLink" class="btn btn-secondary" style="margin-bottom: 5em;">Download</a>
 
+            </section>
+
+        </form>
+        <div class="modal" tabindex="-1" role="dialog" id="errorModal">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Error</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>{{ default_values.error_message }}</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
     <footer>
         <p>© 2024 PolaritonTechnologies</p>
@@ -212,6 +407,8 @@
 </body>
 
 </html>
+
+
 <script>
     document.querySelector('.custom-file-input').addEventListener('change', function (e) {
         var fileName = document.getElementById("customFile").files[0].name;
@@ -222,64 +419,289 @@
 
 
 <script>
-    document.getElementById('add_layer').addEventListener('click', function () {
-        var table = document.getElementById('layers');
-        var row = table.insertRow(-1);
-        var cell1 = row.insertCell(0);
-        var cell2 = row.insertCell(1);
-        var cell3 = row.insertCell(2);
-        var cell4 = row.insertCell(3);
-        var cell5 = row.insertCell(4);
-        cell1.textContent = (table.rows.length - 1);
-        cell2.innerHTML = '<input type="number" class="form-control">';
-        cell3.innerHTML = '<input type="number" class="form-control">';
-        cell4.innerHTML = `
-            <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input" id="checkbox4">
-                <label class="custom-control-label" for="checkbox4"></label>
-            </div>
-        `;
-
-        cell5.innerHTML = `
-            <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input" id="checkbox5">
-                <label class="custom-control-label" for="checkbox5"></label>
-            </div>
-        `;
-    });
-
-    document.getElementById('add_target').addEventListener('click', function () {
-        var table = document.getElementById('target');
-        var row = table.insertRow(-1);
-        var cells = [];
-        for (var i = 0; i <= 9; i++) {
-            cells[i] = row.insertCell(i);
+    // Scripts on the stack tables for adding layers and optimization parameters
+    $(function () {
+        // Function to make table rows draggable
+        function makeRowsDraggable() {
+            $("#layers tbody, #target tbody").sortable({
+                items: ".draggable",
+                cursor: 'move',
+                opacity: 0.6,
+                stop: function () {
+                    // Update row numbers after drag and drop
+                    $(this).find("tr").each(function (index) {
+                        $(this).data('row-number', index);
+                        $(this).find("td:first").text($(this).data('row-number'));
+                    });
+                }
+            });
         }
-        cells[0].textContent = (table.rows.length - 1);
-        cells[1].innerHTML = '<input type="number" class="form-control">';
-        cells[2].innerHTML = '<input type="number" class="form-control">';
-        cells[3].innerHTML = `
-        <select class="form-control">
-            <option value="t">t</option>
-            <option value="r">r</option>
-        </select>
-    `;
-        cells[4].innerHTML = `
-        <select class="form-control">
-            <option value="s">s</option>
-            <option value="p">p</option>
-        </select>
-    `;
-        cells[5].innerHTML = `
-        <select class="form-control">
-            <option value="<"><</option>
-            <option value=">">></option>
-            <option value="=">=</option>
-        </select>
-    `;
-        cells[6].innerHTML = '<input type="text" class="form-control">';
-        cells[7].innerHTML = '<input type="text" class="form-control">';
-        cells[8].innerHTML = '<input type="text" class="form-control">';
-        cells[9].innerHTML = '<input type="text" class="form-control">';
+
+        // Initial call to make existing rows draggable
+        makeRowsDraggable();
+
+        // Delete row on button click
+        $("#layers, #target").on("click", ".delete-row", function () {
+            $(this).closest("tr").remove();
+
+            // Update row numbers after deletion
+            $(this).closest("tbody").find("tr").each(function (index) {
+                $(this).data('row-number', index + 1);
+                $(this).find("td:first").text($(this).data('row-number'));
+            });
+        });
+
+        document.getElementById('add_layer').addEventListener('click', function () {
+            addRow('layers');
+        });
+
+        document.getElementById('add_target').addEventListener('click', function () {
+            addRow('target');
+        });
+
+        function addRow(tableId) {
+            var table = document.getElementById(tableId);
+            var row = table.insertRow(-1);
+            row.dataset.rowNumber = table.rows.length - 1;
+            row.className = 'draggable';
+            var cell1 = row.insertCell(0);
+            cell1.textContent = row.dataset.rowNumber;
+
+            if (tableId === 'layers') {
+                var cell2 = row.insertCell(1);
+                var cell3 = row.insertCell(2);
+                var cell4 = row.insertCell(3);
+                var cell5 = row.insertCell(4);
+                var cell6 = row.insertCell(5);
+                var cell7 = row.insertCell(6);
+                cell2.innerHTML = `
+                    <select class="form-control select2">
+                        {% for material in default_values.available_materials %}
+                        {% if material == default_values.exit_medium %}
+                        <option value="{{ material }}" selected>{{ material }}</option>
+                        {% else %}
+                        <option value="{{ material }}">{{ material }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>`;
+                cell3.innerHTML = '<input type="text" class="form-control">';
+                cell4.innerHTML = `
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="checkbox4">
+                        <label class="custom-control-label" for="checkbox4"></label>
+                    </div> `;
+                cell5.innerHTML = `
+                    <div class="input-group">
+                        <input type="number" class="form-control" placeholder="Min">
+                        <input type="number" class="form-control" placeholder="Max">
+                    </div>
+                    `;
+                cell6.innerHTML = `
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="checkbox5">
+                        <label class="custom-control-label" for="checkbox5"></label>
+                    </div> `;
+                cell7.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+            } else if (tableId === 'target') {
+                var cells = [];
+                for (var i = 1; i <= 10; i++) {
+                    cells[i] = row.insertCell(i);
+                }
+                cells[1].innerHTML = `
+                    <select class="form-control">
+                        <option value="t">t</option>
+                        <option value="r">r</option>
+                        <option value="a">a</option>
+                    </select>
+                    `;
+                cells[2].innerHTML = `
+                    <select class="form-control">
+                        <option value="s">s</option>
+                        <option value="p">p</option>
+                        <option value="">None</option>
+                    </select>
+                    `;
+                cells[3].innerHTML = `
+                    <div class="input-group">
+                        <input type="number" class="form-control" placeholder="Min">
+                        <input type="number" class="form-control" placeholder="Max">
+                        <input type="number" class="form-control" placeholder="Step">
+                    </div>
+                    `;
+                cells[4].innerHTML = `
+                    <div class="input-group">
+                        <input type="number" class="form-control" placeholder="Min">
+                        <input type="number" class="form-control" placeholder="Max">
+                        <input type="number" class="form-control" placeholder="Step">
+                    </div>
+                    `;
+                cells[5].innerHTML = `
+                    <div class="input-group">
+                        <input type="number" class="form-control" placeholder="Min">
+                        <input type="number" class="form-control" placeholder="Max">
+                        <input type="number" class="form-control" placeholder="Step">
+                    </div>
+                    `;
+                cells[6].innerHTML = `
+                    <select class="form-control">
+                        <option value="<"><</option>
+                        <option value=">">></option>
+                        <option value="=">=</option>
+                    </select>
+                    `;
+                cells[7].innerHTML = '<input type="number" class="form-control">';
+                cells[8].innerHTML = '<input type="number" class="form-control">';
+                cells[9].innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+            }
+
+
+            // Refresh sortable functionality after adding new row
+            makeRowsDraggable();
+        }
     });
 </script>
+
+<script>
+    // Send data back to python
+    function getCellData(cell) {
+        var data = {};
+        var inputs = cell.querySelectorAll('input, select');
+        if (inputs.length > 0) {
+            data.values = Array.from(inputs).map(input => {
+                if (input.type === 'checkbox') {
+                    return input.checked;  // returns true if checked, false if not checked
+                } else {
+                    return input.value;
+                }
+            });
+        }
+
+        var nestedTables = cell.querySelectorAll('table');
+        if (nestedTables.length > 0) {
+            data.tables = Array.from(nestedTables).map(table => getTableData(table));
+        }
+
+        return data;
+    }
+
+    function getTableData(table) {
+        var data = [];
+
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            var rowData = {};
+            for (var j = 0, cell; cell = row.cells[j]; j++) {
+                rowData[j] = getCellData(cell);
+            }
+            data.push(rowData);
+        }
+
+        return data;
+    }
+
+    function saveData(button) {
+        var table = document.getElementById('jsonTable');
+        var data = getTableData(table);
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/save_json?button=' + button, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function () {
+            if (this.status == 200) {
+                var response = JSON.parse(this.responseText);
+                if (response.error_message) {
+                    $('#errorModal').modal('show');
+                    $('.modal-body').text(response.error_message);
+                }
+            }
+            else if (this.status == 302) {  // Status code for redirect
+                location.reload();  // Reload the page
+            }
+        };
+        xhr.send(JSON.stringify(data));
+    }
+
+
+    document.getElementById("saveButton").addEventListener("click", function (e) {
+        e.preventDefault();
+        saveData('save');
+    });
+
+    document.getElementById("downloadLink").addEventListener("click", function (e) {
+        e.preventDefault();
+        window.location.href = '/download';
+    });
+
+</script>
+<script>
+    $(document).ready(function () {
+        $('.select2').select2({
+            theme: 'bootstrap',
+            width: 'resolve',
+            tags: true,
+            createTag: function (params) {
+                var term = $.trim(params.term);
+
+                if (term === '') {
+                    return null;
+                }
+
+                return {
+                    id: term,
+                    text: term,
+                    newOption: true
+                }
+            },
+            templateResult: function (data) {
+                var $result = $("<span></span>");
+
+                $result.text(data.text);
+
+                if (data.newOption) {
+                    $result.append(" <em>(add new)</em>");
+                }
+
+                return $result;
+            }
+        });
+    });
+</script>
+<!-- <script>
+    // Function to identify repeating sequences in an array
+    function identifyRepeatingSequences(layers) {
+        // Initialize an empty array to store the sequences
+        let sequences = [];
+        // Initialize a counter to iterate over the array
+        let i = 0;
+
+        // Loop over the array until the second last element
+        while (i < layers.length - 1) {
+            // Create the current sequence from the current and next element
+            let currentSequence = [layers[i], layers[i + 1]];
+            // Initialize a counter to count the number of times the current sequence repeats
+            let sequenceCount = 1;
+
+            // Loop over the array starting from the element after the current sequence
+            for (let j = i + 2; j < layers.length; j += 2) {
+                // If the next sequence is the same as the current sequence, increment the sequence count and update the counter
+                if (layers[j] === currentSequence[0] && layers[j + 1] === currentSequence[1]) {
+                    sequenceCount++;
+                    i = j;
+                } else {
+                    // If the next sequence is not the same as the current sequence, break the loop
+                    break;
+                }
+            }
+
+            // If the current sequence repeats more than once, add it to the sequences array
+            if (sequenceCount > 1) {
+                sequences.push([currentSequence, sequenceCount]);
+            }
+
+            // Move to the next sequence
+            i += 1;
+        }
+
+        // Return the sequences array
+        return sequences;
+    }
+</script> -->

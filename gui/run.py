@@ -7,6 +7,7 @@ from flask import (
     flash,
     jsonify,
     url_for,
+    send_file,
 )
 
 # For asynchronous updates
@@ -24,16 +25,19 @@ import threading
 from werkzeug.utils import secure_filename
 
 import os
+import shutil
 import time
 
 import numpy as np
 import pandas as pd
 import json
+import ast
 
 from utility import (
     allowed_file,
     generate_colors,
 )
+from open_filter_converter import import_from_open_filter
 from FilterStack import FilterStack
 
 # Configure flask app
@@ -48,6 +52,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # replace with your secret key
 app.secret_key = "your secret key"
 app.config["UPLOAD_FOLDER"] = "../src/temp/"
+app.config["MATERIAL_FOLDER"] = "../materials/"
 
 # Global variables necessary for calculation (as data is shared)
 my_filter = None
@@ -91,6 +96,15 @@ def stack():
             unique_colors,
         ) = extract_filter_design(my_filter)
 
+    # Specify the directory you want to search
+    directory = "../materials/"
+
+    material_list = [
+        os.path.splitext(f)[0]
+        for f in os.listdir(directory)
+        if os.path.isfile(os.path.join(directory, f)) and f.endswith(".csv")
+    ]
+
     default_values = {
         "num_boxes": num_boxes,
         "colors": colors,
@@ -98,14 +112,53 @@ def stack():
         "num_legend_items": num_legend_items,
         "unique_materials": unique_materials,
         "legend_colors": unique_colors,
-        "file_label": default_file,
-        "substrate_material_type": my_filter.filter_definition["substrate_material"],
+        "file_label": selected_file,
+        "available_materials": material_list,
     }
 
+    # Add the entire filter definition to the default values to render it
+    default_values.update(my_filter.filter_definition)
+    default_values["structure_materials"] = my_filter.structure_materials_by_user
+    default_values["structure_thicknesses"] = my_filter.structure_thicknesses_by_user
+    default_values["thickness_opt_allowed"] = my_filter.thickness_opt_allowed_by_user
+    default_values["layer_switch_allowed"] = my_filter.layer_switch_allowed_by_user
+    default_values["bounds"] = my_filter.bounds
+    #     "calculation_type": my_filter.filter_definition["calculation_type"],
+    #     "polarization": my_filter.filter_definition["polarization"],
+    #     "polarAngleMin": my_filter.filter_definition["polarAngleMin"],
+    #     "polarAngleMax": my_filter.filter_definition["polarAngleMax"],
+    #     "polarAngleStep": my_filter.filter_definition["polarAngleStep"],
+    #     "azimAngleMin": my_filter.filter_definition["azimAngleMin"],
+    #     "azimAngleMax": my_filter.filter_definition["azimAngleMax"],
+    #     "azimAngleStep": my_filter.filter_definition["azimAngleStep"],
+    #     "wavelengthMin": my_filter.filter_definition["wavelengthMin"],
+    #     "wavelengthMax": my_filter.filter_definition["wavelengthMax"],
+    #     "wavelengthStep": my_filter.filter_definition["wavelengthStep"],
+    #         "structure_materials": my_filter.filter_definition["structure_materials"],
+    # "structure_thicknesses": my_filter.filter_definition["structure_thicknesses"],
+    # "thickness_opt_allowed": my_filter.filter_definition["thickness_opt_allowed"],
+    # "layer_switch_allowed": my_filter.filter_definition["layer_switch_allowed"],
+    # "substrate_material": my_filter.filter_definition["substrate_material"],
+    # "substrate_thickness": my_filter.filter_definition["substrate_thickness"],
+    # "incident_medium": my_filter.filter_definition["incident_medium"],
+    # "exit_medium": my_filter.filter_definition["exit_medium"],
+    # "targets_type": my_filter.filter_definition["targets_type"],
+    # "targets_polarization": my_filter.filter_definition["targets_polarization"],
+    # "targets_condition": my_filter.filter_definition["targets_condition"],
+    # "targets_value": my_filter.filter_definition["targets_value"],
+    # "targets_polar_angle": my_filter.filter_definition["targets_polar_angle"],
+    # "polar_angle_steps": my_filter.filter_definition["polar_angle_steps"],
+    # "targets_azimuthal_angle": my_filter.filter_definition["targets_azimuthal_angle"],
+    # "azimuthal_angle_steps": my_filter.filter_definition["azimuthal_angle_steps"],
+    # "targets_wavelengths": my_filter.filter_definition["targets_wavelengths"],
+    # "wavelength_steps": my_filter.filter_definition["wavelength_steps"],
+    # "targets_tolerance": my_filter.filter_definition["targets_tolerance"],
+    #     "bounds": my_filter.filter_definition["bounds"],
+    # }
 
     return render_template(
         "stack.html",
-        default_values = default_values,
+        default_values=default_values,
     )
 
 
@@ -173,34 +226,23 @@ def optimize():
         legend_colors=unique_colors,
     )
 
-@app.route("/stack_editor")
-def stack_editor():
-    global my_filter
 
-    if np.all(my_filter.stored_data == None):
-        dataPresent = False
-    else:
-        dataPresent = True
+@app.route("/materials")
+def materials():
+    # Specify the directory you want to search
+    directory = "../materials/"
 
-    # default_values = {
-    #     "mode": my_filter.filter_definition["calculation_type"],
-    #     "startAngle": my_filter.filter_definition["polarAngleMin"],
-    #     "endAngle": my_filter.filter_definition["polarAngleMax"],
-    #     "stepAngle": my_filter.filter_definition["polarAngleStep"],
-    #     "startWavelength": my_filter.filter_definition["wavelengthMin"],
-    #     "endWavelength": my_filter.filter_definition["wavelengthMax"],
-    #     "stepWavelength": my_filter.filter_definition["wavelengthStep"],
-    #     "polarization": my_filter.filter_definition["polarization"],
-    #     "azimuthalAngle": my_filter.filter_definition["azimAngleMin"],
-    #     "generalCore": my_filter.filter_definition["core_selection"],
-    #     "dataPresent": dataPresent,
-    # }
+    # Get a list of all files in the directory
+    # file_list = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
 
-    # Send the image URL back to the client
-    return render_template(
-        "stack_editor.html",
-        # default_values=default_values,
-    )
+    # Get a list of all .csv files in the directory
+    material_list = [
+        os.path.splitext(f)[0]
+        for f in os.listdir(directory)
+        if os.path.isfile(os.path.join(directory, f)) and f.endswith(".csv")
+    ]
+
+    return render_template("materials.html", available_materials=material_list)
 
 
 ##############################################
@@ -208,8 +250,16 @@ def stack_editor():
 ##############################################
 
 
+def identify_repeating_sequences(layers):
+    layers = np.array(layers)
+    sequences = [(layers[i], layers[i + 1]) for i in range(len(layers) - 1)]
+    unique_sequences, counts = np.unique(sequences, return_counts=True, axis=0)
+    repeating_sequences = unique_sequences[counts > 1]
+    return repeating_sequences.tolist()
+
+
 @app.route("/upload_file", methods=["POST"])
-def upload_file(defaultname=None):
+def upload_file(provided_filename=None):
     """
     Uploads a file to the server and processes it to generate filter stack
     representation.
@@ -235,7 +285,7 @@ def upload_file(defaultname=None):
 
     # Let the user upload a file to the server, if no file was chosen to be
     # uploaded, use the default file instead.
-    if defaultname == None:
+    if provided_filename == None:
         if "file" not in request.files:
             flash("No file part")
             return redirect(request.url)
@@ -247,11 +297,19 @@ def upload_file(defaultname=None):
             filename = secure_filename(file.filename)
             full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(full_path)
-            selected_file = full_path
+
+            if filename.split(".")[-1] == "json":
+                # Standard .json format
+                selected_file = full_path
+            elif filename.split(".")[-1] == "ofp":
+                # Open filter format (has to be translated to json first)
+                json_path = import_from_open_filter(full_path)
+                selected_file = json_path
+
     else:
-        # If defaultname is provided, use it as the selected file
-        selected_file = defaultname
-        filename = defaultname
+        # If provided_filename is provided, use it as the selected file
+        selected_file = provided_filename
+        filename = provided_filename
 
     # Create the filter and construct the filter stack representation
     my_filter = FilterStack(selected_file)
@@ -264,7 +322,7 @@ def upload_file(defaultname=None):
         unique_colors,
     ) = extract_filter_design(my_filter)
 
-    if defaultname is not None:
+    if provided_filename is not None:
         return (
             num_boxes,
             colors,
@@ -275,16 +333,17 @@ def upload_file(defaultname=None):
         )
 
     else:
-        return render_template(
-            "stack.html",
-            num_boxes=num_boxes,
-            colors=colors,
-            heights=heights,
-            num_legend_items=number_unique_materials,
-            unique_materials=unique_materials,
-            legend_colors=unique_colors,
-            file_label="Currently loaded: " + filename,
-        )
+        return redirect(url_for("stack"))
+        # return render_template(
+        # "stack.html",
+        # num_boxes=num_boxes,
+        # colors=colors,
+        # heights=heights,
+        # num_legend_items=number_unique_materials,
+        # unique_materials=unique_materials,
+        # legend_colors=unique_colors,
+        # file_label=filename,
+        # )
 
 
 def extract_filter_design(filter):
@@ -329,6 +388,91 @@ def extract_filter_design(filter):
         unique_materials.tolist(),
         unique_colors,
     )
+
+
+@app.route("/save_json", methods=["POST"])
+def save_json():
+    global selected_file
+
+    data = request.get_json()
+    button = request.args.get("button")
+
+    # Now the data has to be transformed into a json again so that it can be
+    # saved to file. This is slightly annoying but I do not see a better of way
+    # doing it right now.
+    data_to_json = {}
+    data_to_json["calculation_type"] = data[0].get("1").get("values")[0]
+    data_to_json["polarization"] = data[1].get("1").get("values")[0]
+    data_to_json["wavelengthMin"] = float(data[2].get("1").get("values")[0])
+    data_to_json["wavelengthMax"] = float(data[2].get("2").get("values")[0])
+    data_to_json["wavelengthStep"] = float(data[2].get("3").get("values")[0])
+    data_to_json["polarAngleMin"] = float(data[3].get("1").get("values")[0])
+    data_to_json["polarAngleMax"] = float(data[3].get("2").get("values")[0])
+    data_to_json["polarAngleStep"] = float(data[3].get("3").get("values")[0])
+    data_to_json["azimAngleMin"] = float(data[4].get("1").get("values")[0])
+    data_to_json["azimAngleMax"] = float(data[4].get("2").get("values")[0])
+    data_to_json["azimAngleStep"] = float(data[4].get("3").get("values")[0])
+    data_to_json["substrate_material"] = data[5].get("1").get("values")[0]
+    data_to_json["substrate_thickness"] = float(data[6].get("1").get("values")[0])
+    data_to_json["incident_medium"] = data[7].get("1").get("values")[0]
+    data_to_json["exit_medium"] = data[8].get("1").get("values")[0]
+    data_to_json["core_selection"] = "general" if bool(data[9].get("1").get("values")[0]) else "fast"
+
+    layers = np.array(data[10].get("0").get("values"))
+    data_to_json["structure_materials"] = layers[0::6].tolist()
+    data_to_json["structure_thicknesses"] = np.array(
+        [ast.literal_eval(i) if "," in i else float(i) for i in layers[1::6]],
+        dtype=object,
+    ).tolist()
+    data_to_json["thickness_opt_allowed"] = [s.lower() == "true" for s in layers[2::6]]
+    data_to_json["bounds"] = [
+        [float(x), float(y)] if y != "" else float(x)
+        for x, y in zip(layers[3::6].tolist(), layers[4::6].tolist())
+    ]
+    data_to_json["layer_switch_allowed"] = [s.lower() == "true" for s in layers[5::6]]
+
+    targets = np.array(data[11].get("0").get("values"))
+    data_to_json["targets_type"] = targets[0::14].tolist()
+    data_to_json["targets_polarization"] = targets[1::14].tolist()
+    data_to_json["targets_polar_angle"] = [
+        [float(x), float(y)] if y != "" else float(x)
+        for x, y in zip(targets[2::14].tolist(), targets[3::14].tolist())
+    ]
+    data_to_json["polar_angle_steps"] = targets[4::14].astype(float).tolist()
+    data_to_json["targets_azimuthal_angle"] = [
+        [float(x), float(y)] if y != "" else float(x)
+        for x, y in zip(targets[5::14].tolist(), targets[6::14].tolist())
+    ]
+    data_to_json["azimuthal_angle_steps"] = targets[7::14].astype(float).tolist()
+    data_to_json["targets_wavelengths"] = [
+        [float(x), float(y)] if y != "" else float(x)
+        for x, y in zip(targets[8::14].tolist(), targets[9::14].tolist())
+    ]
+    data_to_json["wavelength_steps"] = targets[10::14].astype(float).tolist()
+    data_to_json["targets_condition"] = targets[11::14].tolist()
+    data_to_json["targets_value"] = targets[12::14].astype(float).tolist()
+    data_to_json["targets_tolerance"] = targets[13::14].astype(float).tolist()
+
+    # If the file is not in the temp folder yet, do not allow for an overwrite
+    if selected_file.split("/")[-2] != "temp":
+        return jsonify({"error_message": "Cannot overwrite the default file."}), 200
+    else:
+        with open(selected_file, "w") as f:
+            json.dump(data_to_json, f)
+
+        # Reload filter for new data (the file path is still selected_file)
+        upload_file(selected_file)
+        return "", 302
+
+        # if button == "download":
+        #     # This is not working at the moment
+        #     return send_file(selected_file, as_attachment=True)
+        # else:
+
+@app.route('/download')
+def download_file():
+    path_to_file = selected_file 
+    return send_file(path_to_file, as_attachment=True)
 
 
 ##############################################
@@ -412,6 +556,24 @@ def plot():
     # Emit the figure in JSON format
     socketio.emit("update_plot", fig_json)
 
+@socketio.on('plot_xy')
+def handle_plot_xy(data):
+    global my_filter
+    x = my_filter.stored_data.index.to_list()
+
+    # Get the y data corresponding to the x data
+    y = my_filter.stored_data.loc[:, data['x']].to_list()
+
+    # Create a dictionary with the x and y data
+    plot_data = {
+        'x': x,
+        'y': y,
+        'name': 'Angle' + str(data['x'])
+    }
+
+    # Emit the data
+    socketio.emit('update_xy_plot', plot_data)
+
 
 ##############################################
 ################ Optimization  ###############
@@ -442,13 +604,16 @@ def start_optimization(data):
         iteration_value.append(my_filter.optimum_iteration)
 
         # Create a Plotly figure using the data
-        fig = go.Figure(data=go.Scatter(x=iteration_value, y=merit_time_series))
+        # fig = go.Figure(data=go.Scatter(x=iteration_value, y=merit_time_series))
+        # Convert the first column to a list and all following columns to a list of lists
+        plotting_data = {
+            "x": iteration_value, 
+            "y": merit_time_series,
+        }
 
-        # Convert the figure to JSON format
-        fig_json = pio.to_json(fig)
 
         # Emit the figure to the client
-        socketio.emit("update_merit_graph", fig_json)
+        socketio.emit("update_merit_graph", plotting_data)
 
         # Update the stack representation
         (
@@ -462,12 +627,12 @@ def start_optimization(data):
 
         # Package the values into a dictionary
         filter_representation = {
-            'num_boxes': num_boxes,
-            'colors': colors,
-            'heights': heights,
-            'number_unique_materials': number_unique_materials,
-            'unique_materials': unique_materials,
-            'unique_colors': unique_colors
+            "num_boxes": num_boxes,
+            "colors": colors,
+            "heights": heights,
+            "number_unique_materials": number_unique_materials,
+            "unique_materials": unique_materials,
+            "unique_colors": unique_colors,
         }
 
         # Convert the dictionary to a JSON string
@@ -486,6 +651,64 @@ def stop_optimization():
 
     my_filter.stop_flag = True
 
+
+##############################################
+################# Materials  #################
+##############################################
+
+
+@socketio.on("get_material_data")
+def get_material_data(data):
+    material = data["material"]
+    # Load file and get data
+    df = pd.read_csv("../materials/" + material + ".csv", skiprows=1)
+
+    # Convert the first column to a list and all following columns to a list of lists
+    data = {
+        "x": df.iloc[:, 0].tolist(),
+        "y": df.iloc[:, 1:].values.T.tolist(),
+        "name": df.columns[1:].tolist(),
+    }
+
+    socketio.emit("material_data", data)
+
+@app.route('/upload_material', methods=['POST'])
+def upload_material():
+    if 'file' not in request.files:
+        return 'No file part', 400
+    file = request.files['file']
+    if file.filename == '':
+        return 'No selected file', 400
+    if file:
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+        # Load file and get data
+        df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'], filename), skiprows=1)
+
+        # Convert the first column to a list and all following columns to a list of lists
+        data = {
+            "x": df.iloc[:, 0].tolist(),
+            "y": df.iloc[:, 1:].values.T.tolist(),
+            "name": df.columns[1:].tolist(),
+        }
+
+        # Emit the data
+        socketio.emit("material_data", data)
+
+        return filename, 200
+
+@app.route('/accept', methods=['POST'])
+def accept_file():
+    filename = request.form.get('filename')
+    shutil.move(os.path.join(app.config['UPLOAD_FOLDER'], filename), os.path.join(app.config['MATERIAL_FOLDER'], filename))
+    return 'File accepted', 200
+
+@app.route('/reject', methods=['POST'])
+def reject_file():
+    filename = request.form.get('filename')
+    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    return 'File rejected', 200
 
 if __name__ == "__main__":
     socketio.run(app)

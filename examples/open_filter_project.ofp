@@ -2,7 +2,7 @@ Version: 1.1.1
 Comment:
 End
 Filter:
-	Substrate: substrate_24mm_koeln 1000000.000000
+	Substrate: Glass_substrate_koeln 1000000.000000
 	FrontMedium: void
 	BackMedium: void
 	CenterWavelength: 450.000000

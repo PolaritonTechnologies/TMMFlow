@@ -33,12 +33,15 @@
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
                     <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
                 </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'materials' else '' }}">
+                    <a class="nav-link" href="{{ url_for('materials') }}">Materials</a>
+                </li>
 
 
             </ul>
         </div>
     </nav>
-    <main>
+    <main class="container-custom">
         <div class="container-fluid">
             <div class="row align-items-center">
                 <!-- Part 1 -->
@@ -174,13 +177,14 @@
         socket.emit('stop_optimization');
     });
 
-    socket.on('update_merit_graph', function (fig_json) {
-        var fig = JSON.parse(fig_json);
+    socket.on('update_merit_graph', function (data) {
+        var trace = {
+            x: data.x,
+            y: data.y,
+            mode: 'lines',
+        };
 
-        // Merge the incoming layout with the initial layout
-        var updatedLayout = Object.assign({}, layout, fig.layout);
-
-        Plotly.react('merit_graph', fig.data, updatedLayout);
+        Plotly.newPlot('merit_graph', [trace], layout);
     });
 
     socket.on('update_filter_representation', function (filter_json) {

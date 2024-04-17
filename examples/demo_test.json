@@ -1,115 +1,56 @@
 {
-    "calculation_type": "t",
-    "polarization": "s",
-    "polarAngleMin": 40.0,
-    "polarAngleMax": 50.0,
-    "polarAngleStep": 1.0,
-    "azimAngleMin": 0.0,
-    "azimAngleMax": 0.0,
-    "azimAngleStep": 1.0,
-    "wavelengthMin": 380.0,
-    "wavelengthMax": 450.0,
-    "wavelengthStep": 1.0,
-    "structure_materials": [
-        "10_Ta2O5_SiO2"
-    ],
-    "structure_thicknesses": [
-        [
-            45,
-            65
-        ]
-    ],
-    "thickness_opt_allowed": [
-        true
-    ],
-    "layer_switch_allowed": [
-        false
-    ],
-    "substrate_material": "FusedSilica",
-    "substrate_thickness": 1e6,
-    "incident_medium": "Air",
-    "exit_medium": "Air",
-    "targets_type": [
-        "t",
-        "t",
-        "t"
-    ],
-    "targets_polarization": [
-        "s",
-        "s",
-        "s"
-    ],
-    "targets_condition": [
-        "<",
-        ">",
-        "<"
-    ],
-    "targets_value": [
-        0.01,
-        0.1,
-        0.01
-    ],
-    "targets_polar_angle": [
-        45.0,
-        45.0,
-        45.0
-    ],
-    "polar_angle_steps": [
-        1.0,
-        1.0,
-        1.0
-    ],
-    "targets_azimuthal_angle": [
-        0.0,
-        0.0,
-        0.0
-    ],
-    "azimuthal_angle_steps": [
-        1.0,
-        1.0,
-        1.0
-    ],
-    "targets_wavelengths": [
-        400.0,
-        426.0,
-        440.0
-    ],
-    "wavelength_steps": [
-        5.0,
-        5.0,
-        5.0
-    ],
-    "targets_tolerance": [
-        0.001,
-        0.001,
-        0.001
-    ],
-    "bounds": [
-        [
-            0,
-            100
-        ]
-    ],
-    "add_layers": true,
-    "nb_added_layers": 3,
-    "added_materials": [
-        "Ta2O5",
-        "PFOGlassy",
-        "Ta2O5"
-    ],
-    "added_layer_bounds": [
-        [
-            0,
-            100
-        ],
-        [
-            0,
-            100
-        ],
-        [
-            0,
-            100
-        ]
-    ],
-    "core_selection": "general"
+  "calculation_type": "t",
+  "polarization": "s",
+  "polarAngleMin": 0.0,
+  "polarAngleMax": 40.0,
+  "polarAngleStep": 1.0,
+  "azimAngleMin": 0.0,
+  "azimAngleMax": 1.0,
+  "azimAngleStep": 0.1,
+  "wavelengthMin": 400.0,
+  "wavelengthMax": 550.0,
+  "wavelengthStep": 1.0,
+  "substrate_material": "FusedSilica",
+  "substrate_thickness": 1000000.0,
+  "incident_medium": "Air",
+  "exit_medium": "Air",
+  "core_selection": "general",
+  "structure_materials": [
+    "10_Ta2O5_SiO2",
+    "Ta2O5",
+    "PFOGlassy",
+    "Ta2O5"
+  ],
+  "structure_thicknesses": [
+    [45.0, 65.0], 45.0, 100.0, 45.0
+  ],
+  "thickness_opt_allowed": [
+    true,
+    true,
+    true,
+    true
+  ],
+  "bounds": [
+    [0.0, 100.0],
+    [0.0, 100.0],
+    [0.0, 100.0],
+    [0.0, 100.0]
+  ],
+  "layer_switch_allowed": [
+    false,
+    true,
+    true,
+    true
+  ],
+  "targets_type": ["t", "t", "t"],
+  "targets_polarization": ["s", "s", "s"],
+  "targets_polar_angle": [45.0, 45.0, 45.0],
+  "polar_angle_steps": [1.0, 1.0, 1.0],
+  "targets_azimuthal_angle": [0.0, 0.0, 0.0],
+  "azimuthal_angle_steps": [1.0, 1.0, 1.0],
+  "targets_wavelengths": [400.0, 426.0, 440.0],
+  "wavelength_steps": [5.0, 5.0, 5.0],
+  "targets_condition": ["<", ">", "<"],
+  "targets_value": [0.01, 0.1, 0.01],
+  "targets_tolerance": [0.001, 0.001, 0.001]
 }

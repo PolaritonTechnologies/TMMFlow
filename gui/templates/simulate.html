@@ -33,6 +33,9 @@
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
                     <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
                 </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'materials' else '' }}">
+                    <a class="nav-link" href="{{ url_for('materials') }}">Materials</a>
+                </li>
 
             </ul>
         </div>
@@ -47,12 +50,16 @@
 
             <div class="col-6">
                 <div class="row d-flex align-items-center justify-content-center">
+                    <div id="DatavsWavelengthPlot"></div>
+                </div>
+                <div class="row d-flex align-items-center justify-content-center">
                     <div class="form-group mx-3">
                         <label for="mode">Mode:</label>
                         <select id="mode" class="form-control">
                             <option value="r" {% if default_values.mode=="r" %}selected{% endif %}>
                                 Reflection</option>
                             <option value="t" {% if default_values.mode=="t" %}selected{% endif %}>Transmission</option>
+                            <option value="a" {% if default_values.mode=="a" %}selected{% endif %}>Absorption</option>
                         </select>
                     </div>
                     <div class="form-group mx-3">
@@ -61,7 +68,7 @@
                             <option value="s" {% if default_values.mode=="s" %}selected{% endif %}>
                                 s</option>
                             <option value="p" {% if default_values.mode=="p" %}selected{% endif %}>p</option>
-                            <option value="" {% if default_values.mode=="" %}selected{% endif %}>None</option>
+                            <option value="None" {% if default_values.mode=="" %}selected{% endif %}>None</option>
                         </select>
                     </div>
 
@@ -121,7 +128,7 @@
                     </div>
                 </div>
 
-                <div class="row d-flex align-items-center justify-content-center">
+                <div class="row d-flex align-items-center justify-content-center" style="margin-bottom: 5em">
                     <button id="calculateButton" class="btn btn-primary mx-3">Calculate</button>
                     <button id="plotButton" class="btn btn-primary mx-3" {% if not default_values.dataPresent
                         %}disabled{% endif %}>Plot</button>
@@ -197,5 +204,61 @@
     socket.on("update_plot", function (fig_json) {
         var fig = JSON.parse(fig_json);
         Plotly.newPlot("heatmap", fig.data, layout);
+        var heatmap = document.getElementById('heatmap');
+
+        // Make the plot interactive: if the user clicks on the plot, plot another plot
+        heatmap.on('plotly_click', function (data) {
+            var x = data.points[0].x;
+            var y = data.points[0].y;
+            console.log('You clicked on point (' + x + ', ' + y + ')');
+            // Trigger the plotting of another plot here
+            socket.emit('plot_xy', { x: x });
+        });
     });
+</script>
+
+<script>
+    var trace1 = {
+        x: [],  // x data
+        y: [],  // y data
+        mode: 'lines',
+        type: 'scatter'
+    };
+
+    var data = [trace1];
+
+    var layout = {
+        xaxis: {
+            title: 'Wavelength (nm)',
+            showgrid: false,
+            zeroline: false
+        },
+        yaxis: {
+            title: 'Intensity (a.u.)',
+            showline: false
+        }
+    };
+
+    Plotly.newPlot('DatavsWavelengthPlot', data, layout);
+
+    socket.on('update_xy_plot', function (data) {
+        var update = {
+            x: [data.x],  // new x data
+            y: [data.y]   // new y data
+        };
+
+        Plotly.update('DatavsWavelengthPlot', update, {}, [0]);
+    });
+</script>
+
+
+<script>
+    window.onload = function () {
+        var dataPresent = {{ default_values.dataPresent| tojson
+    }};
+    console.log("Data present: ", dataPresent);
+    if (dataPresent) {
+        document.getElementById("plotButton").click();
+    }
+    };
 </script>

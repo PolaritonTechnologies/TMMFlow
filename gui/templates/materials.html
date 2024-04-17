@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Matrix Method Simulations</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!-- This here is for asynchronous plotting -->
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>PolaritonTechnologies - Transfer Matrix Method (TMM) Optimization</h1>
+    </header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">PolaritonTechnologies</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item {{ 'active' if request.endpoint == 'stack' else '' }}">
+                    <a class="nav-link" href="{{ url_for('stack') }}">Stack</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'simulate' else '' }}">
+                    <a class="nav-link" href="{{ url_for('simulate') }}">Simulate</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
+                    <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'materials' else '' }}">
+                    <a class="nav-link" href="{{ url_for('materials') }}">Materials</a>
+                </li>
+
+            </ul>
+        </div>
+    </nav>
+    <main class="container-custom">
+        <div class="row align-items-center ">
+            <div class="col-2 d-flex flex-column justify-content-center">
+                <p> Select a material to plot </p>
+                <div style="margin-bottom: 2em;">
+                    <select name="materials" id="materials" class="form-control">
+                        {% for material in available_materials %}
+                        <option value="{{ material }}">{{ material }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <p> Upload new material</p>
+                <input type="file" id="fileUpload" style="display: none;" />
+                <button class="btn btn-primary" id="uploadButton">Upload</button>
+                <div class="row d-flex justify-content-center align-items-center">
+                    <button class="btn btn-success" id="acceptButton"
+                        style="display: none; margin-top: 1em; margin-right: 1em;">Accept</button>
+                    <button class="btn btn-danger" id="rejectButton"
+                        style="display: none; margin-top: 1em; margin-left: 1em;">Reject</button>
+                </div>
+            </div>
+            <div class="col-8" id="plotDiv"></div>
+        </div>
+    </main>
+    <footer>
+        <p>© 2024 PolaritonTechnologies</p>
+    </footer>
+</body>
+
+</html>
+<script>
+    var socket = io.connect("http://localhost:5000");
+    var selectedMaterial;
+
+    var materialsSelect = document.getElementById('materials');
+
+    materialsSelect.addEventListener('change', function () {
+        selectedMaterial = this.value;
+        socket.emit('get_material_data', { material: selectedMaterial });
+    });
+
+    // Trigger the 'change' event manually
+    var event = new Event('change');
+    materialsSelect.dispatchEvent(event);
+
+    socket.on('material_data', function (data) {
+        var traces = data.y.map(function (y, index) {
+            return {
+                x: data.x,
+                y: y,
+                mode: 'lines',
+                name: data.name[index]
+            };
+        });
+
+        var layout = {
+            title: {
+                text: selectedMaterial,
+                font: {
+                    size: 18
+                }
+            },
+            xaxis: {
+                title: {
+                    text: 'Wavelength (nm)',
+                    font: {
+                        size: 18
+                    }
+                }
+            },
+            yaxis: {
+                title: {
+                    text: 'n, k',
+                    font: {
+                        size: 18
+                    }
+                }
+            },
+            height: window.innerHeight * 0.7 // Set the height to 80% of the viewport height
+        };
+
+        Plotly.ne
+
+        Plotly.newPlot('plotDiv', traces, layout);
+    });
+</script>
+
+<script>
+    document.getElementById('uploadButton').addEventListener('click', function () {
+        document.getElementById('fileUpload').click();
+    });
+
+    document.getElementById('fileUpload').addEventListener('change', function () {
+        var file = this.files[0];
+        var formData = new FormData();
+        formData.append('file', file);
+
+        fetch('/upload_material', {
+            method: 'POST',
+            body: formData
+        }).then(response => {
+            if (response.ok) {
+                response.text().then(filename => {
+
+                    // Show the accept and reject buttons
+                    document.getElementById('acceptButton').style.display = 'inline';
+                    document.getElementById('rejectButton').style.display = 'inline';
+
+                    // Add click event listeners to the accept and reject buttons
+                    document.getElementById('acceptButton').addEventListener('click', function () {
+                        fetch('/accept', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: 'filename=' + encodeURIComponent(filename)
+                        }).then(response => {
+                            if (response.ok) {
+                                console.log('File accepted');
+                            } else {
+                                console.error('File acceptance failed');
+                            }
+                        });
+
+                        // Hide the accept and reject buttons
+                        document.getElementById('acceptButton').style.display = 'none';
+                        document.getElementById('rejectButton').style.display = 'none';
+                    });
+                    document.getElementById('rejectButton').addEventListener('click', function () {
+                        fetch('/reject', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: 'filename=' + encodeURIComponent(filename)
+                        }).then(response => {
+                            if (response.ok) {
+                                console.log('File rejected');
+                            } else {
+                                console.error('File rejection failed');
+                            }
+                        });
+                        // Hide the accept and reject buttons
+                        document.getElementById('acceptButton').style.display = 'none';
+                        document.getElementById('rejectButton').style.display = 'none';
+                    });
+                });
+            } else {
+                console.error('File upload failed');
+            }
+        });
+    });
+</script>
