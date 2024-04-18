@@ -16,22 +16,35 @@ sudo apt update
 sudo apt install gcc-11 g++-11
 ```
 
+%% Not Supported yet %%
+
 Provide correct git credentials and subsequently clone repository (subsequently for an AWS instance)
 
-```console
-# Generate ssh key pair on AWS instance
-ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
-# Display key
-cat ~/.ssh/id_rsa.pub
-# Copy displayed public key and add to github account in settings --> SSH and GPG keys --> New SSH key --> paste into key field and press add ssh key
-# Clone git repository to the AWS instance
-git clone git@github.com:username/repository.git
+```
+Follow the instructions to create a personal access token if unavailable:
+https://docs.github.com/en/get-started/getting-started-with-git/about-remote-repositories#cloning-with-https-urls
+and:
+[https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic
+
+```
+
+%%%% For a remote instance: %%%%
+
+Install Filezilla on your local computer: https://filezilla-project.org/
+Use the key pair of your AWS instance to configure the SFTP connection
+Use your instance Public IPv4 address in settings - configure on port 22
+Upload the TMM folder to the instance
+(In case you need to run quickly, copy only examples,materials,src,tests, requirements)
+
+%%%%
+
 ```
 
 Compile C++ code once more to be on the save side
 
 ```console
-g++ -shared -o run_filter_stack.so run_filter_stack.cpp -fPIC
+sudo apt install g++
+g++ -shared -o run_filter_stack.so run_filter_stack.cpp -fPIC -fopenmp
 ```
 
 Install python3.10
@@ -42,12 +55,15 @@ sudo apt install software-properties-common
 sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt update
 sudo apt install python3.10
+
+sudo apt install python3.10-venv
 ```
 
 Create virtual environment using venv called venv
 
 ```console
-python3 -m venv venv
+
+
 ```
 
 Activate virtual environment
@@ -64,24 +80,3 @@ pip install -r requirements.txt
 
 ## Optimization
 
-Optimization benchmark (test_optimisation_DBRCavity.json on Julian's laptop
-varying all layer thicknesses plus the organic's position )
-
-| Method                 | Time to Optimize | Comments                                                                         |
-| ---------------------- | ---------------- | -------------------------------------------------------------------------------- |
-| minimize (Nelder-Mead) | 60 s             | Using 1e-9 tolerance                                                             |
-| dual_annealing         | 1802 s           | Using 1e-5 tolerance, 7000 iterations                                            |
-| basinhopping           | 126 s            | Does not support bounds (recovers results of minimize for the example)           |
-| direct                 | 777 s            | merit only minimized to 0.003 after 2831 calls                                   |
-| differential_evolution |                  | no sign of convergence after ~50000 iterations                                   |
-| shgo                   |                  | did not even start to optimize                                                   |
-| brute                  |                  | not really an option because it requires too many iterations for relevant stacks |
-
-dual_annealing, optimized weights:
-[ 43.44974405 32.76934884 31.45234875 190.87887203 65.24474902
-140.11114023 19.47791629 132.36720361 324.52413575 81.47214849
-69.120849 239.70597544 62.72602507 282.03428307 447.86895182
-459.8029801 143.59800317 484.79319159 178.5618158 24.86932182
-221.55959766 15.84151904 2.68046251]
-
-![Dual annealing optimized image](/doc/dual-annealing-optimized.png)
