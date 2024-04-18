@@ -1,14 +1,14 @@
 from FilterStack import FilterStack
 
 # Input file
-filter_definition_json_file_path = "../examples/demo_test.json"
+filter_definition_json_file_path = "../examples/AlPcCl_bandpass_840nm.json"
 
 # Create filter stack
 filter_stack = FilterStack(filter_definition_json_file_path)
 
 # Optimize stack
 features = filter_stack.perform_optimisation(
-    "minimize", save_optimized_to_file=True, stop_flag=lambda: False
+    "dual_annealing", save_optimized_to_file=True
 )
 
 # Calculate the data for 
