@@ -1034,20 +1034,29 @@ class FilterStack:
     #####################################################
 
     def read_results_from_cpp(
-        self, result_string, wavelengths, polar_angles, azim_angles
+        self, result_string, wavelengths, polar_angles
     ):
         """
         Reads the results from the C++ calculation and returns them as a
         pandas DataFrame.
         """
+        # List of pandas dataframes with one data frame per azimuthal angle
         stored_values = []
 
+        # Split the string by "=" to obtain data by azimuthal angle
         azim_angle_split_arrays = result_string.decode("utf-8").split("=")
+
+        # Iterate over azimuthal angles
         for azim_angle_split_array in azim_angle_split_arrays:
             stored_value = pd.DataFrame(
                 columns=polar_angles.astype("U"), index=wavelengths
             )
+
+            # The polar angle columns are separated by "+", so split for them
             theta_angle_split_arrays = azim_angle_split_array.split("+")
+
+            # Iterate over all polar angles and split again (by "--" this time
+            # to obtain data for each wavelength
             for n, theta_angle_split_array in enumerate(theta_angle_split_arrays):
                 stored_value.loc[:, str(polar_angles[n])] = np.array(
                     theta_angle_split_array.split("--"),
@@ -1172,7 +1181,7 @@ class FilterStack:
         )
 
         self.stored_data = self.read_results_from_cpp(
-            result_string, wavelength, polar_angles, azimuthal_angles
+            result_string, wavelength, polar_angles
         )
 
         if not web:

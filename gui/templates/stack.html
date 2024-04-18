@@ -376,7 +376,11 @@
             <section class="text-center my-5">
                 <input type="submit" value="Save" class="btn btn-primary" style="margin-right: 1em; margin-bottom: 5em;"
                     id="saveButton">
-                <a id="downloadLink" class="btn btn-secondary" style="margin-bottom: 5em;">Download</a>
+                <a id="downloadLink" class="btn btn-secondary"
+                    style="margin-bottom: 5em; margin-left: 1em; margin-right: 1em;">Download</a>
+                <a id="downloadOptimizedLink" class="btn btn-info"
+                    style="margin-bottom: 5em;margin-left: 1em; margin-right: 1em;">Download
+                    Optimized</a>
 
             </section>
 
@@ -459,6 +463,10 @@
             addRow('target');
         });
 
+        // Get number of checkboxes to obtain number of layers (minus the
+        // general core checkbox)
+        let checkboxCounter = (document.querySelectorAll('input[type="checkbox"]').length - 1) / 2;
+
         function addRow(tableId) {
             var table = document.getElementById(tableId);
             var row = table.insertRow(-1);
@@ -486,22 +494,24 @@
                     </select>`;
                 cell3.innerHTML = '<input type="text" class="form-control">';
                 cell4.innerHTML = `
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="checkbox4">
-                        <label class="custom-control-label" for="checkbox4"></label>
-                    </div> `;
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="checkbox_thickness_opt_${checkboxCounter}">
+                    <label class="custom-control-label" for="checkbox_thickness_opt_${checkboxCounter}"></label>
+                </div> `;
+                checkboxCounter++;
                 cell5.innerHTML = `
-                    <div class="input-group">
-                        <input type="number" class="form-control" placeholder="Min">
-                        <input type="number" class="form-control" placeholder="Max">
-                    </div>
-                    `;
+                <div class="input-group">
+                    <input type="number" class="form-control" placeholder="Min">
+                    <input type="number" class="form-control" placeholder="Max">
+                </div>
+                `;
                 cell6.innerHTML = `
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="checkbox5">
-                        <label class="custom-control-label" for="checkbox5"></label>
-                    </div> `;
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="checkbox_layer_switch_${checkboxCounter}">
+                    <label class="custom-control-label" for="checkbox_layer_switch_${checkboxCounter}"></label>
+                </div> `;
                 cell7.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+                checkboxCounter++;
             } else if (tableId === 'target') {
                 var cells = [];
                 for (var i = 1; i <= 10; i++) {
