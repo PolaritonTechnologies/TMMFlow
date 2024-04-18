@@ -477,15 +477,15 @@ def download_file():
     path_to_file = selected_file
     return send_file(path_to_file, as_attachment=True)
 
-@app.route('/download_current_optimum_file')
+
+@app.route("/download_current_optimum_file")
 def download_current_optimum_file():
     global my_filter
 
     # Generate a .json with the current optimum and save in /src/temp/
 
-
     # Send the path to the frontend
-    path_to_file = selected_file 
+    path_to_file = selected_file
     return send_file(path_to_file, as_attachment=True)
 
 
@@ -588,7 +588,7 @@ def plot():
     """ """
     global my_filter
 
-    calculated_data_df = my_filter.stored_data
+    calculated_data_df = my_filter.stored_data[0]
 
     # Create a Plotly figure using the calculated data
     angles = calculated_data_df.columns.to_numpy()
