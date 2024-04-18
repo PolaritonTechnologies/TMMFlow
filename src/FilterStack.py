@@ -66,7 +66,6 @@ class FilterStack:
         messages. Defaults to an ignore function that does nothing.
         """
 
-
         with open(json_file_path, "r") as json_file_path:
             filter_definition_by_user = json.load(json_file_path)
 
@@ -89,10 +88,18 @@ class FilterStack:
         self.initial_structure_materials = np.copy(
             np.array(self.filter_definition["structure_materials"])
         )
-        self.structure_materials_by_user = filter_definition_by_user["structure_materials"]
-        self.structure_thicknesses_by_user = filter_definition_by_user["structure_thicknesses"]
-        self.thickness_opt_allowed_by_user = filter_definition_by_user["thickness_opt_allowed"]
-        self.layer_switch_allowed_by_user = filter_definition_by_user["layer_switch_allowed"]
+        self.structure_materials_by_user = filter_definition_by_user[
+            "structure_materials"
+        ]
+        self.structure_thicknesses_by_user = filter_definition_by_user[
+            "structure_thicknesses"
+        ]
+        self.thickness_opt_allowed_by_user = filter_definition_by_user[
+            "thickness_opt_allowed"
+        ]
+        self.layer_switch_allowed_by_user = filter_definition_by_user[
+            "layer_switch_allowed"
+        ]
 
         self.filter_definition["structure_thicknesses"] = np.array(
             self.filter_definition["structure_thicknesses"]
@@ -159,7 +166,6 @@ class FilterStack:
         Returns:
         str: The path to the temporary JSON file that contains the translated optimization order.
         """
-
 
         updated_optimisation_order = optimisation_order.copy()
 
@@ -628,7 +634,7 @@ class FilterStack:
             ret = dual_annealing(
                 self.merit_function,
                 bounds=bounds,
-                callback = self.scipy_callback,
+                callback=self.scipy_callback,
             )
         elif optimisation_type == "differential_evolution":
             ret = differential_evolution(
@@ -676,7 +682,7 @@ class FilterStack:
                 # the below values for xatol and fatol were found to prevent the function
                 # from overoptimising
                 options={"xatol": 1e-1, "fatol": 1e-1},
-                callback = self.scipy_callback,
+                callback=self.scipy_callback,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
@@ -855,7 +861,7 @@ class FilterStack:
                 temp_json["structure_thicknesses"] = current_structure_thicknesses
 
                 # if self.filter_definition["add_layers"]:
-                    # temp_json["add_layers"] = False
+                # temp_json["add_layers"] = False
             else:
                 temp_json["structure_thicknesses"] = list(x)
 
@@ -890,10 +896,10 @@ class FilterStack:
         # If the merit function is close to zero (within the tolerance) or the
         # stop flag is true, stop the optimization.
         # if self.stop_flag or math.isclose(f, 0, abs_tol=1e-6):
-            # return True
+        # return True
         # else:
-            # return False
-    
+        # return False
+
     def scipy_callback(self, dummy1, dummy2=None, dummy3=None):
         """
         This is used to stop the scipy optimize function
@@ -1047,9 +1053,7 @@ class FilterStack:
     ########## Plotting and calculation area ############
     #####################################################
 
-    def read_results_from_cpp(
-        self, result_string, wavelengths, polar_angles
-    ):
+    def read_results_from_cpp(self, result_string, wavelengths, polar_angles):
         """
         Reads the results from the C++ calculation and returns them as a
         pandas DataFrame.
@@ -1063,7 +1067,8 @@ class FilterStack:
         # Iterate over azimuthal angles
         for azim_angle_split_array in azim_angle_split_arrays:
             stored_value = pd.DataFrame(
-                columns=polar_angles.astype("U"), index=wavelengths
+                columns=np.ascontiguousarray(polar_angles).astype(np.float64),
+                index=wavelengths,
             )
 
             # The polar angle columns are separated by "+", so split for them
@@ -1072,7 +1077,7 @@ class FilterStack:
             # Iterate over all polar angles and split again (by "--" this time
             # to obtain data for each wavelength
             for n, theta_angle_split_array in enumerate(theta_angle_split_arrays):
-                stored_value.loc[:, str(polar_angles[n])] = np.array(
+                stored_value.loc[:, polar_angles[n]] = np.array(
                     theta_angle_split_array.split("--"),
                     dtype=np.float64,
                 )
@@ -1106,15 +1111,15 @@ class FilterStack:
             np.ascontiguousarray(wavelengths).astype(np.float64),
             int(np.size(wavelengths)),
             np.ascontiguousarray(polar_angle).astype(np.float64),
-            1,
+            int(np.size(polar_angle)),
             np.ascontiguousarray(azimuthal_angle).astype(np.float64),
-            1,
+            int(np.size(azimuthal_angle)),
             is_general_core,
         )
 
         return pd.Series(
             np.array(result_string.decode("utf-8").split("--"), dtype=np.float64),
-            index=wavelengths,
+            index=np.ascontiguousarray(wavelengths).astype(np.float64),
         )
 
     def calculate_ar_data(

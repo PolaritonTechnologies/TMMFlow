@@ -416,7 +416,9 @@ def save_json():
     data_to_json["substrate_thickness"] = float(data[6].get("1").get("values")[0])
     data_to_json["incident_medium"] = data[7].get("1").get("values")[0]
     data_to_json["exit_medium"] = data[8].get("1").get("values")[0]
-    data_to_json["core_selection"] = "general" if bool(data[9].get("1").get("values")[0]) else "fast"
+    data_to_json["core_selection"] = (
+        "general" if bool(data[9].get("1").get("values")[0]) else "fast"
+    )
 
     layers = np.array(data[10].get("0").get("values"))
     data_to_json["structure_materials"] = layers[0::6].tolist()
@@ -469,9 +471,10 @@ def save_json():
         #     return send_file(selected_file, as_attachment=True)
         # else:
 
-@app.route('/download')
+
+@app.route("/download")
 def download_file():
-    path_to_file = selected_file 
+    path_to_file = selected_file
     return send_file(path_to_file, as_attachment=True)
 
 
@@ -502,7 +505,13 @@ def calculate_and_plot(data):
     target_type = data["mode"]
     polarization = data["polarization"]
 
-    my_filter.calculate_ar_data(wavelengths, polar_angles, target_type=target_type, polarization=polarization, web=True)
+    my_filter.calculate_ar_data(
+        wavelengths,
+        polar_angles,
+        target_type=target_type,
+        polarization=polarization,
+        web=True,
+    )
     calculated_data_df = my_filter.stored_data[0]
 
     # Create a Plotly figure using the calculated data
@@ -591,23 +600,20 @@ def plot():
     # Emit the figure in JSON format
     socketio.emit("update_plot", fig_json)
 
-@socketio.on('plot_xy')
+
+@socketio.on("plot_xy")
 def handle_plot_xy(data):
     global my_filter
-    x = my_filter.stored_data.index.to_list()
+    x = my_filter.stored_data[0].index.to_list()
 
     # Get the y data corresponding to the x data
-    y = my_filter.stored_data.loc[:, data['x']].to_list()
+    y = my_filter.stored_data[0].loc[:, data["x"]].to_list()
 
     # Create a dictionary with the x and y data
-    plot_data = {
-        'x': x,
-        'y': y,
-        'name': 'Angle' + str(data['x'])
-    }
+    plot_data = {"x": x, "y": y, "name": "Angle" + str(data["x"])}
 
     # Emit the data
-    socketio.emit('update_xy_plot', plot_data)
+    socketio.emit("update_xy_plot", plot_data)
 
 
 ##############################################
@@ -642,10 +648,9 @@ def start_optimization(data):
         # fig = go.Figure(data=go.Scatter(x=iteration_value, y=merit_time_series))
         # Convert the first column to a list and all following columns to a list of lists
         plotting_data = {
-            "x": iteration_value, 
+            "x": iteration_value,
             "y": merit_time_series,
         }
-
 
         # Emit the figure to the client
         socketio.emit("update_merit_graph", plotting_data)
@@ -707,19 +712,22 @@ def get_material_data(data):
 
     socketio.emit("material_data", data)
 
-@app.route('/upload_material', methods=['POST'])
+
+@app.route("/upload_material", methods=["POST"])
 def upload_material():
-    if 'file' not in request.files:
-        return 'No file part', 400
-    file = request.files['file']
-    if file.filename == '':
-        return 'No selected file', 400
+    if "file" not in request.files:
+        return "No file part", 400
+    file = request.files["file"]
+    if file.filename == "":
+        return "No selected file", 400
     if file:
         filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
 
         # Load file and get data
-        df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'], filename), skiprows=1)
+        df = pd.read_csv(
+            os.path.join(app.config["UPLOAD_FOLDER"], filename), skiprows=1
+        )
 
         # Convert the first column to a list and all following columns to a list of lists
         data = {
@@ -733,17 +741,23 @@ def upload_material():
 
         return filename, 200
 
-@app.route('/accept', methods=['POST'])
-def accept_file():
-    filename = request.form.get('filename')
-    shutil.move(os.path.join(app.config['UPLOAD_FOLDER'], filename), os.path.join(app.config['MATERIAL_FOLDER'], filename))
-    return 'File accepted', 200
 
-@app.route('/reject', methods=['POST'])
+@app.route("/accept", methods=["POST"])
+def accept_file():
+    filename = request.form.get("filename")
+    shutil.move(
+        os.path.join(app.config["UPLOAD_FOLDER"], filename),
+        os.path.join(app.config["MATERIAL_FOLDER"], filename),
+    )
+    return "File accepted", 200
+
+
+@app.route("/reject", methods=["POST"])
 def reject_file():
-    filename = request.form.get('filename')
-    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    return 'File rejected', 200
+    filename = request.form.get("filename")
+    os.remove(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+    return "File rejected", 200
+
 
 if __name__ == "__main__":
     socketio.run(app)
