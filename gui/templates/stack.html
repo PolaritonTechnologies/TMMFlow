@@ -492,6 +492,9 @@
                         {% endif %}
                         {% endfor %}
                     </select>`;
+                // Initialize Select2 on the new element
+                $(cell2).find('select').select2();
+
                 cell3.innerHTML = '<input type="text" class="form-control">';
                 cell4.innerHTML = `
                 <div class="custom-control custom-checkbox">

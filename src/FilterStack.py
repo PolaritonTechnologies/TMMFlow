@@ -575,6 +575,7 @@ class FilterStack:
         self.initial_merit = 0
         self.iteration_no = 0
         self.callback_call = 0
+        self.optimization_method = optimisation_type
 
         start_time = time.time()
 
@@ -627,6 +628,7 @@ class FilterStack:
             ret = dual_annealing(
                 self.merit_function,
                 bounds=bounds,
+                callback = self.scipy_callback,
             )
         elif optimisation_type == "differential_evolution":
             ret = differential_evolution(
@@ -674,6 +676,7 @@ class FilterStack:
                 # the below values for xatol and fatol were found to prevent the function
                 # from overoptimising
                 options={"xatol": 1e-1, "fatol": 1e-1},
+                callback = self.scipy_callback,
             )
 
         thicknesses, layer_order = self.extract_thickness_and_position_from_features(
@@ -805,8 +808,7 @@ class FilterStack:
                 self.optimum_merit = merit
 
             ## callback function
-            if self.callback(features, merit):
-                raise Exception("Optimization stopped.")
+            self.callback(features, merit)
 
             self.iteration_no += 1
 
@@ -887,8 +889,20 @@ class FilterStack:
 
         # If the merit function is close to zero (within the tolerance) or the
         # stop flag is true, stop the optimization.
-        if self.stop_flag or math.isclose(f, 0, abs_tol=1e-6):
-            return True
+        # if self.stop_flag or math.isclose(f, 0, abs_tol=1e-6):
+            # return True
+        # else:
+            # return False
+    
+    def scipy_callback(self, dummy1, dummy2=None, dummy3=None):
+        """
+        This is used to stop the scipy optimize function
+        """
+        if self.stop_flag:
+            if self.optimization_method == "minimize":
+                raise StopIteration
+            elif self.optimization_method == "dual_annealing":
+                return True
         else:
             return False
 
