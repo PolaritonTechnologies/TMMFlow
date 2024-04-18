@@ -9,16 +9,18 @@ parser = argparse.ArgumentParser()
 
 # Add the arguments
 parser.add_argument(
-    "--file",
+    "file",
     type=str,
     help="The input file path",
     default="./temp/current_structure.json",
+    nargs="?",
 )
 parser.add_argument(
-    "--optimisation_method",
+    "optimisation_method",
     type=str,
     help="The optimisation method",
     default="dual_annealing",
+    nargs="?",
 )
 
 # Parse the arguments
