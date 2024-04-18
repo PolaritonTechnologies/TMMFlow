@@ -728,22 +728,7 @@ class FilterStack:
         self.log_func("Optimized merit value: ", ret.fun)
         self.log_func("Number of function evaluations: ", ret.nfev)
 
-        if save_optimized_to_file:
-            optimized_values = []
-            optimized_values.append(
-                "Optimization time: " + str(time.time() - start_time) + " s \n"
-            )
-            optimized_values.append(
-                "Number of function evaluations: " + str(ret.nfev) + "\n"
-            )
-            optimized_values.append("Optimized merit value: " + str(ret.fun) + "\n")
-            optimized_values.append("Optimized features: " + str(ret.x) + "\n")
-            temp_path = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)),
-                "./temp/optimized_values.csv",
-            )
-            with open(temp_path, "w") as the_file:
-                the_file.write("\n".join(optimized_values))
+        self.save_current_design_to_json("current_structure")
 
         return ret.x
 
@@ -862,6 +847,8 @@ class FilterStack:
 
         # Save the current best optimisation values to file
         if f < self.optimum_merit or f == 0:
+            print(self.filter_definition["structure_thicknesses"])
+            print(self.filter_definition["structure_materials"])
             self.save_current_design_to_json("current_structure")
 
             self.optimum_merit = f
