@@ -644,6 +644,11 @@
         window.location.href = '/download';
     });
 
+    document.getElementById("downloadOptimizedLink").addEventListener("click", function (e) {
+        e.preventDefault();
+        window.location.href = '/download_current_optimum_file';
+    });
+
 </script>
 <script>
     $(document).ready(function () {

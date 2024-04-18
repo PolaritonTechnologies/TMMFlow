@@ -477,6 +477,17 @@ def download_file():
     path_to_file = selected_file
     return send_file(path_to_file, as_attachment=True)
 
+@app.route('/download_current_optimum_file')
+def download_current_optimum_file():
+    global my_filter
+
+    # Generate a .json with the current optimum and save in /src/temp/
+
+
+    # Send the path to the frontend
+    path_to_file = selected_file 
+    return send_file(path_to_file, as_attachment=True)
+
 
 ##############################################
 ############# Calculate and Plot #############
