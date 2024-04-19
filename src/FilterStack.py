@@ -106,7 +106,9 @@ class FilterStack:
         )
         self.bounds = [tuple(x) for x in self.filter_definition["bounds"]]
 
-        self.layer_order = np.arange(0, len(self.filter_definition["structure_thicknesses"]), 1)
+        self.layer_order = np.arange(
+            0, len(self.filter_definition["structure_thicknesses"]), 1
+        )
 
         (
             self.target_wavelength,
@@ -548,12 +550,26 @@ class FilterStack:
         self.lib.change_material_order(
             self.my_filter, self.layer_order, int(np.size(self.layer_order))
         )
-    
+
     def save_current_design_to_json(self, file_name):
         temp_json = self.filter_definition.copy()
 
         # Convert to a python list
-        temp_json["structure_thicknesses"] = [self.filter_definition["structure_thicknesses"][el] for el in self.layer_order ]
+        temp_json["structure_thicknesses"] = [
+            self.filter_definition["structure_thicknesses"][el]
+            for el in self.layer_order
+        ]
+        temp_json["thickness_opt_allowed"] = [
+            self.filter_definition["thickness_opt_allowed"][el]
+            for el in self.layer_order
+        ]
+        temp_json["bounds"] = [
+            self.filter_definition["bounds"][el] for el in self.layer_order
+        ]
+        temp_json["layer_switch_allowed"] = [
+            self.filter_definition["layer_switch_allowed"][el]
+            for el in self.layer_order
+        ]
 
         temp_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -562,8 +578,6 @@ class FilterStack:
 
         with open(temp_path, "w") as file:
             json.dump(temp_json, file)
-    
-
 
     #####################################################
     ############# Filter Optimization Area ##############
@@ -653,7 +667,7 @@ class FilterStack:
                 self.merit_function,
                 bounds=bounds,
                 callback=self.scipy_callback,
-                x0 = x_initial
+                x0=x_initial,
             )
         elif optimisation_type == "differential_evolution":
             ret = differential_evolution(
@@ -704,8 +718,8 @@ class FilterStack:
                 callback=self.scipy_callback,
             )
 
-        thicknesses, self.layer_order = self.extract_thickness_and_position_from_features(
-            ret.x
+        thicknesses, self.layer_order = (
+            self.extract_thickness_and_position_from_features(ret.x)
         )
 
         # Change the filter stack to the optimized values (in C++ and in python)
@@ -720,15 +734,19 @@ class FilterStack:
             self.my_filter, self.layer_order, int(np.size(self.layer_order))
         )
 
+        self.lib.get_material_order(self.my_filter)
+        self.lib.get_thicknesses(self.my_filter)
+
         # The stop flag is also be used as an "optimization done" indicator
         self.stop_flag = True
 
         self.log_func("Optimization time: ", time.time() - start_time, "s")
-        self.log_func("Optimized features: ", ret.x)
-        self.log_func("Optimized merit value: ", ret.fun)
+        self.log_func("Optimized thicknesses: ", [thicknesses[el] for el in self.layer_order])
+        self.log_func("Optimized layer order: ", self.filter_definition["structure_materials"])
+        self.log_func("Optimized merit value: ", self.optimum_merit)
         self.log_func("Number of function evaluations: ", ret.nfev)
 
-        self.save_current_design_to_json("current_structure")
+        # self.save_current_design_to_json("current_structure")
 
         return ret.x
 
@@ -754,8 +772,8 @@ class FilterStack:
         merit = 0
 
         # Extract thickness and layer order from features
-        thicknesses, self.layer_order = self.extract_thickness_and_position_from_features(
-            features
+        thicknesses, self.layer_order = (
+            self.extract_thickness_and_position_from_features(features)
         )
 
         # Change material thickness
@@ -807,6 +825,7 @@ class FilterStack:
                 self.first_zero = False
                 self.log_func("Optimization has reached merit 0")
                 self.callback(features, merit)
+                self.stop_flag = True
 
             return 0
 
@@ -847,8 +866,8 @@ class FilterStack:
 
         # Save the current best optimisation values to file
         if f < self.optimum_merit or f == 0:
-            print(self.filter_definition["structure_thicknesses"])
-            print(self.filter_definition["structure_materials"])
+            # self.lib.get_material_order(self.my_filter)
+            # self.lib.get_thicknesses(self.my_filter)
             self.save_current_design_to_json("current_structure")
 
             self.optimum_merit = f

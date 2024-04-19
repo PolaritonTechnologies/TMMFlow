@@ -375,9 +375,11 @@ def extract_filter_design(filter):
             == np.unique(filter.filter_definition["structure_materials"])[i]
         ] = unique_colors[i]
 
+    ordered_thicknesses = [filter.filter_definition["structure_thicknesses"][i] for i in filter.layer_order]
+
     heights = np.round(
-        np.array(filter.filter_definition["structure_thicknesses"])
-        / sum(filter.filter_definition["structure_thicknesses"])
+        np.array(ordered_thicknesses)
+        / sum(ordered_thicknesses)
         * 300
     )
     return (
@@ -591,9 +593,9 @@ def plot():
     calculated_data_df = my_filter.stored_data[0]
 
     # Create a Plotly figure using the calculated data
-    angles = calculated_data_df.columns.to_numpy()
-    wavelengths = calculated_data_df.index.to_numpy()
-    color_values = calculated_data_df.to_numpy()
+    angles = calculated_data_df[0].columns.to_numpy()
+    wavelengths = calculated_data_df[0].index.to_numpy()
+    color_values = calculated_data_df[0].to_numpy()
 
     # The layout is stored in simulate.html
     heatmap = go.Heatmap(
