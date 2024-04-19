@@ -144,7 +144,7 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
     double merit = 0.0;
     bool is_general_core;
 
-#pragma omp parallel for
+    #pragma omp parallel for
     for (size_t i = 0; i < target_value_vector.size(); i++)
     {
 
@@ -194,6 +194,51 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
     return merit;
 }
 
+// double FilterStack::calculate_reflection_transmission_absorption_reasemble(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0, bool is_general_case)
+// {
+//     std::vector<double> d_list = calculation_order.structure_thicknesses;
+
+//     // Add 0 to the beginning - substrate
+//     d_list.insert(d_list.begin(), 0.0);
+//     // Add 0 to the end - incident medium
+//     d_list.push_back(0.0);
+//     theta_0 = theta_0 * M_PI / 180.0;
+
+//     // std::cout << "Type: " << type << " Polarization: " << polarization << " Wavelength: " << wavelength << " Theta_0: " << theta_0 << " Phi_0: " << phi_0 << std::endl;
+//     double reflectivity, transmissivity;
+
+//     if (strcmp(polarization, "s") == 0)
+//     {
+//         std::tie(reflectivity, transmissivity) = calculate_rt_s(asemble, d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+//     }
+//     else if (strcmp(polarization, "p") == 0)
+//     {
+//         std::tie(reflectivity, transmissivity) = calculate_rt_p(dict_assembled_e_list_3x3[static_cast<int>(wavelength * 10)], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+//     }
+//     else
+//     {
+//         std::tie(reflectivity, transmissivity) = calculate_rt(dict_assembled_e_list_3x3[static_cast<int>(wavelength * 10)], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+//     }
+
+//     if (strcmp(type, "t") == 0)
+//     {
+//         return transmissivity;
+//     }
+//     else if (strcmp(type, "r") == 0)
+//     {
+//         return reflectivity;
+//     }
+//     else if (strcmp(type, "a") == 0)
+//     {
+//         return 1 - reflectivity - transmissivity;
+//     }
+//     else
+//     {
+//         std::cout << "Invalid type. Please use 't', 'r' or 'a'." << std::endl;
+//         return 0;
+//     }
+// }
+
 double FilterStack::calculate_reflection_transmission_absorption(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0, bool is_general_case)
 {
     std::vector<double> d_list = calculation_order.structure_thicknesses;
@@ -209,15 +254,15 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
 
     if (strcmp(polarization, "s") == 0)
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt_s(dict_assembled_e_list_3x3[static_cast<int>(wavelength * 10)], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+        std::tie(reflectivity, transmissivity) = calculate_rt_s(assemble_e_list_3x3(material_splines, wavelength), d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
     }
     else if (strcmp(polarization, "p") == 0)
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt_p(dict_assembled_e_list_3x3[static_cast<int>(wavelength * 10)], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+        std::tie(reflectivity, transmissivity) = calculate_rt_p(assemble_e_list_3x3(material_splines, wavelength), d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
     }
     else
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt(dict_assembled_e_list_3x3[static_cast<int>(wavelength * 10)], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+        std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelength), d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
     }
 
     if (strcmp(type, "t") == 0)
