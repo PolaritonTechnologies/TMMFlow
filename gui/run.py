@@ -485,9 +485,11 @@ def download_current_optimum_file():
     global my_filter
 
     # Generate a .json with the current optimum and save in /src/temp/
+    # This is actually not necessary as the current optimum is saved in
+    # current_structure.json anyways
 
     # Send the path to the frontend
-    path_to_file = selected_file
+    path_to_file = os.path.join(app.config["UPLOAD_FOLDER"], "current_structure.json")
     return send_file(path_to_file, as_attachment=True)
 
 
