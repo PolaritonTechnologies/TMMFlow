@@ -68,7 +68,7 @@ public:
             material_order_int[i] = i;
         }
         // Change the wavelength extrema if needed
-        initialise_e_list_3x3(material_splines, 250, 1200, 0.1);
+        // initialise_e_list_3x3(material_splines, 250, 1200, 0.1);
     }
 
     // The destructor should probably be populated more
@@ -78,7 +78,7 @@ private:
     // Private methods
     std::pair<std::map<std::string, std::vector<tk::spline>>, bool> assemble_materials(std::string full_path);
     std::vector<Matrix3cd> assemble_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength);
-    void initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step);
+    // void initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step);
 };
 
 std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_transmission_absorption_para(const char *type, const char *polarization, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0, bool is_general_case)
@@ -92,7 +92,7 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
     // Add 0 to the end - incident medium
     d_list.push_back(0.0);
 
-#pragma omp parallel for collapse(3)
+    // #pragma omp parallel for collapse(3)
     for (int p = 0; p < phis_0.size(); p++)
     {
         for (int n = 0; n < thetas_0.size(); n++)
@@ -128,7 +128,7 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
                 }
                 else
                 {
-#pragma omp critical
+                    // #pragma omp critical
                     {
                         std::cout << "Invalid type. Please use 't', 'r' or 'a'." << std::endl;
                     }
@@ -144,7 +144,7 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
     double merit = 0.0;
     bool is_general_core;
 
-    #pragma omp parallel for
+#pragma omp parallel for reduction(+ : merit)
     for (size_t i = 0; i < target_value_vector.size(); i++)
     {
 
@@ -319,14 +319,14 @@ std::pair<std::map<std::string, std::vector<tk::spline>>, bool> FilterStack::ass
 }
 
 // Function to assemble e_list_3x3 for a given wavelength using the material_splines obtained from file
-void FilterStack::initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step)
-{
-    for (double wavelength = wavelength_min; wavelength <= wavelength_max; wavelength += wavelength_step)
-    {
-        int wavelength_key = static_cast<int>(wavelength * 10);
-        dict_assembled_e_list_3x3[wavelength_key] = assemble_e_list_3x3(material_splines, wavelength);
-    }
-}
+// void FilterStack::initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step)
+// {
+// for (double wavelength = wavelength_min; wavelength <= wavelength_max; wavelength += wavelength_step)
+// {
+// int wavelength_key = static_cast<int>(wavelength * 10);
+// dict_assembled_e_list_3x3[wavelength_key] = assemble_e_list_3x3(material_splines, wavelength);
+// }
+// }
 
 std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength)
 {

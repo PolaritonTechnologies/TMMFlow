@@ -38,7 +38,7 @@ features = filter_stack.perform_optimisation(
     args.optimisation_method, save_optimized_to_file=True
 )
 # filter_stack.merit_function(np.append(filter_stack.filter_definition["structure_thicknesses"],[3,19,21]))
-print(filter_stack.merit_function(features) *  filter_stack.initial_merit)
+# print(filter_stack.merit_function(features) *  filter_stack.initial_merit)
 
 # Calculate the data for
 filter_stack.calculate_ar_data(

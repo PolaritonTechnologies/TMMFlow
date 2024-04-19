@@ -768,9 +768,6 @@ class FilterStack:
         float: The computed merit value, normalized by the initial merit value.
         """
 
-        # Declare merit
-        merit = 0
-
         # Extract thickness and layer order from features
         thicknesses, self.layer_order = (
             self.extract_thickness_and_position_from_features(features)

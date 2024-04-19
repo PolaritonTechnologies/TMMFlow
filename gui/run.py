@@ -593,9 +593,9 @@ def plot():
     calculated_data_df = my_filter.stored_data[0]
 
     # Create a Plotly figure using the calculated data
-    angles = calculated_data_df[0].columns.to_numpy()
-    wavelengths = calculated_data_df[0].index.to_numpy()
-    color_values = calculated_data_df[0].to_numpy()
+    angles = calculated_data_df.columns.to_numpy()
+    wavelengths = calculated_data_df.index.to_numpy()
+    color_values = calculated_data_df.to_numpy()
 
     # The layout is stored in simulate.html
     heatmap = go.Heatmap(

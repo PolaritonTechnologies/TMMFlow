@@ -10,7 +10,7 @@ int main()
     std::vector<double> d_list_vector({45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 100.0, 45.0});
     filter.change_material_thickness(d_list_vector);
 
-    filter.get_material_order();
+    filter.calculate_reflection_transmission_absorption();
     filter.get_thicknesses();
 
     std::vector<double> d_list_vector2({111.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 111.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 65.0, 45.0, 100.0, 45.0});
