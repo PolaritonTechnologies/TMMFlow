@@ -394,6 +394,18 @@ bool isRealDiagonalIsotropic(const MatrixXcd &matrix)
 std::tuple<double, double> calculate_rt_s( std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0, double n_exit_medium, bool general_case)
 {
 
+    std::cout << 'Printing d_list: ' << std::endl;
+    // Print d_list values
+    for (double d : d_list) {
+        std::cout << d << ' ';
+    }
+    std::cout << std::endl;
+
+    std::cout << 'Printing e_list_3x3: ' << std::endl;
+    for (const auto &matrix : e_list_3x3) {
+        std::cout << matrix << std::endl << std::endl;
+    }
+
     // Incident medium and substrate have to be real, diagonal and isotropic
     // incident medium check
     MatrixXcd lastMatrix = e_list_3x3[e_list_3x3.size() - 1];
