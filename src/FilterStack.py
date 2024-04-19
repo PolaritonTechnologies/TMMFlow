@@ -714,7 +714,7 @@ class FilterStack:
                 method="Nelder-Mead",
                 # the below values for xatol and fatol were found to prevent the function
                 # from overoptimising
-                options={"xatol": 1e-1, "fatol": 1e-1},
+                # options={"xatol": 1e-1, "fatol": 1e-1},
                 callback=self.scipy_callback,
             )
 
