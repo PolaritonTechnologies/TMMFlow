@@ -103,15 +103,15 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
 
                 if (strcmp(polarization, "s") == 0)
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt_s(dict_assembled_e_list_3x3[static_cast<int>(wavelengths[i] * 10)], d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]), is_general_case);
+                    std::tie(reflectivity, transmissivity) = calculate_rt_s(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]), is_general_case);
                 }
                 else if (strcmp(polarization, "p") == 0)
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt_p(dict_assembled_e_list_3x3[static_cast<int>(wavelengths[i] * 10)], d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]), is_general_case);
+                    std::tie(reflectivity, transmissivity) = calculate_rt_p(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]), is_general_case);
                 }
                 else
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt(dict_assembled_e_list_3x3[static_cast<int>(wavelengths[i] * 10)], d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]), is_general_case);
+                    std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]), is_general_case);
                 }
 
                 if (strcmp(type, "t") == 0)
