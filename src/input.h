@@ -59,7 +59,7 @@ public:
             std::istringstream ss(line);
             std::string field;
 
-            while (std::getline(ss, field, ','))
+            while (std::getline(ss, field, '\t'))
             {
                 ++columnCount;
             }
@@ -77,19 +77,19 @@ public:
             {
                 std::istringstream ss(line);
                 std::string field;
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 wavelength.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 nx.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 kx.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 ny.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 ky.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 nz.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 kz.push_back(std::stod(field));
             }
 
@@ -130,16 +130,17 @@ public:
             {
                 std::istringstream ss(line);
                 std::string field;
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 wavelength.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 nx.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 kx.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 nz.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 kz.push_back(std::stod(field));
+     
             }
 
             tk::spline nx_spline(wavelength, nx); // ordinary extraordinary only
@@ -175,19 +176,19 @@ public:
             {
                 std::istringstream ss(line);
                 std::string field;
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 wavelength.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 nx.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 kx.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 ny.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 ky.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 nz.push_back(std::stod(field));
-                std::getline(ss, field, ',');
+                std::getline(ss, field, '\t');
                 kz.push_back(std::stod(field));
             }
             tk::spline nx_spline(wavelength, nx); // isotropic
