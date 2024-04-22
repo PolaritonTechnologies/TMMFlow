@@ -58,13 +58,17 @@
         <h2>Upload your Filter Design</h2>
         <p>Upload a .json or .ofp file containing your filter design.</p>
         <section class="text-center my-5">
-            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
-                <div class="custom-file">
-                    <input type="file" class="custom-file-input" id="customFile" name="file">
-                    <label class="custom-file-label" for="customFile">{{ default_values.file_label }}</label>
-                </div>
-                <button type="submit" class="btn btn-primary mt-3" value="upload">Upload</button>
-            </form>
+            <div>
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data"
+                    class="d-flex flex-column align-items-center">
+                    <div class="custom-file">
+                        <input type="file" class="custom-file-input" id="customFile" name="file">
+                        <label class="custom-file-label" for="customFile">{{ default_values.file_label }}</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3" value="upload">Upload</button>
+                </form>
+
+            </div>
         </section>
         <section class="row justify-content-center">
             <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
@@ -78,7 +82,7 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="col-lg-2 col-md-6">
+            <div class="col-lg-2 col-md-4">
                 <div id="legend">
                     {% if default_values.num_legend_items and default_values.legend_colors is defined %}
                     {% for i in range(default_values.num_legend_items) %}
@@ -91,7 +95,12 @@
                     {% endfor %}
                     {% endif %}
                 </div>
+                <form action="{{ url_for('reset_filter') }}" method="post" enctype="multipart/form-data"
+                    class="ml-3 d-flex align-items-end" style="margin-top:2em;">
+                    <button type="submit" class="btn btn-danger" value="resetFilter">Reset Filter</button>
+                </form>
             </div>
+
         </section>
 
         <h2>Filter Definition</h2>
@@ -536,8 +545,37 @@
                         {% endif %}
                         {% endfor %}
                     </select>`;
+
                 // Initialize Select2 on the new element
-                $(cell2).find('select').select2();
+                $(cell2).find('select').select2({
+                    theme: 'bootstrap',
+                    width: 'resolve',
+                    tags: true,
+                    createTag: function (params) {
+                        var term = $.trim(params.term);
+
+                        if (term === '') {
+                            return null;
+                        }
+
+                        return {
+                            id: term,
+                            text: term,
+                            newOption: true
+                        }
+                    },
+                    templateResult: function (data) {
+                        var $result = $("<span></span>");
+
+                        $result.text(data.text);
+
+                        if (data.newOption) {
+                            $result.append(" <em>(add new)</em>");
+                        }
+
+                        return $result;
+                    }
+                });
 
                 cell3.innerHTML = '<input type="text" class="form-control">';
                 cell4.innerHTML = `

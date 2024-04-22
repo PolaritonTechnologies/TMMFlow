@@ -513,11 +513,16 @@ def download_current_optimum_file():
 
         return send_file(path_to_file, as_attachment=True)
 
-    # Generate a .json with the current optimum and save in /src/temp/
-    # This is actually not necessary as the current optimum is saved in
-    # current_structure.json anyways
+@app.route("/reset_filter", methods=['POST'])
+def reset_filter():
+    global my_filter
 
-    # Send the path to the frontend
+    # Reset filter
+    my_filter.reset()
+
+    # Reload page
+    return redirect("/")
+
 
 
 ##############################################
@@ -656,6 +661,16 @@ def handle_plot_xy(data):
 
     # Emit the data
     socketio.emit("update_xy_plot", plot_data)
+
+@app.route("/download_data")
+def download_data():
+    global my_filter
+    file_path = os.path.join( app.config["UPLOAD_FOLDER"], "simulated_data.csv")
+
+    x = my_filter.stored_data[0]
+    x.to_csv(file_path, sep="\t")
+
+    return send_file(file_path, as_attachment=True)
 
 
 ##############################################
