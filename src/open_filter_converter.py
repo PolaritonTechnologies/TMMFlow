@@ -49,12 +49,7 @@ def import_from_open_filter(input_file):
     for idx, line in enumerate(lines):
         if line.startswith("FrontLayer:"):
             parts = line.split(" ")
-            if parts[1] == "Ta2O5_Koeln_AM":
-                data["structure_materials"].append("Ta2O5")
-            elif parts[1] == "SiO2_Koeln_AM":
-                data["structure_materials"].append("SiO2")
-            else:
-                data["structure_materials"].append(parts[1])
+            data["structure_materials"].append(parts[1])
             data["structure_thicknesses"].append(float(parts[2]))
         if line.startswith("RefineThickness:"):
             parts = line.split(" ")
@@ -192,15 +187,15 @@ def export_to_open_filter(dictionary_input):
 
     to_export = ""
 
-    header = """Version: 1.1.1
+    header = f"""Version: 1.1.1
             Comment:
             End
             Filter:
-                Substrate: substrate_24mm_koeln 1000000.000000
-                FrontMedium: void
-                BackMedium: void
+                Substrate: {dictionary_input['substrate_material']} {dictionary_input['substrate_thickness']}
+                FrontMedium: {dictionary_input['incident_medium'] if dictionary_input == 'Air' else 'void'}
+                BackMedium: {dictionary_input['exit_medium'] if dictionary_input == 'Air' else 'void'}
                 CenterWavelength: 450.000000
-                WavelengthRange: 300.000000 1000.000000 1.000000
+                WavelengthRange: {dictionary_input['wavelengthMin']} {dictionary_input['wavelengthMax']} {dictionary_input['wavelengthStep']}
                 DontConsiderSubstrate: 0
                 StepSpacing: 0.010000
                 MinimumThickness: 0.000000
@@ -218,22 +213,6 @@ def export_to_open_filter(dictionary_input):
     to_export = to_export + header
 
     for i, el in enumerate(dictionary_input["structure_materials"]):
-
-        if el == "Ta2O5":
-
-            material_block = f"""   FrontLayer: Ta2O5_Koeln_AM {dictionary_input['structure_thicknesses'][i]}
-    RefineThickness: {int(dictionary_input['thickness_opt_allowed'][i])}
-"""
-            to_export = to_export + material_block
-
-        elif el == "SiO2":
-
-            material_block = f"""   FrontLayer: SiO2_Koeln_AM {dictionary_input['structure_thicknesses'][i]}
-    RefineThickness: {int(dictionary_input['thickness_opt_allowed'][i])}
-"""
-            to_export = to_export + material_block
-
-        else:
 
             material_block = f"""   FrontLayer: {dictionary_input['structure_materials'][i]} {dictionary_input['structure_thicknesses'][i]}
     RefineThickness: {int(dictionary_input['thickness_opt_allowed'][i])}
@@ -264,7 +243,7 @@ def export_to_open_filter(dictionary_input):
         if isinstance(dictionary_input["targets_wavelengths"][i], list):
             target_block = f"""Target:
     Kind: {dictionary_type[dictionary_input['targets_type'][i]]}
-    Angle: {dictionary_input['targets_polar_angle'][i]}
+    Angle: {dictionary_input['targets_polar_angle'][i] if len(dictionary_input['targets_polar_angle']) == 1 else dictionary_input['targets_polar_angle'][i][0]}
     Polarization: {dictionary_polarization[dictionary_input['targets_polarization'][i]]}
     Direction: Normal
     From: {dictionary_input['targets_wavelengths'][i][0]}
@@ -314,10 +293,10 @@ End"""
 #         input_text = input_file.read()
 #     print(import_from_open_filter(input_text))
 
-# if False:
+if True:
 
-#     input_file = "./temp/current_structure.json"
-#     with open(input_file, "r") as input_file:
-#         input_dic = json.load(input_file)
-#         print(input_dic)
-#     print(export_to_open_filter(input_dic))
+    input_file = "../examples/current_structure_bestAlPCCl.json"
+    with open(input_file, "r") as input_file:
+        input_dic = json.load(input_file)
+        print(input_dic)
+    print(export_to_open_filter(input_dic))
