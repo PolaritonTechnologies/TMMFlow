@@ -145,4 +145,11 @@ extern "C"
 	{
 		filter_stack->get_thicknesses();
 	}
+
+	void initialise_optimization(FilterStack *filter_stack, double *target_wavelengths, size_t size_wavelengths)
+	{
+		std::vector<double> target_wavelengths_vector(target_wavelengths, target_wavelengths + size_wavelengths);
+		filter_stack->initialise_optimization(target_wavelengths_vector);
+	}
+
 };

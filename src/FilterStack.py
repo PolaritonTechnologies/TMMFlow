@@ -359,6 +359,12 @@ class FilterStack:
         ]
         lib.calculate_merit.restype = ctypes.c_double
 
+        lib.initialise_optimization.argtypes = [
+            c_string_array,
+            c_double_array,
+            ctypes.c_size_t,
+        ]
+
         lib.reset_filter.argtypes = [c_string_array]
         lib.get_material_order.argtypes = [c_string_array]
         lib.get_thicknesses.argtypes = [c_string_array]
@@ -608,6 +614,10 @@ class FilterStack:
 
         print("running optimisation...")
 
+        self.lib.initialise_optimization(
+            self.my_filter, self.target_wavelength, int(np.size(self.target_wavelength))
+        )
+
         # Reset some variables
         self.stop_flag = False
         self.initial_merit = 0
@@ -714,7 +724,7 @@ class FilterStack:
                 method="Nelder-Mead",
                 # the below values for xatol and fatol were found to prevent the function
                 # from overoptimising
-                # options={"xatol": 1e-1, "fatol": 1e-1},
+                options={"xatol": 1e-1, "fatol": 1e-1},
                 callback=self.scipy_callback,
             )
 
@@ -741,8 +751,12 @@ class FilterStack:
         self.stop_flag = True
 
         self.log_func("Optimization time: ", time.time() - start_time, "s")
-        self.log_func("Optimized thicknesses: ", [thicknesses[el] for el in self.layer_order])
-        self.log_func("Optimized layer order: ", self.filter_definition["structure_materials"])
+        self.log_func(
+            "Optimized thicknesses: ", [thicknesses[el] for el in self.layer_order]
+        )
+        self.log_func(
+            "Optimized layer order: ", self.filter_definition["structure_materials"]
+        )
         self.log_func("Optimized merit value: ", self.optimum_merit)
         self.log_func("Number of function evaluations: ", ret.nfev)
 

@@ -20,7 +20,9 @@ public:
     std::vector<double> d_list_initial;
     std::vector<double> d_list_in_initial_order;
     std::vector<std::string> material_order_initial;
+    std::vector<double> unique_wavelengths_vector;
     std::map<int, std::vector<Matrix3cd>> dict_assembled_e_list_3x3;
+    std::map<int, std::vector<Matrix3cd>> dict_optim_assembled_e_list_3x3;  
     bool general_materials_in_stack = true;
 
     // Public methods
@@ -36,6 +38,7 @@ public:
 
     void get_material_order();
     void get_thicknesses();
+    void initialise_optimization(std::vector<double> target_wavelengths_vector);
 
     void setGeneralMaterialsInStack(bool value)
     {
@@ -68,7 +71,7 @@ public:
             material_order_int[i] = i;
         }
         // Change the wavelength extrema if needed
-        // initialise_e_list_3x3(material_splines, 250, 1200, 0.1);
+        initialise_e_list_3x3(material_splines, 250, 1200, 0.1);
     }
 
     // The destructor should probably be populated more
@@ -78,7 +81,8 @@ private:
     // Private methods
     std::pair<std::map<std::string, std::vector<tk::spline>>, bool> assemble_materials(std::string full_path);
     std::vector<Matrix3cd> assemble_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength);
-    // void initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step);
+    void initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step);
+    void initialise_e_list_3x3_optim(std::map<std::string, std::vector<tk::spline>> material_splines, std::vector<double> wavelengths);
 };
 
 std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_transmission_absorption_para(const char *type, const char *polarization, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0, bool is_general_case)
@@ -249,20 +253,22 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
     d_list.push_back(0.0);
     theta_0 = theta_0 * M_PI / 180.0;
 
+    double wavelength_key = static_cast<int>(wavelength * 10);
+
     // std::cout << "Type: " << type << " Polarization: " << polarization << " Wavelength: " << wavelength << " Theta_0: " << theta_0 << " Phi_0: " << phi_0 << std::endl;
     double reflectivity, transmissivity;
 
     if (strcmp(polarization, "s") == 0)
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt_s(assemble_e_list_3x3(material_splines, wavelength), d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+        std::tie(reflectivity, transmissivity) = calculate_rt_s(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
     }
     else if (strcmp(polarization, "p") == 0)
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt_p(assemble_e_list_3x3(material_splines, wavelength), d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+        std::tie(reflectivity, transmissivity) = calculate_rt_p(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
     }
     else
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelength), d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+        std::tie(reflectivity, transmissivity) = calculate_rt(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
     }
 
     if (strcmp(type, "t") == 0)
@@ -318,15 +324,33 @@ std::pair<std::map<std::string, std::vector<tk::spline>>, bool> FilterStack::ass
     return std::make_pair(material_splines, contains_general_material);
 }
 
-// Function to assemble e_list_3x3 for a given wavelength using the material_splines obtained from file
-// void FilterStack::initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step)
-// {
-// for (double wavelength = wavelength_min; wavelength <= wavelength_max; wavelength += wavelength_step)
-// {
-// int wavelength_key = static_cast<int>(wavelength * 10);
-// dict_assembled_e_list_3x3[wavelength_key] = assemble_e_list_3x3(material_splines, wavelength);
-// }
-// }
+void FilterStack::initialise_optimization(std::vector<double> target_wavelengths_vector)
+{
+    std::set<double> unique_wavelengths(target_wavelengths_vector.begin(), target_wavelengths_vector.end());
+    std::vector<double> unique_wavelengths_vector_converted(unique_wavelengths.begin(), unique_wavelengths.end());
+    unique_wavelengths_vector = unique_wavelengths_vector_converted;
+    initialise_e_list_3x3_optim(material_splines, unique_wavelengths_vector);
+}
+
+//Function to assemble e_list_3x3 for a given wavelength using the material_splines obtained from file
+void FilterStack::initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step)
+{
+    for (double wavelength = wavelength_min; wavelength <= wavelength_max; wavelength += wavelength_step)
+    {
+        int wavelength_key = static_cast<int>(wavelength * 10);
+        dict_assembled_e_list_3x3[wavelength_key] = assemble_e_list_3x3(material_splines, wavelength);
+    }
+
+}
+
+void FilterStack::initialise_e_list_3x3_optim(std::map<std::string, std::vector<tk::spline>> material_splines, std::vector<double> wavelengths)
+{
+    for (double wavelength : wavelengths)
+    {
+        int wavelength_key = static_cast<int>(wavelength * 10);
+        dict_optim_assembled_e_list_3x3[wavelength_key] = assemble_e_list_3x3(material_splines, wavelength);
+    }
+}
 
 std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength)
 {
@@ -364,23 +388,57 @@ std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, st
 
 void FilterStack::change_material_order(std::vector<int> new_material_order)
 {
+    size_t size_arrays = new_material_order.size();
+
     // Make sure new_material_order has the same size as structure_materials
-    assert(new_material_order.size() == calculation_order.structure_materials.size());
+    assert(size_arrays == calculation_order.structure_materials.size());
 
     // Create new vectors to hold the reordered materials and their corresponding values
-    std::vector<std::string> reordered_material_list;
-    std::vector<double> reordered_d_list;
+    std::vector<std::string> reordered_material_list(size_arrays);
+    std::vector<double> reordered_d_list(size_arrays);
+    std::map<int, std::vector<Matrix3cd>> reordered_dict_optim_assembled_e_list_3x3;
 
-    // Populate the new vector with the materials in the new order
-    for (int i : new_material_order)
-    {
-        reordered_material_list.push_back(material_order_initial[i]);
-        reordered_d_list.push_back(d_list_in_initial_order[i]);
+    bool first_loop = true;
+    std::vector<Matrix3cd> reordered_e_list_3x3(size_arrays + 2);
+    size_t i;
+    int wavelength_key;
+
+    for (double wavelength : unique_wavelengths_vector) {
+
+        wavelength_key = static_cast<int>(wavelength * 10);
+
+        reordered_e_list_3x3[0] = dict_assembled_e_list_3x3[wavelength_key][0];
+        
+        i = 0;
+
+        while (i < size_arrays) {
+
+            if (first_loop) {
+
+                reordered_material_list[i] = material_order_initial[new_material_order[i]];
+
+                reordered_d_list[i] = d_list_in_initial_order[new_material_order[i]];
+
+            }
+
+            reordered_e_list_3x3[i + 1] = dict_assembled_e_list_3x3[wavelength_key][new_material_order[i] + 1];
+            
+            i++;
+
+        }
+
+        first_loop = false;
+
+        reordered_e_list_3x3[size_arrays + 1] = dict_assembled_e_list_3x3[wavelength_key][size_arrays + 1];
+    
+        reordered_dict_optim_assembled_e_list_3x3[wavelength_key] = reordered_e_list_3x3;
+
     }
 
     // Replace the old vector with the new one
     calculation_order.structure_materials = reordered_material_list;
     calculation_order.structure_thicknesses = reordered_d_list;
+    dict_optim_assembled_e_list_3x3 = reordered_dict_optim_assembled_e_list_3x3;
     material_order_int = new_material_order;
 }
 

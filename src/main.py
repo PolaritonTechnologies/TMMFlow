@@ -2,7 +2,7 @@ import argparse
 from FilterStack import FilterStack
 import numpy as np
 
-## typical call: python main.py ../examples/AlPcCl_bandpass_840nm.json dual_annealing
+## typical call: python main.py dual_annealing ../examples/AlPcCl_bandpass_840nm.json
 ## default values are current_structure.json from last optimisation and dual_annealing
 
 # Create the parser
@@ -10,17 +10,17 @@ parser = argparse.ArgumentParser()
 
 # Add the arguments
 parser.add_argument(
-    "file",
-    type=str,
-    help="The input file path",
-    default="../src/temp/current_structure.json",
-    nargs="?",
-)
-parser.add_argument(
     "optimisation_method",
     type=str,
     help="The optimisation method",
     default="minimize",
+    nargs="?",
+)
+parser.add_argument(
+    "file",
+    type=str,
+    help="The input file path",
+    default="../src/temp/current_structure.json",
     nargs="?",
 )
 
