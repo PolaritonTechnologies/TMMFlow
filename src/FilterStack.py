@@ -695,6 +695,7 @@ class FilterStack:
                 x0=x_initial,
                 minimizer_kwargs={
                     "method": "Nelder-Mead",
+                    "bounds": bounds,
                 },
             )
 
@@ -987,7 +988,13 @@ class FilterStack:
             # )
             raise ValueError
 
-        return np.array([np.clip(np.round(t, 1), b[0], b[1]) for t, b in zip(thicknesses, self.bounds)], dtype=np.float64), layer_order.astype(np.int32)
+        return np.array(
+            [
+                np.clip(np.round(t, 1), b[0], b[1])
+                for t, b in zip(thicknesses, self.bounds)
+            ],
+            dtype=np.float64,
+        ), layer_order.astype(np.int32)
 
     def convert_layer_positions_to_stack_order(self, temp_layer_positions):
         """
