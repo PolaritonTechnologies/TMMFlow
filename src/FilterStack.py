@@ -535,7 +535,7 @@ class FilterStack:
             target_type,
         )
 
-    def reset_filter(self):
+    def reset(self):
         """
         Reset filter to initial thickness and order
         """
@@ -548,7 +548,7 @@ class FilterStack:
             int(np.size(self.initial_structure_thicknesses)),
         )
         self.layer_order = np.arange(
-            0, np.sum(self.filter_definition["layer_switch_allowed"]), 1
+            0, int(np.size(self.initial_structure_thicknesses)), 1, dtype=np.int32
         )
         self.filter_definition["structure_materials"] = [
             self.initial_structure_materials[el] for el in self.layer_order
@@ -678,11 +678,14 @@ class FilterStack:
                 bounds=bounds,
                 callback=self.scipy_callback,
                 x0=x_initial,
+                maxiter = 100000
             )
         elif optimisation_type == "differential_evolution":
             ret = differential_evolution(
                 self.merit_function,
                 bounds=bounds,
+                x0 = x_initial,
+                maxiter = 100000
                 # callback = self.callback_func_advanced
             )
         elif optimisation_type == "basinhopping":
