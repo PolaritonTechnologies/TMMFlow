@@ -37,7 +37,7 @@ from utility import (
     allowed_file,
     generate_colors,
 )
-from open_filter_converter import import_from_open_filter
+from open_filter_converter import import_from_open_filter, export_to_open_filter
 from FilterStack import FilterStack
 
 # Configure flask app
@@ -375,13 +375,11 @@ def extract_filter_design(filter):
             == np.unique(filter.filter_definition["structure_materials"])[i]
         ] = unique_colors[i]
 
-    ordered_thicknesses = [filter.filter_definition["structure_thicknesses"][i] for i in filter.layer_order]
+    ordered_thicknesses = [
+        filter.filter_definition["structure_thicknesses"][i] for i in filter.layer_order
+    ]
 
-    heights = np.round(
-        np.array(ordered_thicknesses)
-        / sum(ordered_thicknesses)
-        * 300
-    )
+    heights = np.round(np.array(ordered_thicknesses) / sum(ordered_thicknesses) * 300)
     return (
         num_boxes,
         colors.tolist(),
@@ -476,21 +474,50 @@ def save_json():
 
 @app.route("/download")
 def download_file():
-    path_to_file = selected_file
-    return send_file(path_to_file, as_attachment=True)
+    file_ending = request.args.get("fileEnding")
+    if file_ending == ".json":
+        # Handle .json file ending
+        path_to_file = selected_file
+        return send_file(path_to_file, as_attachment=True)
+    elif file_ending == ".ofp":
+        # Handle .ofp file ending
+        # First convert the .json file to .ofp
+        input_file = selected_file
+        with open(input_file, "r") as input_file:
+            input_dic = json.load(input_file)
+
+        path_to_file = export_to_open_filter(input_dic, selected_file.split("/")[-1].split(".")[0] + "_converted")
+
+        return send_file(path_to_file, as_attachment=True)
 
 
 @app.route("/download_current_optimum_file")
 def download_current_optimum_file():
     global my_filter
+    file_ending = request.args.get("fileEnding")
+    path_to_json_file = os.path.join(
+        app.config["UPLOAD_FOLDER"], "current_structure.json"
+    )
+
+    if file_ending == ".json":
+        # Handle .json file ending
+        return send_file(path_to_json_file, as_attachment=True)
+    elif file_ending == ".ofp":
+        # Handle .ofp file ending
+        # First convert the .json file to .ofp
+        input_file = path_to_json_file
+        with open(input_file, "r") as input_file:
+            input_dic = json.load(input_file)
+
+        path_to_file = export_to_open_filter(input_dic, "current_structure_converted")
+
+        return send_file(path_to_file, as_attachment=True)
 
     # Generate a .json with the current optimum and save in /src/temp/
     # This is actually not necessary as the current optimum is saved in
     # current_structure.json anyways
 
     # Send the path to the frontend
-    path_to_file = os.path.join(app.config["UPLOAD_FOLDER"], "current_structure.json")
-    return send_file(path_to_file, as_attachment=True)
 
 
 ##############################################
@@ -716,7 +743,7 @@ def stop_optimization():
 def get_material_data(data):
     material = data["material"]
     # Load file and get data
-    df = pd.read_csv("../materials/" + material + ".csv", skiprows=1)
+    df = pd.read_csv("../materials/" + material + ".csv", skiprows=1, sep="\t")
 
     # Convert the first column to a list and all following columns to a list of lists
     data = {
@@ -741,7 +768,7 @@ def upload_material():
 
         # Load file and get data
         df = pd.read_csv(
-            os.path.join(app.config["UPLOAD_FOLDER"], filename), skiprows=1
+            os.path.join(app.config["UPLOAD_FOLDER"], filename), skiprows=1, sep="\t"
         )
 
         # Convert the first column to a list and all following columns to a list of lists

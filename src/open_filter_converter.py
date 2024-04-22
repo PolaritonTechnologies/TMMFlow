@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import os
 
 
 def import_from_open_filter(input_file):
@@ -42,7 +43,7 @@ def import_from_open_filter(input_file):
         "substrate_thickness": None,
         "incident_medium": None,
         "exit_medium": None,
-        "core_selection": None 
+        "core_selection": None,
     }
 
     # Go through the open filter file to populate the dictionary
@@ -131,7 +132,7 @@ def import_from_open_filter(input_file):
         if line.startswith("BackMedium:"):
             parts = line.split(" ")
             if parts[1] == "void":
-                data["exit_medium"] = "Air" 
+                data["exit_medium"] = "Air"
             else:
                 data["exit_medium"] = str(parts[1])
 
@@ -165,25 +166,25 @@ def import_from_open_filter(input_file):
     if data["bounds"] == []:
         data["bounds"] = [[0, 200]] * len(data["structure_materials"])
     if data["substrate_material"] is None:
-        data["substrate_material"] = "FusedSilica" 
+        data["substrate_material"] = "FusedSilica"
     if data["substrate_thickness"] is None:
-        data["substrate_thickness"] = 1000000.0 
+        data["substrate_thickness"] = 1000000.0
     if data["incident_medium"] is None:
-        data["incident_medium"] = "Air" 
+        data["incident_medium"] = "Air"
     if data["exit_medium"] is None:
-        data["exit_medium"] = "Air" 
+        data["exit_medium"] = "Air"
     if data["core_selection"] is None:
-        data["core_selection"] = "fast" 
+        data["core_selection"] = "fast"
 
     # Write to JSON file
     saving_path = input_file.name[:-3] + "json"
     with open(saving_path, "w") as output_file:
         json.dump(data, output_file)
-    
-    return saving_path 
+
+    return saving_path
 
 
-def export_to_open_filter(dictionary_input):
+def export_to_open_filter(dictionary_input, file_name):
 
     to_export = ""
 
@@ -214,10 +215,10 @@ def export_to_open_filter(dictionary_input):
 
     for i, el in enumerate(dictionary_input["structure_materials"]):
 
-            material_block = f"""   FrontLayer: {dictionary_input['structure_materials'][i]} {dictionary_input['structure_thicknesses'][i]}
+        material_block = f"""   FrontLayer: {dictionary_input['structure_materials'][i]} {dictionary_input['structure_thicknesses'][i]}
     RefineThickness: {int(dictionary_input['thickness_opt_allowed'][i])}
 """
-            to_export = to_export + material_block
+        to_export = to_export + material_block
 
     to_export = to_export + "End\n"
 
@@ -282,8 +283,17 @@ End"""
         to_export = to_export + target_block
 
     # Write to text file
-    with open("converted_open_filter.ofp", "w") as output_file:
+    path_to_file = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), "./temp/" + file_name + ".ofp"
+    )
+
+    with open(
+        path_to_file,
+        "w",
+    ) as output_file:
         output_file.write(to_export)
+
+    return path_to_file
 
 
 # if True:
@@ -293,10 +303,10 @@ End"""
 #         input_text = input_file.read()
 #     print(import_from_open_filter(input_text))
 
-if True:
+# if True:
 
-    input_file = "../examples/current_structure_bestAlPCCl.json"
-    with open(input_file, "r") as input_file:
-        input_dic = json.load(input_file)
-        print(input_dic)
-    print(export_to_open_filter(input_dic))
+#     input_file = "../examples/current_structure_bestAlPCCl.json"
+#     with open(input_file, "r") as input_file:
+#         input_dic = json.load(input_file)
+#         print(input_dic)
+#     print(export_to_open_filter(input_dic))
