@@ -394,19 +394,6 @@ bool isRealDiagonalIsotropic(const MatrixXcd &matrix)
 std::tuple<double, double> calculate_rt_s(std::vector<Matrix3cd> e_list_3x3, std::vector<double> d_list, double wavelength, double theta_0, double phi_0, double n_exit_medium, bool general_case)
 {
 
-    // std::cout << 'Printing d_list: ' << std::endl;
-    // // Print d_list values
-    // for (double d : d_list)
-    // {
-    //     std::cout << d << ' ';
-    // }
-    // std::cout << std::endl;
-
-    // std::cout << 'Printing e_list_3x3: ' << std::endl;
-    // for (const auto &matrix : e_list_3x3) {
-    //     std::cout << matrix << std::endl << std::endl;
-    // }
-
     // Incident medium and substrate have to be real, diagonal and isotropic
     // incident medium check
     MatrixXcd lastMatrix = e_list_3x3[e_list_3x3.size() - 1];
@@ -881,5 +868,5 @@ std::tuple<double, double> calculate_rt(std::vector<Matrix3cd> e_list_3x3, std::
         transmissivity_p = (transmissivity_p_no_backside * T_p_subs_exit * std::exp(2 * beta)) / (1 - reflectivity_p_no_backside_reverse * R_p_subs_exit * std::exp(4 * beta));
     }
 
-    return {0.5 * (reflectivity_s + reflectivity_p), 0.5 * (transmissivity_p + reflectivity_p)};
+    return {0.5 * (reflectivity_s + reflectivity_p), 0.5 * (transmissivity_p + transmissivity_s)};
 };
