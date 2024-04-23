@@ -278,6 +278,9 @@
                                     </div>
                                 </td>
                                 <td>
+                                    <button class="btn btn-success duplicate-row">x2</button>
+                                </td>
+                                <td>
                                     <button class="btn btn-danger delete-row">Delete</button>
                                 </td>
                             </tr>
@@ -539,6 +542,7 @@
                 var cell5 = row.insertCell(4);
                 var cell6 = row.insertCell(5);
                 var cell7 = row.insertCell(6);
+                var cell8 = row.insertCell(7);
                 cell2.innerHTML = `
                     <select class="form-control select2">
                         {% for material in default_values.available_materials %}
@@ -600,6 +604,7 @@
                     <label class="custom-control-label" for="checkbox_layer_switch_${checkboxCounter}"></label>
                 </div> `;
                 cell7.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+                cell8.innerHTML = '<button class="btn btn-success duplicate-row">x2</button>';
                 checkboxCounter++;
             } else if (tableId === 'target') {
                 var cells = [];
@@ -657,6 +662,24 @@
             // Refresh sortable functionality after adding new row
             makeRowsDraggable();
         }
+    });
+    $(document).ready(function () {
+        $(document).on('click', '.duplicate-row', function (event) {
+            event.preventDefault();
+            var row = $(this).closest('tr');  // Find the row
+            var clone = row.clone();  // Clone the row
+
+            // Get the number of the last row
+            var lastRowNumber = parseInt($('#layers tr:last-child td:first-child').text());
+
+            // Set the number of the new row
+            clone.find('td:first-child').text(lastRowNumber + 1);
+
+            // Copy the styles from the original row to the cloned row
+            clone.attr('style', row.attr('style'));
+
+            $('#layers').append(clone);  // Append the row to the table
+        });
     });
 </script>
 
