@@ -311,6 +311,8 @@
                                             %}>t</option>
                                         <option value="r" {% if default_values.targets_type[i]=='r' %}selected{% endif
                                             %}>r</option>
+                                        <option value="a" {% if default_values.targets_type[i]=='a' %}selected{% endif
+                                            %}>a</option>
                                     </select>
                                 </td>
                                 <td>
@@ -319,6 +321,8 @@
                                             endif %}>s</option>
                                         <option value="p" {% if default_values.targets_polarization[i]=='p' %}selected{%
                                             endif %}>p</option>
+                                        <option value="" {% if default_values.targets_polarization[i]=='' %}selected{%
+                                            endif %}>None</option>
                                     </select>
                                 </td>
 

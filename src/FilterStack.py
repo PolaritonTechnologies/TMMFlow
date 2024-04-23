@@ -9,13 +9,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from scipy.optimize import (
-    dual_annealing,
+    #dual_annealing,
     minimize,
     differential_evolution,
     basinhopping,
     shgo,
     brute,
 )
+
+from optimization import dual_annealing
 
 
 def ignore(msg=None):
@@ -678,14 +680,16 @@ class FilterStack:
                 bounds=bounds,
                 callback=self.scipy_callback,
                 x0=x_initial,
-                maxiter = 100000
+                maxiter = 10000,
+                minimizer_kwargs = {"callback": self.scipy_callback}
             )
         elif optimisation_type == "differential_evolution":
             ret = differential_evolution(
                 self.merit_function,
                 bounds=bounds,
                 x0 = x_initial,
-                maxiter = 100000
+                maxiter = 100000,
+                callback = self.scipy_callback,
                 # callback = self.callback_func_advanced
             )
         elif optimisation_type == "basinhopping":
@@ -696,9 +700,11 @@ class FilterStack:
             ret = basinhopping(
                 self.merit_function,
                 x0=x_initial,
+                callback = self.scipy_callback,
                 minimizer_kwargs={
                     "method": "Nelder-Mead",
                     "bounds": bounds,
+                    "callback": self.scipy_callback
                 },
             )
 
@@ -728,7 +734,7 @@ class FilterStack:
                 method="Nelder-Mead",
                 # the below values for xatol and fatol were found to prevent the function
                 # from overoptimising
-                options={"xatol": 1e-1, "fatol": 1e-1},
+                # options={"xatol": 1e-1, "fatol": 1e-1},
                 callback=self.scipy_callback,
             )
 
@@ -922,6 +928,11 @@ class FilterStack:
                 raise StopIteration
             elif self.optimization_method == "dual_annealing":
                 return True
+            elif self.optimization_method == "basinhopping":
+                return True
+            elif self.optimization_method == "differential_evolution":
+                return True
+
         else:
             return False
 
