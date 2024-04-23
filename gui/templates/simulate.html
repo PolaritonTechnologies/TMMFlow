@@ -63,8 +63,10 @@
             </div>
 
             <div class="col-6">
-                <div class="row d-flex align-items-center justify-content-center">
+                <div style="position: relative;">
                     <div id="DatavsWavelengthPlot"></div>
+                    <button id="resetPlot" class="btn btn-primary" style="position: absolute; top: 0; right: 0;">Reset
+                        Plot</button>
                 </div>
                 <div class="row d-flex align-items-center justify-content-center">
                     <div class="form-group mx-3">
@@ -267,7 +269,7 @@
         x: [],  // x data
         y: [],  // y data
         mode: 'lines',
-        type: 'scatter'
+        type: 'scatter',
     };
 
     var data = [trace1];
@@ -286,14 +288,34 @@
 
     Plotly.newPlot('DatavsWavelengthPlot', data, layout);
 
+    var plottedAngles = {};
+
     socket.on('update_xy_plot', function (data) {
-        var update = {
-            x: [data.x],  // new x data
-            y: [data.y]   // new y data
+        // Check if this angle has already been plotted
+        if (plottedAngles[data.name]) {
+            return;
+        }
+
+        var newTrace = {
+            x: data.x,  // new x data
+            y: data.y,  // new y data
+            mode: 'lines',
+            type: 'scatter',
+            name: data.name + ' °'
         };
 
-        Plotly.update('DatavsWavelengthPlot', update, {}, [0]);
+        Plotly.addTraces('DatavsWavelengthPlot', newTrace);
+
+        // Mark this angle as plotted
+        plottedAngles[data.name] = true;
     });
+
+    document.getElementById('resetPlot').addEventListener('click', function () {
+        Plotly.newPlot('DatavsWavelengthPlot', [], layout);
+        plottedAngles = {};
+    });
+
+
 </script>
 
 
