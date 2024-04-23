@@ -10,6 +10,19 @@
 
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- Add jQuery UI CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-theme/0.1.0-beta.10/select2-bootstrap.min.css"
+        rel="stylesheet" />
+
+
+    <!-- Add jQuery, jQuery UI and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
 </head>
 
 <body>
@@ -109,7 +122,13 @@
                 </div>
             </div>
         </div>
-        <div id="merit_graph"></div>
+        <div class="position-relative">
+            <div id="merit_graph"></div>
+            <div class="d-flex justify-content-end position-absolute" style="top: 1em; right: 0;">
+                <div id="iterations" class="text-right mr-2"></div>
+                <div id="merit" class="text-right"></div>
+            </div>
+        </div>
 
     </main>
     <footer>
@@ -151,7 +170,6 @@
             type: 'log',
             showline: true
         },
-        showlegend: true,
         hovermode: 'closest',
         plot_bgcolor: 'rgb(223, 232, 243)'
     };
@@ -188,8 +206,8 @@
         Plotly.newPlot('merit_graph', [trace], layout);
     });
 
-    socket.on('update_filter_representation', function (filter_json) {
-        var filter_representation = JSON.parse(filter_json);
+    socket.on('update_filter_representation', function (data) {
+        var filter_representation = JSON.parse(data.filter_json);
 
         // Access the values
         var num_boxes = filter_representation.num_boxes;
@@ -215,6 +233,9 @@
             div.style.height = heights[i] + 'px';
             container.appendChild(div);
         }
+        $('#iterations').html('<strong>Iterations:</strong> ' + data.iterations);
+        $('#merit').html('<strong>Latest Merit:</strong> ' + data.merit);
+
     });
 
 </script>

@@ -486,7 +486,9 @@ def download_file():
         with open(input_file, "r") as input_file:
             input_dic = json.load(input_file)
 
-        path_to_file = export_to_open_filter(input_dic, selected_file.split("/")[-1].split(".")[0] + "_converted")
+        path_to_file = export_to_open_filter(
+            input_dic, selected_file.split("/")[-1].split(".")[0] + "_converted"
+        )
 
         return send_file(path_to_file, as_attachment=True)
 
@@ -513,7 +515,8 @@ def download_current_optimum_file():
 
         return send_file(path_to_file, as_attachment=True)
 
-@app.route("/reset_filter", methods=['POST'])
+
+@app.route("/reset_filter", methods=["POST"])
 def reset_filter():
     global my_filter
 
@@ -522,7 +525,6 @@ def reset_filter():
 
     # Reload page
     return redirect("/")
-
 
 
 ##############################################
@@ -657,15 +659,16 @@ def handle_plot_xy(data):
     y = my_filter.stored_data[0].loc[:, data["x"]].to_list()
 
     # Create a dictionary with the x and y data
-    plot_data = {"x": x, "y": y, "name": "Angle" + str(data["x"])}
+    plot_data = {"x": x, "y": y, "name": str(data["x"])}
 
     # Emit the data
     socketio.emit("update_xy_plot", plot_data)
 
+
 @app.route("/download_data")
 def download_data():
     global my_filter
-    file_path = os.path.join( app.config["UPLOAD_FOLDER"], "simulated_data.csv")
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], "simulated_data.csv")
 
     x = my_filter.stored_data[0]
     x.to_csv(file_path, sep="\t")
@@ -736,7 +739,14 @@ def start_optimization(data):
         filter_json = json.dumps(filter_representation)
 
         # Emit the JSON string
-        socketio.emit("update_filter_representation", filter_json)
+        socketio.emit(
+            "update_filter_representation",
+            {
+                "filter_json": filter_json,
+                "iterations": my_filter.iteration_no,
+                "merit": np.round(my_filter.last_merit, 1),
+            },
+        )
 
         time.sleep(1)
 
