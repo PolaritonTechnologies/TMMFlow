@@ -87,6 +87,8 @@ class FilterStack:
             np.array(self.filter_definition["structure_thicknesses"])
         )
 
+        # This is for displaying in the GUI only as the display for the user is
+        # slightly different to the converted version for C++
         self.initial_structure_materials = np.copy(
             np.array(self.filter_definition["structure_materials"])
         )
@@ -102,6 +104,10 @@ class FilterStack:
         self.layer_switch_allowed_by_user = filter_definition_by_user[
             "layer_switch_allowed"
         ]
+        self.bounds_by_user = filter_definition_by_user[
+            "bounds"
+        ]
+        #---
 
         self.filter_definition["structure_thicknesses"] = np.array(
             self.filter_definition["structure_thicknesses"]

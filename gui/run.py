@@ -122,7 +122,7 @@ def stack():
     default_values["structure_thicknesses"] = my_filter.structure_thicknesses_by_user
     default_values["thickness_opt_allowed"] = my_filter.thickness_opt_allowed_by_user
     default_values["layer_switch_allowed"] = my_filter.layer_switch_allowed_by_user
-    default_values["bounds"] = my_filter.bounds
+    default_values["bounds"] = my_filter.bounds_by_user
     #     "calculation_type": my_filter.filter_definition["calculation_type"],
     #     "polarization": my_filter.filter_definition["polarization"],
     #     "polarAngleMin": my_filter.filter_definition["polarAngleMin"],
