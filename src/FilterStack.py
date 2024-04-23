@@ -141,6 +141,7 @@ class FilterStack:
         self.stop_flag = False
 
         self.initial_merit = 0
+        self.last_merit = 0
         self.iteration_no = 0
         self.callback_call = 0
         self.previous_layer_positions = np.arange(
@@ -732,7 +733,6 @@ class FilterStack:
                 # maxiter = 50000,
             )
         elif optimisation_type == "minimize":
-
             ret = minimize(
                 self.merit_function,
                 x0=x_initial,
@@ -743,6 +743,19 @@ class FilterStack:
                 # options={"xatol": 1e-1, "fatol": 1e-1},
                 callback=self.scipy_callback,
             )
+
+            # Rerun multiple times (10 for now)
+            for i in range(9):
+                ret = minimize(
+                    self.merit_function,
+                    x0=ret.x,
+                    bounds=bounds,
+                    method="Nelder-Mead",
+                    # the below values for xatol and fatol were found to prevent the function
+                    # from overoptimising
+                    # options={"xatol": 1e-1, "fatol": 1e-1},
+                    callback=self.scipy_callback,
+                )
 
         thicknesses, self.layer_order = (
             self.extract_thickness_and_position_from_features(ret.x)
@@ -911,6 +924,7 @@ class FilterStack:
                 f"merit | call #{str(self.iteration_no)} : {round(f / self.initial_merit, 9)} {round(f, 2)}"
             )
             self.last_log_time = current_time
+            self.last_merit = f
             if self.last_optimum_number < self.optimum_number:
                 self.log_func(
                     f"New optimum on call #{self.optimum_iteration} : {round(self.optimum_merit / self.initial_merit, 9)} {round(self.optimum_merit, 2)}"
