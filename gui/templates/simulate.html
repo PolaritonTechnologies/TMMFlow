@@ -57,6 +57,10 @@
     <main>
         <div class="row align-items-center ">
             <div class="col-6">
+                <div id="loading" class="spinner-border text-primary" role="status"
+                    style="position: absolute; display: none;">
+                    <span class="sr-only">Loading...</span>
+                </div>
                 <div class="row d-flex align-items-center justify-content-center">
                     <div id="heatmap" style="margin-bottom: 5em;"></div>
                 </div>
@@ -220,6 +224,9 @@
     Plotly.newPlot('heatmap', [dummyData], layout);
 
     document.getElementById("calculateButton").addEventListener("click", function () {
+        // Show the spinner
+        document.getElementById('loading').style.display = 'block';
+
         var mode = document.getElementById("mode").value;
         var polarization = document.getElementById("polarization").value;
         var azimuthalAngle = document.getElementById("azimuthalAngle").value;
@@ -245,6 +252,8 @@
         });
 
         document.getElementById("downloadModalButton").disabled = false;
+
+
     });
 
 
@@ -261,6 +270,8 @@
             // Trigger the plotting of another plot here
             socket.emit('plot_xy', { x: x });
         });
+        // Hide the spinner
+        document.getElementById('loading').style.display = 'none';
     });
 </script>
 

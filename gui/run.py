@@ -557,6 +557,7 @@ def calculate_and_plot(data):
     my_filter.calculate_ar_data(
         wavelengths,
         polar_angles,
+        azimuthal_angles = [float(data["azimuthalAngle"])], 
         target_type=target_type,
         polarization=polarization,
         web=True,

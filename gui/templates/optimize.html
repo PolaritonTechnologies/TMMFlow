@@ -60,6 +60,10 @@
                 <!-- Part 1 -->
                 <div class="col-6">
                     <div class="row mb-3">
+                        <div id="loadingOpt" class="spinner-border text-primary" role="status"
+                            style="position: absolute; display: none;">
+                            <span class="sr-only"></span>
+                        </div>
                         <div class="col-10 offset-1">
                             <form action="{{ url_for('optimize') }}" method="post">
                                 <div class="form-group">
@@ -124,7 +128,7 @@
         </div>
         <div class="position-relative">
             <div id="merit_graph"></div>
-            <div class="d-flex justify-content-end position-absolute" style="top: 1em; right: 0;">
+            <div class="d-flex justify-content-end position-absolute" style="top: 2em; right: 0;">
                 <div id="iterations" class="text-right mr-2"></div>
                 <div id="merit" class="text-right"></div>
             </div>
@@ -181,6 +185,8 @@
 
     document.getElementById('startOptimization').addEventListener('click', function (e) {
         e.preventDefault();
+        // Show the spinner
+        document.getElementById('loadingOpt').style.display = 'block';
 
         var optimizationMethod = document.getElementById('optimizationMethod').value;
 
@@ -193,6 +199,8 @@
         // Prevent form submission and page reload
         e.preventDefault();
 
+        // Remove the spinner 
+        document.getElementById('loadingOpt').style.display = 'none';
         socket.emit('stop_optimization');
     });
 
