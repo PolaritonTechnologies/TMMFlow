@@ -287,6 +287,8 @@
                             {% endfor %}
                         </table>
                         <button id="add_layer" type="button" class="btn btn-primary">Add Layer</button>
+                        <button id="add_incoherent_layer" type="button" class="btn btn-secondary">Add Incoherent
+                            Layer</button>
                     </td>
                 </tr>
 
@@ -519,6 +521,10 @@
             addRow('layers');
         });
 
+        document.getElementById('add_incoherent_layer').addEventListener('click', function () {
+            addRow('layers', 'incoherent');
+        });
+
         document.getElementById('add_target').addEventListener('click', function () {
             addRow('target');
         });
@@ -527,7 +533,7 @@
         // general core checkbox)
         let checkboxCounter = (document.querySelectorAll('input[type="checkbox"]').length - 1) / 2;
 
-        function addRow(tableId) {
+        function addRow(tableId, type = 'coherent') {
             var table = document.getElementById(tableId);
             var row = table.insertRow(-1);
             row.dataset.rowNumber = table.rows.length - 1;
@@ -535,7 +541,7 @@
             var cell1 = row.insertCell(0);
             cell1.textContent = row.dataset.rowNumber;
 
-            if (tableId === 'layers') {
+            if (tableId === 'layers' && type === 'coherent') {
                 var cell2 = row.insertCell(1);
                 var cell3 = row.insertCell(2);
                 var cell4 = row.insertCell(3);
@@ -606,6 +612,62 @@
                 cell7.innerHTML = '<button class="btn btn-success duplicate-row">x2</button>';
                 cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
                 checkboxCounter++;
+            } else if (tableId === 'layers' && type === "incoherent") {
+                // Use a different color for the incoherent layer
+                row.style.backgroundColor = "#D3D3D3";
+
+                var cell2 = row.insertCell(1);
+                var cell3 = row.insertCell(2);
+                var cell4 = row.insertCell(3);
+                var cell5 = row.insertCell(4);
+                var cell6 = row.insertCell(5);
+                var cell7 = row.insertCell(6);
+                var cell8 = row.insertCell(7);
+                cell2.innerHTML = `
+                    <select class="form-control select2">
+                        {% for material in default_values.available_materials %}
+                        {% if material == default_values.exit_medium %}
+                        <option value="{{ material }}" selected>{{ material }}</option>
+                        {% else %}
+                        <option value="{{ material }}">{{ material }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>`;
+
+                // Initialize Select2 on the new element
+                $(cell2).find('select').select2({
+                    theme: 'bootstrap',
+                    width: 'resolve',
+                    tags: true,
+                    createTag: function (params) {
+                        var term = $.trim(params.term);
+
+                        if (term === '') {
+                            return null;
+                        }
+
+                        return {
+                            id: term,
+                            text: term,
+                            newOption: true
+                        }
+                    },
+                    templateResult: function (data) {
+                        var $result = $("<span></span>");
+
+                        $result.text(data.text);
+
+                        if (data.newOption) {
+                            $result.append(" <em>(add new)</em>");
+                        }
+
+                        return $result;
+                    }
+                });
+
+                cell3.innerHTML = '<input type="text" class="form-control">';
+                cell7.innerHTML = '<button class="btn btn-success duplicate-row">x2</button>';
+                cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
             } else if (tableId === 'target') {
                 var cells = [];
                 for (var i = 1; i <= 10; i++) {
