@@ -780,6 +780,14 @@ def get_material_data(data):
 
     socketio.emit("material_data", data)
 
+@app.route("/download_material")
+def download_material():
+    file_name = request.args.get("fileName")
+    path_to_file = app.config["MATERIAL_FOLDER"] + file_name + ".csv"
+
+    return send_file(path_to_file, as_attachment=True)
+
+
 
 @app.route("/upload_material", methods=["POST"])
 def upload_material():

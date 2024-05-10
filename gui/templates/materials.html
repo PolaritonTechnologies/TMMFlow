@@ -43,13 +43,16 @@
     <main class="container-custom">
         <div class="row align-items-center ">
             <div class="col-2 d-flex flex-column justify-content-center">
-                <p> Select a material to plot </p>
+                <p> Select a material</p>
                 <div style="margin-bottom: 2em;">
                     <select name="materials" id="materials" class="form-control">
                         {% for material in available_materials %}
                         <option value="{{ material }}">{{ material }}</option>
                         {% endfor %}
                     </select>
+                </div>
+                <div style="margin-bottom: 2em;">
+                    <button class="btn btn-primary form-control" id="downloadButton">Download</button>
                 </div>
                 <p> Upload new material</p>
                 <input type="file" id="fileUpload" style="display: none;" />
@@ -124,6 +127,25 @@
         Plotly.ne
 
         Plotly.newPlot('plotDiv', traces, layout);
+    });
+</script>
+
+<script>
+    document.getElementById("downloadButton").addEventListener("click", function (e) {
+        e.preventDefault();
+        var fileName = document.getElementById("materials").value;
+
+        fetch('/download_material?fileName=' + fileName)
+            .then(response => response.blob())
+            .then(blob => {
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a); // we need to append the element to the dom -> otherwise it will not work in firefox
+                a.click();
+                a.remove();  //afterwards we remove the element again         
+            });
     });
 </script>
 
