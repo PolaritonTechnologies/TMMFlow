@@ -123,10 +123,27 @@
             },
             height: window.innerHeight * 0.7 // Set the height to 80% of the viewport height
         };
+        var config = {
+            modeBarButtonsToAdd: [{
+                name: 'Log Scale',
+                title: 'log',
+                click: function (gd) {
+                    var update = { 'yaxis.type': 'log' };
+                    Plotly.relayout(gd, update);
+                }
+            }, {
+                name: 'Linear Scale',
+                title: 'lin',
+                click: function (gd) {
+                    var update = { 'yaxis.type': 'linear' };
+                    Plotly.relayout(gd, update);
+                }
+            }]
+        };
 
         Plotly.ne
 
-        Plotly.newPlot('plotDiv', traces, layout);
+        Plotly.newPlot('plotDiv', traces, layout, config);
     });
 </script>
 

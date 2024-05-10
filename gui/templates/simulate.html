@@ -69,7 +69,8 @@
             <div class="col-6">
                 <div style="position: relative;">
                     <div id="DatavsWavelengthPlot"></div>
-                    <button id="resetPlot" class="btn btn-primary" style="position: absolute; top: 0; right: 0;">Reset
+                    <button id="resetPlot" class="btn btn-primary"
+                        style="position: absolute; top: 40px; right: 0;">Reset
                         Plot</button>
                 </div>
                 <div class="row d-flex align-items-center justify-content-center">
@@ -220,9 +221,62 @@
         xaxis: { title: "Angle (°)" },
         yaxis: { title: "Wavelength (nm)" },
     };
-
+    var config = {
+        modeBarButtonsToAdd: [{
+            name: 'Log Scale',
+            title: 'log',
+            click: function (gd) {
+                Plotly.restyle(gd, {
+                    // 'colorscale': [[
+                    //     [0, 'rgb(250, 250, 250)'],        //0
+                    //     [1, 'rgb(200, 200, 200)'], //10
+                    //     [2, 'rgb(150, 150, 150)'],  //100
+                    //     [3, 'rgb(100, 100, 100)'],   //1000
+                    //     [4. / 10, 'rgb(50, 50, 50)'],       //10000
+                    //     [5., 'rgb(0, 0, 0)']              //100000
+                    // ]],
+                    // 'colorbar.tick0': 10,
+                    // 'colorbar.tickmode': 'array',
+                    'colorbar.tickvals': [0, 1. / 10000, 1. / 1000, 1. / 100, 1. / 10, 1],
+                    'colorbar.ticktext': ['0', '1e-4', '1e-3', '1e-2', '1e-1', '1']
+                });
+            }
+        }, {
+            name: 'Linear Scale',
+            title: 'lin',
+            click: function (gd) {
+                Plotly.restyle(gd, {
+                    'colorscale': 'Viridis',
+                    'colorbar.tick0': 0,
+                    'colorbar.tickmode': 'array',
+                    'colorbar.tickvals': [0, 0.2, 0.4, 0.6, 0.8, 1],
+                    'colorbar.ticktext': ['0', '0.2', '0.4', '0.6', '0.8', '1']
+                });
+            }
+        }]
+    };
     // Plot the dummy heatmap when the page loads
-    Plotly.newPlot('heatmap', [dummyData], layout);
+    // Plotly.newPlot('heatmap', [dummyData], layout, config);
+    window.onload = function () {
+        var dataPresent = {{ default_values.dataPresent | tojson
+    }};
+    console.log("Data present: ", dataPresent);
+    if (dataPresent) {
+        socket.emit('plot');
+        socket.on('update_plot', function (data) {
+            var data = {
+                x: data.x,
+                y: data.y,
+                z: data.z,
+                colorscale: 'Viridis',
+                type: 'heatmap',
+            }
+            Plotly.newPlot("heatmap", [data], layout, config);
+        });
+    } else {
+        Plotly.newPlot('heatmap', [dummyData], layout, config);
+    }
+    };
 
     document.getElementById("calculateButton").addEventListener("click", function () {
         // Show the spinner
@@ -259,8 +313,14 @@
 
 
     socket.on("update_plot", function (fig_json) {
-        var fig = JSON.parse(fig_json);
-        Plotly.newPlot("heatmap", fig.data, layout);
+        var data = {
+            x: fig_json.x,
+            y: fig_json.y,
+            z: fig_json.z,
+            colorscale: 'Viridis',
+            type: 'heatmap',
+        }
+        Plotly.newPlot("heatmap", [data], layout, config);
         var heatmap = document.getElementById('heatmap');
 
         // Make the plot interactive: if the user clicks on the plot, plot another plot
@@ -286,7 +346,7 @@
 
     var data = [trace1];
 
-    var layout = {
+    var layout_xy = {
         xaxis: {
             title: 'Wavelength (nm)',
             showgrid: false,
@@ -294,11 +354,29 @@
         },
         yaxis: {
             title: 'Intensity (a.u.)',
-            showline: false
-        }
+            showline: false,
+            type: 'linear'  // set initial yaxis type to linear
+        },
+    };
+    var config_xy = {
+        modeBarButtonsToAdd: [{
+            name: 'Log Scale',
+            title: 'log',
+            click: function (gd) {
+                var update = { 'yaxis.type': 'log' };
+                Plotly.relayout(gd, update);
+            }
+        }, {
+            name: 'Linear Scale',
+            title: 'lin',
+            click: function (gd) {
+                var update = { 'yaxis.type': 'linear' };
+                Plotly.relayout(gd, update);
+            }
+        }]
     };
 
-    Plotly.newPlot('DatavsWavelengthPlot', data, layout);
+    Plotly.newPlot('DatavsWavelengthPlot', data, layout_xy, config_xy);
 
     var plottedAngles = {};
 
@@ -323,27 +401,13 @@
     });
 
     document.getElementById('resetPlot').addEventListener('click', function () {
-        Plotly.newPlot('DatavsWavelengthPlot', [], layout);
+        Plotly.newPlot('DatavsWavelengthPlot', [], layout_xy);
         plottedAngles = {};
     });
 
 
 </script>
 
-
-<script>
-    window.onload = function () {
-        var dataPresent = {{ default_values.dataPresent| tojson
-    }};
-    console.log("Data present: ", dataPresent);
-    if (dataPresent) {
-        socket.emit('plot');
-        socket.on('update_plot', function (data) {
-            // Handle the plot data here
-        });
-    }
-    };
-</script>
 
 <script>
     document.getElementById("downloadButton").addEventListener("click", function (e) {

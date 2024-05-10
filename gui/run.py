@@ -573,6 +573,17 @@ def calculate_and_plot(data):
     color_values = calculated_data_df.to_numpy()
 
     # The layout is stored in simulate.html
+    plotting_data = {
+        "x": angles.tolist(),
+        "y": wavelengths.tolist(),
+        "z": color_values.tolist(),
+    }
+
+    # Emit the figure to the client
+    socketio.emit("update_plot", plotting_data)
+
+
+    """
     heatmap = go.Heatmap(
         x=angles,
         y=wavelengths,
@@ -587,6 +598,7 @@ def calculate_and_plot(data):
 
     # Emit the figure in JSON format
     socketio.emit("update_plot", fig_json)
+    """
 
     # calculated_data_df = pd.DataFrame()
     # for theta in polar_angles:
@@ -637,21 +649,32 @@ def plot():
     wavelengths = calculated_data_df.index.to_numpy()
     color_values = calculated_data_df.to_numpy()
 
+    # # The layout is stored in simulate.html
+    # heatmap = go.Heatmap(
+    #     x=angles,
+    #     y=wavelengths,
+    #     z=color_values,
+    #     colorscale="Viridis",
+    # )
+
+    # fig = go.Figure(data=heatmap)
+
+    # # Convert the figure to JSON format
+    # fig_json = pio.to_json(fig)
+
+    # # Emit the figure in JSON format
+    # socketio.emit("update_plot", fig_json)
+
     # The layout is stored in simulate.html
-    heatmap = go.Heatmap(
-        x=angles,
-        y=wavelengths,
-        z=color_values,
-        colorscale="Viridis",
-    )
+    plotting_data = {
+        "x": angles.tolist(),
+        "y": wavelengths.tolist(),
+        "z": color_values.tolist(),
+    }
 
-    fig = go.Figure(data=heatmap)
+    # Emit the figure to the client
+    socketio.emit("update_plot", plotting_data)
 
-    # Convert the figure to JSON format
-    fig_json = pio.to_json(fig)
-
-    # Emit the figure in JSON format
-    socketio.emit("update_plot", fig_json)
 
 
 @socketio.on("plot_xy")
