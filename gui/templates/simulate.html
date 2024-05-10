@@ -85,10 +85,11 @@
                     <div class="form-group mx-3">
                         <label for="polarization">Polarization:</label>
                         <select id="polarization" class="form-control">
-                            <option value="s" {% if default_values.mode=="s" %}selected{% endif %}>
+                            <option value="s" {% if default_values.polarization=="s" %}selected{% endif %}>
                                 s</option>
-                            <option value="p" {% if default_values.mode=="p" %}selected{% endif %}>p</option>
-                            <option value="None" {% if default_values.mode=="" %}selected{% endif %}>None</option>
+                            <option value="p" {% if default_values.polarization=="p" %}selected{% endif %}>p</option>
+                            <option value="None" {% if default_values.polarization=="" %}selected{% endif %}>None
+                            </option>
                         </select>
                     </div>
 
@@ -101,7 +102,7 @@
                         <label for="generalCore">General Core:</label>
                         <div class="custom-control custom-switch">
                             <input type="checkbox" class="custom-control-input" id="generalCore" {% if
-                                default_values.generalCore %}checked{% endif %}>
+                                default_values.core_selection=="general" %} checked {% endif %}>
                             <label class="custom-control-label" for="generalCore"></label>
                         </div>
                     </div>
@@ -230,7 +231,7 @@
         var mode = document.getElementById("mode").value;
         var polarization = document.getElementById("polarization").value;
         var azimuthalAngle = document.getElementById("azimuthalAngle").value;
-        var generalCore = document.getElementById("generalCore").value;
+        var generalCore = document.getElementById("generalCore").checked;
         var startAngle = document.getElementById("startAngle").value;
         var endAngle = document.getElementById("endAngle").value;
         var stepAngle = document.getElementById("stepAngle").value;

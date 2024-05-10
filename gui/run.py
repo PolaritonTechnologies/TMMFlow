@@ -534,7 +534,9 @@ def reset_filter():
 
 @socketio.on("calculate_and_plot")
 def calculate_and_plot(data):
-    """ """
+    """ 
+    Calculate AR data and plot
+    """
     global my_filter
     wavelengths = np.arange(
         float(data["startWavelength"]),
@@ -560,6 +562,7 @@ def calculate_and_plot(data):
         azimuthal_angles = [float(data["azimuthalAngle"])], 
         target_type=target_type,
         polarization=polarization,
+        is_general_core=data["generalCore"],
         web=True,
     )
     calculated_data_df = my_filter.stored_data[0]

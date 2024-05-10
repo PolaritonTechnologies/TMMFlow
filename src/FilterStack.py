@@ -1180,6 +1180,7 @@ class FilterStack:
         azimuthal_angles=None,
         target_type=None,
         polarization=None,
+        is_general_core = False,
         save_figure=False,
         save_data=False,
         web=False,
@@ -1225,15 +1226,15 @@ class FilterStack:
         if polarization is None:
             polarization = self.filter_definition["polarization"]
 
-        if self.filter_definition["core_selection"] == "general":
-            is_general_core = True
-        elif self.filter_definition["core_selection"] == "fast":
-            is_general_core = False
-        else:
-            if polarization != "s":
-                is_general_core = self.lib.getGeneralMaterialsInStack()
-            else:
-                is_general_core = False
+        # if self.filter_definition["core_selection"] == "general":
+        #     is_general_core = True
+        # elif self.filter_definition["core_selection"] == "fast":
+        #     is_general_core = False
+        # else:
+        #     if polarization != "s":
+        #         is_general_core = self.lib.getGeneralMaterialsInStack()
+        #     else:
+        #         is_general_core = False
 
         initial_time = time.time()
 
