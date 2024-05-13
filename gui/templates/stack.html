@@ -16,6 +16,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-theme/0.1.0-beta.10/select2-bootstrap.min.css"
         rel="stylesheet" />
 
+    <!-- jQuery CDN -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
     <!-- Add jQuery, jQuery UI and Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
@@ -59,15 +61,44 @@
         <p>Upload a .json or .ofp file containing your filter design.</p>
         <section class="text-center my-5">
             <div>
-                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data"
+                <form id="uploadForm" method="post" enctype="multipart/form-data"
                     class="d-flex flex-column align-items-center">
                     <div class="custom-file">
                         <input type="file" class="custom-file-input" id="customFile" name="file">
                         <label class="custom-file-label" for="customFile">{{ default_values.file_label }}</label>
                     </div>
-                    <button type="submit" class="btn btn-primary mt-3" value="upload">Upload</button>
+                    <button type="submit" class="btn btn-primary mt-3" value="upload" id="upload_button">Upload</button>
                 </form>
 
+            </div>
+            <div class="modal" tabindex="-1" role="dialog" id="materialLoadModal">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Materials not found</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p> Please choose replacement materials </p>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Material</th>
+                                        <th scope="col">Replace with</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modalTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" id="acceptMaterialChoice">Accept</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
         <section class="row justify-content-center">
@@ -474,6 +505,110 @@
 
 </html>
 
+<script>
+    $('#uploadForm').on('submit', function (e) {
+        e.preventDefault();
+
+        var formData = new FormData(this);
+        $.ajax({
+            url: '/upload_file',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                if (response.error) {
+                    // show the modal with the error message
+                    var tableBody = $('#modalTableBody');
+                    tableBody.empty();
+                    console.log(response.mismatched_materials)
+
+                    $.each(response.mismatched_materials, function (i, material) {
+                        var row = $('<tr>');
+                        row.append('<td>' + material + '</td>');
+                        var select = $('<select class="form-control select2"></select>');
+                        $.each(response.available_materials, function (i, available_material) {
+                            select.append('<option>' + available_material + '</option>');
+                        });
+
+                        row.append($('<td>').append(select));
+                        tableBody.append(row);
+
+                    });
+
+                    $('.select2').select2();
+
+                    // Initialize Select2 on the new element
+                    $(tableBody).find('select').select2({
+                        theme: 'bootstrap',
+                        width: 'resolve',
+                        tags: true,
+                        createTag: function (params) {
+                            var term = $.trim(params.term);
+
+                            if (term === '') {
+                                return null;
+                            }
+
+                            return {
+                                id: term,
+                                text: term,
+                                newOption: true
+                            }
+                        },
+                        templateResult: function (data) {
+                            var $result = $("<span></span>");
+
+                            $result.text(data.text);
+
+                            if (data.newOption) {
+                                $result.append(" <em>(add new)</em>");
+                            }
+
+                            return $result;
+                        }
+                    });
+                    $('#materialLoadModal').modal('show');
+
+                } else if (response.redirect) {
+                    // redirect to the stack page
+                    window.location.href = response.redirect;
+                } else {
+                    console.log(3)
+                    // update the page with the filter stack data
+                }
+            }
+        });
+    });
+
+    // If the user input the new materials to replace the ones not existing in
+    // the database run upload file again replacing these
+    $(document).on('click', '#acceptMaterialChoice', function () {
+        var replacements = [];
+        $('#materialLoadModal .select2').each(function () {
+            replacements.push($(this).val());
+        });
+
+        var formData = new FormData($('#uploadForm')[0]);
+        formData.append('replacements', JSON.stringify(replacements));
+
+        $.ajax({
+            url: '/upload_file',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                if (response.redirect) {
+                    // redirect to the stack page
+                    window.location.href = response.redirect;
+                } else {
+                    // update the page with the filter stack data
+                }
+            }
+        });
+    });
+</script>
 
 <script>
     document.querySelector('.custom-file-input').addEventListener('change', function (e) {
@@ -866,10 +1001,10 @@
     });
 </script>
 
-<script>
+<!-- <script>
     // Pass the server-side variable to JavaScript
     var structureMaterials = {{ default_values.structure_materials | tojson | safe }};
 
     // Print the values to the console
     console.log(structureMaterials);
-</script>
+</script> -->

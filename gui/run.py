@@ -33,10 +33,7 @@ import pandas as pd
 import json
 import ast
 
-from utility import (
-    allowed_file,
-    generate_colors,
-)
+from utility import allowed_file, generate_colors, get_available_materials, is_number
 from open_filter_converter import import_from_open_filter, export_to_open_filter
 from FilterStack import FilterStack
 
@@ -97,13 +94,7 @@ def stack():
         ) = extract_filter_design(my_filter)
 
     # Specify the directory you want to search
-    directory = "../materials/"
-
-    material_list = [
-        os.path.splitext(f)[0]
-        for f in os.listdir(directory)
-        if os.path.isfile(os.path.join(directory, f)) and f.endswith(".csv")
-    ]
+    material_list = get_available_materials(app.config["MATERIAL_FOLDER"])
 
     default_values = {
         "num_boxes": num_boxes,
@@ -229,18 +220,8 @@ def optimize():
 
 @app.route("/materials")
 def materials():
-    # Specify the directory you want to search
-    directory = "../materials/"
-
-    # Get a list of all files in the directory
-    # file_list = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-
     # Get a list of all .csv files in the directory
-    material_list = [
-        os.path.splitext(f)[0]
-        for f in os.listdir(directory)
-        if os.path.isfile(os.path.join(directory, f)) and f.endswith(".csv")
-    ]
+    material_list = get_available_materials(app.config["MATERIAL_FOLDER"])
 
     return render_template("materials.html", available_materials=material_list)
 
@@ -311,6 +292,105 @@ def upload_file(provided_filename=None):
         selected_file = provided_filename
         filename = provided_filename
 
+    # Now check if the selected file is valid
+    ###
+    with open(selected_file, "r") as json_file_path:
+        filter_definition_json = json.load(json_file_path)
+
+    # Check that all materials in filter definition are available from the
+    # materials DB
+    temp_list_of_materials = [
+        (
+            a.split("_")[1:]
+            if np.size(a.split("_")) > 1 and is_number(a.split("_")[0])
+            else a
+        )
+        for a in np.unique(filter_definition_json["structure_materials"])
+    ]
+    list_of_materials_in_stack = np.unique(
+        [
+            item
+            for sublist in temp_list_of_materials
+            for item in (sublist if isinstance(sublist, list) else [sublist])
+        ]
+    )
+
+    available_materials = get_available_materials(app.config["MATERIAL_FOLDER"])
+
+    material_available = [
+        material in available_materials for material in list_of_materials_in_stack
+    ]
+
+    # If the use selected replacements from the modal already
+    if "replacements" in request.form:
+        replacements = np.array(request.form["replacements"].split('"'))[1::4]
+
+        # We need to reverse engineer, which of the following ones are not
+        # available.
+        if filter_definition_json["substrate_material"] not in available_materials:
+            filter_definition_json["substrate_material"] = replacements[-1]
+            replacements = np.delete(replacements, -1)
+        if filter_definition_json["incident_medium"] not in available_materials:
+            filter_definition_json["incident_medium"] = replacements[-1]
+            replacements = np.delete(replacements, -1)
+        if filter_definition_json["exit_medium"] not in available_materials:
+            filter_definition_json["exit_medium"] = replacements[-1] 
+            replacements = np.delete(replacements, -1)
+
+        # Check that the size of replacements matches the size of materials that
+        # were not found
+        if np.size(replacements) == np.sum(np.invert(material_available)):
+            # Iterate over all replacement elements, replace and save again to
+            # file so that the correct file is loaded in
+            for i in range(np.size(replacements)):
+                temp_structure_materials = np.array(
+                    filter_definition_json["structure_materials"]
+                )
+                temp_structure_materials[
+                    np.array(filter_definition_json["structure_materials"])
+                    == list_of_materials_in_stack[np.invert(material_available)][i]
+                ] = replacements[i]
+                filter_definition_json["structure_materials"] = (
+                    temp_structure_materials.tolist()
+                )
+
+            # Now save again to file
+            with open(selected_file, "w") as f:
+                json.dump(filter_definition_json, f)
+
+            material_available = True
+
+    if (
+        not np.all(material_available)
+        or filter_definition_json["exit_medium"] not in available_materials
+        or filter_definition_json["incident_medium"] not in available_materials
+        or filter_definition_json["substrate_material"] not in available_materials
+    ):
+        # This is a bit more complicated, as each of the materials could
+        # potentially not be available
+        unavailable_materials = []
+        if not np.all(material_available):
+            unavailable_materials = (unavailable_materials + list_of_materials_in_stack[ np.invert(material_available)].tolist())
+        if filter_definition_json["exit_medium"] not in available_materials:
+            unavailable_materials.append(filter_definition_json["exit_medium"])
+        if filter_definition_json["incident_medium"] not in available_materials:
+            unavailable_materials.append(filter_definition_json["incident_medium"])
+        if filter_definition_json["substrate_material"] not in available_materials:
+            unavailable_materials.append(filter_definition_json["substrate_material"])
+
+        # open a modal to inform the user that some materials are not available
+        # and break the loading (or better for the future: open a modal that
+        # lets the user select the materials to choose instead)
+        return jsonify(
+            {
+                "error": "Some materials are not available",
+                "mismatched_materials": unavailable_materials,
+                "available_materials": available_materials,
+            }
+        )
+
+    ###
+
     # Create the filter and construct the filter stack representation
     my_filter = FilterStack(selected_file)
     (
@@ -333,7 +413,7 @@ def upload_file(provided_filename=None):
         )
 
     else:
-        return redirect(url_for("stack"))
+        return jsonify({"redirect": url_for("stack")})
         # return render_template(
         # "stack.html",
         # num_boxes=num_boxes,
@@ -534,7 +614,7 @@ def reset_filter():
 
 @socketio.on("calculate_and_plot")
 def calculate_and_plot(data):
-    """ 
+    """
     Calculate AR data and plot
     """
     global my_filter
@@ -559,7 +639,7 @@ def calculate_and_plot(data):
     my_filter.calculate_ar_data(
         wavelengths,
         polar_angles,
-        azimuthal_angles = [float(data["azimuthalAngle"])], 
+        azimuthal_angles=[float(data["azimuthalAngle"])],
         target_type=target_type,
         polarization=polarization,
         is_general_core=data["generalCore"],
@@ -581,7 +661,6 @@ def calculate_and_plot(data):
 
     # Emit the figure to the client
     socketio.emit("update_plot", plotting_data)
-
 
     """
     heatmap = go.Heatmap(
@@ -674,7 +753,6 @@ def plot():
 
     # Emit the figure to the client
     socketio.emit("update_plot", plotting_data)
-
 
 
 @socketio.on("plot_xy")
@@ -806,13 +884,13 @@ def get_material_data(data):
 
     socketio.emit("material_data", data)
 
+
 @app.route("/download_material")
 def download_material():
     file_name = request.args.get("fileName")
     path_to_file = app.config["MATERIAL_FOLDER"] + file_name + ".csv"
 
     return send_file(path_to_file, as_attachment=True)
-
 
 
 @app.route("/upload_material", methods=["POST"])
