@@ -237,7 +237,7 @@
                             <tr class="draggable">
                                 <td>{{ i+1 }}</td>
                                 <td>
-                                    <select class="form-control select2">
+                                    <select class="form-control select2" autocomplete="off">
                                         <!-- Add an option for the selected material -->
                                         <option value="{{ default_values.structure_materials[i] }}" selected>{{
                                             default_values.structure_materials[i] }}</option>
@@ -864,4 +864,12 @@
             }
         });
     });
+</script>
+
+<script>
+    // Pass the server-side variable to JavaScript
+    var structureMaterials = {{ default_values.structure_materials | tojson | safe }};
+
+    // Print the values to the console
+    console.log(structureMaterials);
 </script>
