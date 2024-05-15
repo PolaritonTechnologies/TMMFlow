@@ -16,6 +16,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-theme/0.1.0-beta.10/select2-bootstrap.min.css"
         rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
 
     <!-- Add jQuery, jQuery UI and Bootstrap JS -->
@@ -66,14 +67,25 @@
                         </div>
                         <div class="col-10 offset-1">
                             <form action="{{ url_for('optimize') }}" method="post">
-                                <div class="form-group">
-                                    <label for="optimizationMethod">Select Optimization Method</label>
-                                    <select class="form-control" id="optimizationMethod" name="optimizationMethod">
-                                        <option value="minimize">Nelder-Mead</option>
-                                        <option value="dual_annealing">Dual annealing</option>
-                                        <option value="basinhopping">Basin Hopping</option>
-                                        <option value="differential_evolution">Differential Evolution</option>
-                                    </select>
+                                <label for="selectedMethods">Selected Optimization Methods</label>
+                                <div id="selectedMethods" class="list-group mb-3"></div>
+                                <label for="optimizationMethod">Optimization Method</label>
+                                <div class="form-group row">
+                                    <div class="col-sm-10">
+                                        <select class="form-control" id="optimizationMethod" name="optimizationMethod">
+                                            <option value="minimize">Nelder-Mead</option>
+                                            <option value="dual_annealing">Dual annealing</option>
+                                            <option value="basinhopping">Basin Hopping</option>
+                                            <option value="differential_evolution">Differential Evolution</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-1">
+                                        <button type="button"
+                                            class="btn btn-success rounded-circle d-flex align-items-center justify-content-center"
+                                            style="width: 1em; height: 1em; padding: 1em;" id="addOptButton">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -98,14 +110,19 @@
                 <div class="col-6">
                     <section class="row justify-content-center">
                         <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
-                            <div class="container">
+                            <div class="container"
+                                style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
                                 {% if num_boxes and colors is defined %}
-                                {% for _ in range(num_boxes) %}
+                                {% for i in range(num_boxes)|reverse %}
                                 <div class="box"
-                                    style="background-color: {{ colors[loop.index0 % colors|length] }}; height: {{ heights[loop.index0 % heights|length] }}px;">
+                                    style="background-color: {{ colors[i % colors|length] }}; height: {{ heights[i % heights|length] }}px;">
                                 </div>
                                 {% endfor %}
                                 {% endif %}
+                                <div class="substrate_box"
+                                    style="background-color:#A9A9A9; height: 50px; display: flex; justify-content: center; align-items: center;">
+                                    Substrate
+                                </div>
                             </div>
                         </div>
                         <div class="col-lg-6 col-md-6">
@@ -246,4 +263,33 @@
 
     });
 
+</script>
+
+<script>
+    $('#addOptButton').click(function () {
+        var selectedMethod = $('#optimizationMethod').val();
+        var methodElement = $('<div>').addClass('list-group-item d-flex').text(selectedMethod);
+        var numberElement = $('<div>').addClass('mr-2 number').text('');
+        var removeButton = $('<button>').addClass('btn btn-sm btn-danger ml-auto').text('-').click(function () {
+            $(this).parent().remove();
+            updateNumbers();
+        });
+        methodElement.prepend(numberElement);
+        methodElement.append(removeButton);
+        $('#selectedMethods').append(methodElement);
+        updateNumbers();
+    });
+
+    $('#selectedMethods').sortable({
+        stop: function () {
+            updateNumbers();
+        }
+    });
+
+    function updateNumbers() {
+        $('.number').each(function (index) {
+            $(this).text(index + 1);
+        });
+    }
+    $('#selectedMethods').sortable();
 </script>
