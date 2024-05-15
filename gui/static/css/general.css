@@ -73,6 +73,14 @@ footer {
     padding: 0px;
     margin: 0px;
 }
+.substrate_box {
+    width: 110%;
+    /* height: 1em; */
+    border: 1px solid black;
+    /* background-color: blue; */
+    padding: 0px;
+    margin: 0px;
+}
 
 button:disabled {
     background-color: grey;
@@ -95,4 +103,9 @@ input[type="number"] {
 
 .select2-container {
     width: 100% !important;
+}
+
+#selectedMethods {
+    max-height: 200px; /* Adjust this value as needed */
+    overflow-y: auto;
 }

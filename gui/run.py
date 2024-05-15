@@ -501,17 +501,17 @@ def save_json():
     )
 
     layers = np.array(data[10].get("0").get("values"))
-    data_to_json["structure_materials"] = layers[0::6].tolist()
-    data_to_json["structure_thicknesses"] = np.array(
+    data_to_json["structure_materials"] = np.flip(layers[0::6]).tolist()
+    data_to_json["structure_thicknesses"] = np.flip(np.array(
         [ast.literal_eval(i) if "," in i else float(i) for i in layers[1::6]],
         dtype=object,
-    ).tolist()
-    data_to_json["thickness_opt_allowed"] = [s.lower() == "true" for s in layers[2::6]]
-    data_to_json["bounds"] = [
+    )).tolist()
+    data_to_json["thickness_opt_allowed"] = np.flip([s.lower() == "true" for s in layers[2::6]]).tolist()
+    data_to_json["bounds"] = np.flip([
         [float(x), float(y)] if y != "" else float(x)
         for x, y in zip(layers[3::6].tolist(), layers[4::6].tolist())
-    ]
-    data_to_json["layer_switch_allowed"] = [s.lower() == "true" for s in layers[5::6]]
+    ]).tolist()
+    data_to_json["layer_switch_allowed"] = np.flip([s.lower() == "true" for s in layers[5::6]]).tolist()
 
     targets = np.array(data[11].get("0").get("values"))
     data_to_json["targets_type"] = targets[0::14].tolist()

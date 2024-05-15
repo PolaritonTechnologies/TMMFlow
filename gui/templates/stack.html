@@ -103,14 +103,27 @@
         </section>
         <section class="row justify-content-center">
             <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
-                <div class="container">
+                <div class="container"
+                    style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <div class="arrow-container"
+                        style="position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div class="arrow-line" style="width: 2px; height: 50px; background-color: black;"></div>
+                        <div class="arrow"
+                            style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 20px solid black; margin-bottom: 10px;">
+                        </div>
+                    </div>
+
                     {% if default_values.num_boxes and default_values.colors is defined %}
-                    {% for _ in range(default_values.num_boxes) %}
+                    {% for i in range(default_values.num_boxes)|reverse %}
                     <div class="box"
-                        style="background-color: {{ default_values.colors[loop.index0 % default_values.colors|length] }}; height: {{ default_values.heights[loop.index0 % default_values.heights|length] }}px;">
+                        style="background-color: {{ default_values.colors[i % default_values.colors|length] }}; height: {{ default_values.heights[i % default_values.heights|length] }}px;">
                     </div>
                     {% endfor %}
                     {% endif %}
+                    <div class="substrate_box"
+                        style="background-color:#A9A9A9; height: 50px; display: flex; justify-content: center; align-items: center;">
+                        Substrate
+                    </div>
                 </div>
             </div>
             <div class="col-lg-2 col-md-4">
@@ -255,71 +268,79 @@
                 </tr>
                 <tr>
                     <td colspan="4">
-                        <table id="layers" class="table">
-                            <tr>
-                                <th>Layer</th>
-                                <th>Value</th>
-                                <th>Thickness</th>
-                                <th>Thickness Opt</th>
-                                <th>Thickness Bounds</th>
-                                <th>Position Opt</th>
-                            </tr>
-                            {% for i in range(default_values.structure_materials|length) %}
-                            <tr class="draggable">
-                                <td>{{ i+1 }}</td>
-                                <td>
-                                    <select class="form-control select2" autocomplete="off">
-                                        <!-- Add an option for the selected material -->
-                                        <option value="{{ default_values.structure_materials[i] }}" selected>{{
-                                            default_values.structure_materials[i] }}</option>
 
-                                        {% for material in default_values.available_materials %}
-                                        <!-- Only add an option for the material if it is not the selected material -->
-                                        {% if material != default_values.structure_materials[i] %}
-                                        <option value="{{ material }}">{{ material }}</option>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td><input type="text" class="form-control"
-                                        value="{{ default_values.structure_thicknesses[i] }}"></td>
-                                <td>
-                                    <div class="custom-control custom-checkbox">
-                                        <input type="checkbox" class="custom-control-input"
-                                            id="checkbox_thickness_opt_{{ i }}" {% if
-                                            default_values.thickness_opt_allowed[i] %}checked{% endif %}>
-                                        <label class="custom-control-label"
-                                            for="checkbox_thickness_opt_{{ i }}"></label>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control" placeholder="Min"
-                                            value="{{ default_values.bounds[i][0] }}">
-                                        <input type="number" class="form-control" placeholder="Max"
-                                            value="{{ default_values.bounds[i][1] }}">
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="custom-control custom-checkbox">
-                                        <input type="checkbox" class="custom-control-input"
-                                            name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}" {%
-                                            if default_values.layer_switch_allowed[i] %}checked{% endif %}>
-                                        <label class="custom-control-label" for="checkbox_layer_switch_{{ i }}"></label>
-                                    </div>
-                                </td>
-                                <td>
-                                    <button class="btn btn-success duplicate-row">x2</button>
-                                </td>
-                                <td>
-                                    <button class="btn btn-danger delete-row">Delete</button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                        <button id="add_layer" type="button" class="btn btn-primary">Add Layer</button>
-                        <button id="add_incoherent_layer" type="button" class="btn btn-secondary">Add Incoherent
+                        <button id="add_layer" type="button" class="btn btn-primary" style="margin-bottom: 1em;">Add
                             Layer</button>
+                        <button id="add_incoherent_layer" type="button" class="btn btn-secondary"
+                            style="margin-bottom: 1em;">Add Incoherent
+                            Layer</button>
+                        <table id="layers" class="table">
+                            <thead>
+                                <tr>
+                                    <th>Layer</th>
+                                    <th>Value</th>
+                                    <th>Thickness</th>
+                                    <th>Thickness Opt</th>
+                                    <th>Thickness Bounds</th>
+                                    <th>Position Opt</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(default_values.structure_materials|length)|reverse %}
+                                <tr class="draggable">
+                                    <td>{{ i+1 }}</td>
+                                    <td>
+                                        <select class="form-control select2" autocomplete="off">
+                                            <!-- Add an option for the selected material -->
+                                            <option value="{{ default_values.structure_materials[i] }}" selected>{{
+                                                default_values.structure_materials[i] }}</option>
+
+                                            {% for material in default_values.available_materials %}
+                                            <!-- Only add an option for the material if it is not the selected material -->
+                                            {% if material != default_values.structure_materials[i] %}
+                                            <option value="{{ material }}">{{ material }}</option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td><input type="text" class="form-control"
+                                            value="{{ default_values.structure_thicknesses[i] }}"></td>
+                                    <td>
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input"
+                                                id="checkbox_thickness_opt_{{ i }}" {% if
+                                                default_values.thickness_opt_allowed[i] %}checked{% endif %}>
+                                            <label class="custom-control-label"
+                                                for="checkbox_thickness_opt_{{ i }}"></label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" placeholder="Min"
+                                                value="{{ default_values.bounds[i][0] }}">
+                                            <input type="number" class="form-control" placeholder="Max"
+                                                value="{{ default_values.bounds[i][1] }}">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input"
+                                                name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}"
+                                                {% if default_values.layer_switch_allowed[i] %}checked{% endif %}>
+                                            <label class="custom-control-label"
+                                                for="checkbox_layer_switch_{{ i }}"></label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-success duplicate-row">x2</button>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger delete-row">Delete</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </td>
                 </tr>
 
@@ -624,15 +645,30 @@
     $(function () {
         // Function to make table rows draggable
         function makeRowsDraggable() {
-            $("#layers tbody, #target tbody").sortable({
+            $("#layers tbody").sortable({
+                items: ".draggable",
+                cursor: 'move',
+                opacity: 0.6,
+                stop: function () {
+                    // Update row numbers after drag and drop
+                    var totalRows = $(this).find("tr").length;
+                    $(this).find("tr").each(function (index) {
+                        var rowNumber = totalRows - index;
+                        $(this).data('row-number', rowNumber);
+                        $(this).find("td:first").text(rowNumber);
+                    });
+                }
+            });
+            $("#target tbody").sortable({
                 items: ".draggable",
                 cursor: 'move',
                 opacity: 0.6,
                 stop: function () {
                     // Update row numbers after drag and drop
                     $(this).find("tr").each(function (index) {
-                        $(this).data('row-number', index);
-                        $(this).find("td:first").text($(this).data('row-number'));
+                        var rowNumber = index;
+                        $(this).data('row-number', rowNumber);
+                        $(this).find("td:first").text(rowNumber);
                     });
                 }
             });
@@ -642,14 +678,29 @@
         makeRowsDraggable();
 
         // Delete row on button click
-        $("#layers, #target").on("click", ".delete-row", function () {
+        $("#layers").on("click", ".delete-row", function () {
+            var tbody = $(this).closest("tbody");
             $(this).closest("tr").remove();
 
             // Update row numbers after deletion
-            $(this).closest("tbody").find("tr").each(function (index) {
-                $(this).data('row-number', index + 1);
-                $(this).find("td:first").text($(this).data('row-number'));
+            var totalRows = tbody.find("tr").length;
+            tbody.find("tr").each(function (index) {
+                var rowNumber = totalRows - index;
+                $(this).data('row-number', rowNumber);
+                $(this).find("td:first").text(rowNumber);
             });
+        });
+        $("#target").on("click", ".delete-row", function () {
+            var tbody = $(this).closest("tbody");
+            $(this).closest("tr").remove();
+
+            // Update row numbers after deletion
+            tbody.find("tr").each(function (index) {
+                var rowNumber = index;
+                $(this).data('row-number', rowNumber);
+                $(this).find("td:first").text(rowNumber);
+            });
+
         });
 
         document.getElementById('add_layer').addEventListener('click', function () {
@@ -670,7 +721,11 @@
 
         function addRow(tableId, type = 'coherent') {
             var table = document.getElementById(tableId);
-            var row = table.insertRow(-1);
+            if (tableId == "target") {
+                var row = table.insertRow(-1);
+            } else {
+                var row = table.insertRow(1);
+            }
             row.dataset.rowNumber = table.rows.length - 1;
             row.className = 'draggable';
             var cell1 = row.insertCell(0);
@@ -867,7 +922,7 @@
             var clone = row.clone();  // Clone the row
 
             // Get the number of the last row
-            var lastRowNumber = parseInt($('#layers tr:last-child td:first-child').text());
+            var lastRowNumber = parseInt($('#layers tr:first-child td:first-child').text());
 
             // Set the number of the new row
             clone.find('td:first-child').text(lastRowNumber + 1);
@@ -875,7 +930,7 @@
             // Copy the styles from the original row to the cloned row
             clone.attr('style', row.attr('style'));
 
-            $('#layers').append(clone);  // Append the row to the table
+            $('#layers tbody').prepend(clone);  // Append the row to the table
         });
     });
 </script>
