@@ -109,8 +109,18 @@ def stack():
 
     # Add the entire filter definition to the default values to render it
     default_values.update(my_filter.filter_definition)
-    default_values["structure_materials"] = my_filter.structure_materials_by_user
-    default_values["structure_thicknesses"] = my_filter.structure_thicknesses_by_user
+    temp_material_list = my_filter.structure_materials_by_user
+    default_values["structure_materials"] = [
+        (
+            item.split("_")[0] + "_" + "_".join(item.split("_")[1:][::-1])
+            if "_" in item
+            else item
+        )
+        for item in temp_material_list
+    ]
+    default_values["structure_thicknesses"] = [
+        np.flip(a).tolist() for a in my_filter.structure_thicknesses_by_user
+    ]
     default_values["thickness_opt_allowed"] = my_filter.thickness_opt_allowed_by_user
     default_values["layer_switch_allowed"] = my_filter.layer_switch_allowed_by_user
     default_values["bounds"] = my_filter.bounds_by_user
@@ -334,7 +344,7 @@ def upload_file(provided_filename=None):
             filter_definition_json["incident_medium"] = replacements[-1]
             replacements = np.delete(replacements, -1)
         if filter_definition_json["exit_medium"] not in available_materials:
-            filter_definition_json["exit_medium"] = replacements[-1] 
+            filter_definition_json["exit_medium"] = replacements[-1]
             replacements = np.delete(replacements, -1)
 
         # Check that the size of replacements matches the size of materials that
@@ -370,7 +380,10 @@ def upload_file(provided_filename=None):
         # potentially not be available
         unavailable_materials = []
         if not np.all(material_available):
-            unavailable_materials = (unavailable_materials + list_of_materials_in_stack[ np.invert(material_available)].tolist())
+            unavailable_materials = (
+                unavailable_materials
+                + list_of_materials_in_stack[np.invert(material_available)].tolist()
+            )
         if filter_definition_json["exit_medium"] not in available_materials:
             unavailable_materials.append(filter_definition_json["exit_medium"])
         if filter_definition_json["incident_medium"] not in available_materials:
@@ -501,17 +514,42 @@ def save_json():
     )
 
     layers = np.array(data[10].get("0").get("values"))
-    data_to_json["structure_materials"] = np.flip(layers[0::6]).tolist()
-    data_to_json["structure_thicknesses"] = np.flip(np.array(
-        [ast.literal_eval(i) if "," in i else float(i) for i in layers[1::6]],
-        dtype=object,
-    )).tolist()
-    data_to_json["thickness_opt_allowed"] = np.flip([s.lower() == "true" for s in layers[2::6]]).tolist()
-    data_to_json["bounds"] = np.flip([
-        [float(x), float(y)] if y != "" else float(x)
-        for x, y in zip(layers[3::6].tolist(), layers[4::6].tolist())
-    ]).tolist()
-    data_to_json["layer_switch_allowed"] = np.flip([s.lower() == "true" for s in layers[5::6]]).tolist()
+    # Because of the way the structures are displayed (being different to the
+    # order in the .json file), all entries concerning a layers must be flipped
+    # here. Additionally, all entries containing muliple materials (e.g.
+    # 5_SiO2_Ta2O5), have to be reverted, too (5_Ta2O5_SiO2) so that things make
+    # sense. This is slighty confusing, however, and we should consider changing
+    # the order in the .json file instead.
+    temp_material_list = np.flip(layers[0::6]).tolist()
+    data_to_json["structure_materials"] = [
+        (
+            item.split("_")[0] + "_" + "_".join(item.split("_")[1:][::-1])
+            if "_" in item
+            else item
+        )
+        for item in temp_material_list
+    ]
+    temp_structure_thicknesses = np.flip(
+        np.array(
+            [ast.literal_eval(i) if "," in i else float(i) for i in layers[1::6]],
+            dtype=object,
+        )
+    ).tolist()
+    data_to_json["structure_thicknesses"] = [
+        np.flip(a).tolist() for a in temp_structure_thicknesses
+    ]
+    data_to_json["thickness_opt_allowed"] = np.flip(
+        [s.lower() == "true" for s in layers[2::6]]
+    ).tolist()
+    data_to_json["bounds"] = np.flip(
+        [
+            [float(x), float(y)] if y != "" else float(x)
+            for x, y in zip(layers[3::6].tolist(), layers[4::6].tolist())
+        ], axis = 0
+    ).tolist()
+    data_to_json["layer_switch_allowed"] = np.flip(
+        [s.lower() == "true" for s in layers[5::6]]
+    ).tolist()
 
     targets = np.array(data[11].get("0").get("values"))
     data_to_json["targets_type"] = targets[0::14].tolist()
