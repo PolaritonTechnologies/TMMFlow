@@ -189,27 +189,27 @@ def export_to_open_filter(dictionary_input, file_name):
     to_export = ""
 
     header = f"""Version: 1.1.1
-            Comment:
-            End
-            Filter:
-                Substrate: {dictionary_input['substrate_material']} {dictionary_input['substrate_thickness']}
-                FrontMedium: {dictionary_input['incident_medium'] if dictionary_input == 'Air' else 'void'}
-                BackMedium: {dictionary_input['exit_medium'] if dictionary_input == 'Air' else 'void'}
-                CenterWavelength: 450.000000
-                WavelengthRange: {dictionary_input['wavelengthMin']} {dictionary_input['wavelengthMax']} {dictionary_input['wavelengthStep']}
-                DontConsiderSubstrate: 0
-                StepSpacing: 0.010000
-                MinimumThickness: 0.000000
-                Illuminant: CIE-D65
-                Observer: CIE-1931
-                ConsiderBackside: 1
-                EllipsometerType: 1
-                DeltaMin: -90.000000
-                ConsiderBacksideOnMonitoring: 1
-                MonitoringEllipsometerType: 1
-                MonitoringDeltaMin: -90.000000
-                MonitoringSublayerThickness: 1.000000
-            """
+    Comment:
+    End
+    Filter:
+        Substrate: {dictionary_input['substrate_material']} {dictionary_input['substrate_thickness']}
+        FrontMedium: {dictionary_input['incident_medium'] if dictionary_input == 'Air' else 'void'}
+        BackMedium: {dictionary_input['exit_medium'] if dictionary_input == 'Air' else 'void'}
+        CenterWavelength: 450.000000
+        WavelengthRange: {dictionary_input['wavelengthMin']} {dictionary_input['wavelengthMax']} {dictionary_input['wavelengthStep']}
+        DontConsiderSubstrate: 0
+        StepSpacing: 0.010000
+        MinimumThickness: 0.000000
+        Illuminant: CIE-D65
+        Observer: CIE-1931
+        ConsiderBackside: 1
+        EllipsometerType: 1
+        DeltaMin: -90.000000
+        ConsiderBacksideOnMonitoring: 1
+        MonitoringEllipsometerType: 1
+        MonitoringDeltaMin: -90.000000
+        MonitoringSublayerThickness: 1.000000
+    """
 
     to_export = to_export + header
 
@@ -253,14 +253,15 @@ def export_to_open_filter(dictionary_input, file_name):
     Points: 
         {dictionary_input['targets_wavelengths'][i][0]}\t{dictionary_input['targets_value'][i]}\t{dictionary_input['targets_tolerance'][i]}
         {dictionary_input['targets_wavelengths'][i][1]}\t{dictionary_input['targets_value'][i]}\t{dictionary_input['targets_tolerance'][i]}
-    End"""
+    End
+"""
             if dictionary_input["targets_condition"][i] != "":
                 target_block = (
                     target_block
                     + f"""
         {dictionary_condition[dictionary_input['targets_condition'][i]]}
-    End
-    """
+End
+"""
                 )
         else:
             target_block = f"""Target:
@@ -271,14 +272,14 @@ def export_to_open_filter(dictionary_input, file_name):
     Wavelength: {dictionary_input['targets_wavelengths'][i]}
     Value: {dictionary_input['targets_value'][i]}
     Tolerance: {dictionary_input['targets_tolerance'][i]}
-End"""
+    """
 
             if dictionary_input["targets_condition"][i] != "":
                 target_block = (
                     target_block
-                    + f"""Inequality: {dictionary_condition[dictionary_input['targets_condition'][i]]}
-    End
-    """
+                    + f"""{dictionary_condition[dictionary_input['targets_condition'][i]]}
+End
+"""
                 )
         to_export = to_export + target_block
 
