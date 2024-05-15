@@ -61,10 +61,10 @@
                 <!-- Part 1 -->
                 <div class="col-6">
                     <div class="row mb-3">
-                        <div id="loadingOpt" class="spinner-border text-primary" role="status"
-                            style="position: absolute; display: none;">
-                            <span class="sr-only"></span>
-                        </div>
+                        <!-- <div id="loadingOpt" class="spinner-border text-primary" role="status" -->
+                        <!-- style="position: absolute; display: none;"> -->
+                        <!-- <span class="sr-only"></span> -->
+                        <!-- </div> -->
                         <div class="col-10 offset-1">
                             <form action="{{ url_for('optimize') }}" method="post">
                                 <label for="selectedMethods">Selected Optimization Methods</label>
@@ -202,7 +202,7 @@
     document.getElementById('startOptimization').addEventListener('click', function (e) {
         e.preventDefault();
         // Show the spinner
-        document.getElementById('loadingOpt').style.display = 'block';
+        // document.getElementById('loadingOpt').style.display = 'block';
 
         var optimizationMethod = document.getElementById('optimizationMethod').value;
 
@@ -216,7 +216,7 @@
         e.preventDefault();
 
         // Remove the spinner 
-        document.getElementById('loadingOpt').style.display = 'none';
+        // document.getElementById('loadingOpt').style.display = 'none';
         socket.emit('stop_optimization');
     });
 

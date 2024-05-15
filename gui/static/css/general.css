@@ -106,6 +106,13 @@ input[type="number"] {
 }
 
 #selectedMethods {
-    max-height: 200px; /* Adjust this value as needed */
+    max-height: 10em; /* Adjust this value as needed */
     overflow-y: auto;
+}
+
+.list-group-item {
+    height: 3em; /* Adjust this value to your liking */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
