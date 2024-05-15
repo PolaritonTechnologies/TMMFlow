@@ -592,6 +592,8 @@ def save_json():
 
 @app.route("/download")
 def download_file():
+    global my_filter
+
     file_ending = request.args.get("fileEnding")
     if file_ending == ".json":
         # Handle .json file ending
@@ -599,11 +601,12 @@ def download_file():
         return send_file(path_to_file, as_attachment=True)
     elif file_ending == ".ofp":
         # Handle .ofp file ending
-        # First convert the .json file to .ofp
-        input_file = selected_file
-        with open(input_file, "r") as input_file:
-            input_dic = json.load(input_file)
+        # First convert the cpp .json file to .ofp
+        path_to_file = my_filter.json_file_path_cpp
 
+        with open(path_to_file, "r") as input_file:
+            input_dic = json.load(input_file)
+        
         path_to_file = export_to_open_filter(
             input_dic, selected_file.split("/")[-1].split(".")[0] + "_converted"
         )
