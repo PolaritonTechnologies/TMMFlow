@@ -7,7 +7,7 @@ def allowed_file(filename):
 
 
 def generate_colors(n):
-    cmap = plt.cm.get_cmap("viridis", n)  # Get the 'viridis' color map
+    cmap = plt.cm.get_cmap("Dark2", n)  # Get the 'viridis' color map
     colors = [cmap(i) for i in range(cmap.N)]  # Generate colors
     # Convert RGB colors to hex
     hex_colors = [
