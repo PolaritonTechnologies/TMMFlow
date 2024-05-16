@@ -56,6 +56,10 @@ my_filter = None
 selected_file = None
 default_file = "../examples/demo_test.json"
 
+# Copy default file to temp folder and then use the copied file
+shutil.copy(default_file, app.config["UPLOAD_FOLDER"] + default_file.split("/")[-1])
+temp_default_file = app.config["UPLOAD_FOLDER"] + default_file.split("/")[-1]
+
 # num_boxes = None
 # colors = None
 # heights = None
@@ -70,7 +74,7 @@ default_file = "../examples/demo_test.json"
 @app.route("/", methods=["GET", "POST"])
 def stack():
     global my_filter
-    global default_file
+    global temp_default_file
 
     # If filter has not yet been selected, load the default filter and display
     # its structure, else
@@ -82,7 +86,7 @@ def stack():
             num_legend_items,
             unique_materials,
             unique_colors,
-        ) = upload_file(default_file)
+        ) = upload_file(temp_default_file)
     else:
         (
             num_boxes,
@@ -196,7 +200,7 @@ def simulate():
 @app.route("/optimize", methods=["GET", "POST"])
 def optimize():
     global my_filter
-    global default_file
+    global temp_default_file
 
     if my_filter is None:
         (
@@ -206,7 +210,7 @@ def optimize():
             num_legend_items,
             unique_materials,
             unique_colors,
-        ) = upload_file(default_file)
+        ) = upload_file(temp_default_file)
     else:
         (
             num_boxes,
@@ -298,9 +302,9 @@ def upload_file(provided_filename=None):
                 selected_file = json_path
 
     else:
-        # If provided_filename is provided, use it as the selected file
+
+        # If provided_filename is not none, use it as the selected file
         selected_file = provided_filename
-        filename = provided_filename
 
     # Now check if the selected file is valid
     ###
