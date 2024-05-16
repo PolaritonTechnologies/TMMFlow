@@ -73,14 +73,14 @@ class FilterStack:
 
         # translate json file to a readable format for the C++ code that does
         # not involve abbreviations that we use for filter design
-        json_file_path_cpp = self.translate_order_for_cpp(filter_definition_by_user)
+        self.json_file_path_cpp = self.translate_order_for_cpp(filter_definition_by_user)
 
         # Create the filter stack in C++
-        self.my_filter, self.lib = self.create_filter_in_cpp(json_file_path_cpp)
+        self.my_filter, self.lib = self.create_filter_in_cpp(self.json_file_path_cpp)
 
         # Read in the json file translated for C++ again and restructure a bit
         # for easy handling in python
-        with open(json_file_path_cpp) as f:
+        with open(self.json_file_path_cpp) as f:
             self.filter_definition = json.load(f)
 
         self.initial_structure_thicknesses = np.copy(
@@ -1222,7 +1222,6 @@ class FilterStack:
         polarization=None,
         save_figure=False,
         save_data=False,
-        web=False,
     ):
         """
         Calculates the angle-resolved (AR)) data for a given set of parameters.
@@ -1283,7 +1282,19 @@ class FilterStack:
             result_string, wavelength, polar_angles
         )
 
-        if not web:
+        if save_data:
+            header_lines = []
+
+            # Save header lines indicating what the simulation represents
+            temp_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "./temp/value.csv"
+            )
+            with open(temp_path, "w") as the_file:
+                the_file.write("\n".join(header_lines))
+
+            # Save actual data by appending
+            self.stored_data[0].to_csv(temp_path, sep=",", header=True, mode="a")
+        if save_figure:
             # Print time elapsed for the generation of the reflectivity matrix
             print(time.time() - initial_time)
             # Plotting - right now, on the first azimuthal angle
@@ -1302,26 +1313,11 @@ class FilterStack:
             plt.xlabel("Polar Angle (°)")
             plt.ylabel("Wavelength (nm)")
             # Save the figure before showing it
-
-            if save_figure:
-                # plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
-                temp_path = os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), "./temp/plot.png"
-                )
-                plt.savefig(temp_path, format="png", dpi=300)
-                # Save X, Y, Z to csv files
-            if save_data:
-                header_lines = []
-                header_lines.append("Here we can add some meta data to the header \n")
-
-                # Save header lines indicating what the simulation represents
-                temp_path = os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)), "./temp/value.csv"
-                )
-                with open(temp_path, "w") as the_file:
-                    the_file.write("\n".join(header_lines))
-
-                # Save actual data by appending
-                self.stored_data[0].to_csv(temp_path, sep=",", header=True, mode="a")
-
+            # plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
+            temp_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "./temp/plot.png"
+            )
+            plt.savefig(temp_path, format="png", dpi=300)
             plt.show()
+            # Save X, Y, Z to csv files
+

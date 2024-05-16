@@ -296,6 +296,19 @@ End
 
     return path_to_file
 
+def convert_csv_from_open_filter(file_path):
+    import pandas as pd
+    temp = pd.read_csv(file_path, skiprows = 1)
+    wavelength = temp["wavelength"].unique().reshape(1, -1)
+    absorption = temp["absorption"].to_numpy()
+
+    absorption_reshaped = np.reshape(absorption, [7, int(len(absorption) / 7)])
+    new_columns = np.array(["wavelength", "0", "15", "30", "45", "60", "75", "89"])
+    
+    temp_save_df = pd.DataFrame(np.concatenate((wavelength, absorption_reshaped)).T, columns = new_columns)
+    temp_save_df.to_csv(file_path + "_converted.csv", index = False, sep = "\t")
+
+
 
 # if True:
 
