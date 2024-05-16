@@ -219,9 +219,15 @@
         heatmap.on('plotly_click', function (data) {
             var x = data.points[0].x;
             var y = data.points[0].y;
-            console.log('You clicked on point (' + x + ', ' + y + ')');
+
+            // Additionally embellish data with polarization and a/r/t
+            // information retrieved from the according fields
+            var mode = document.getElementById("mode").value;
+            var polarization = document.getElementById("polarization").value;
+
+            // console.log('You clicked on point (' + x + ', ' + y + ')');
             // Trigger the plotting of another plot here
-            socket.emit('plot_xy', { x: x });
+            socket.emit('plot_xy', { x: x, mode: mode, polarization: polarization });
         });
     }
 
@@ -399,7 +405,7 @@
             y: data.y,  // new y data
             mode: 'lines',
             type: 'scatter',
-            name: data.name + ' °'
+            name: data.name
         };
 
         Plotly.addTraces('DatavsWavelengthPlot', newTrace);
