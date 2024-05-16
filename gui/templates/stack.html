@@ -144,6 +144,19 @@
                     <button type="submit" class="btn btn-danger" value="resetFilter">Reset Filter</button>
                 </form>
             </div>
+            <div class="col-lg-2 col-md-4">
+                <div class="row">
+                    <h4 style="margin-bottom: 1em;"> Filter Design Summary </h4>
+                </div>
+                <div class="row">
+                    <div class="col-6 text-end"><b>Total no. layers:</b></div>
+                    <div class="col-6 text-start"><span id="layerCount"></span></div>
+                </div>
+                <div class="row">
+                    <div class="col-6 text-end"><b>Total thickness:</b></div>
+                    <div class="col-6 text-start"><span id="totalThickness"></span> nm</div>
+                </div>
+            </div>
 
         </section>
 
@@ -1053,6 +1066,35 @@
                 return $result;
             }
         });
+    });
+</script>
+
+<script>
+    $(document).ready(function () {
+        // Calculate the number of layers
+        var layerCount = 0;
+        var totalThickness = 0;
+        $("#layers tbody tr").each(function () {
+            var layerType = $(this).find('td').eq(1).find('select').val();
+            var layerNumber = parseInt(layerType.split('_')[0]);
+
+            var thicknessField = $(this).find('td').eq(2).find('input').val();
+            console.log(thicknessField);
+            if (!isNaN(layerNumber)) {
+                layerCount += layerNumber * (layerType.split('_').length - 1);
+                var thicknessValues = thicknessField.replace('[', '').replace(']', '').split(',').map(Number);
+                var thickness = thicknessValues.reduce((a, b) => a + b, 0);
+                totalThickness += parseFloat(thickness) * layerNumber;
+            } else {
+                layerCount += 1;  // Count as 1 layer if there's no leading number
+                totalThickness += parseFloat(thicknessField);
+            }
+
+        });
+
+        // Display the statistics
+        $("#layerCount").text(layerCount);
+        $("#totalThickness").text(totalThickness);
     });
 </script>
 
