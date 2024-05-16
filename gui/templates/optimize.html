@@ -250,7 +250,7 @@
         }
 
         // Create new boxes
-        for (var i = 0; i < num_boxes; i++) {
+        for (var i = num_boxes - 1; i >= 0; i--) {
             var div = document.createElement('div');
             div.className = 'box';
             div.style.backgroundColor = colors[i];
