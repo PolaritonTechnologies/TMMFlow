@@ -854,25 +854,41 @@ def start_optimization(data):
     )
     thread.start()
 
-    merit_time_series = []
-    iteration_value = []
+    # Some helper variables for plotting
+    i = 0
+    current_optimization_method = data["optimizationMethod"][i]
+    colors = generate_colors(len(data["optimizationMethod"]))
+    traces = []
+    traces.append({
+        "x": [],
+        "y": [],
+        "color": colors[i],
+        "name": current_optimization_method
+    })
 
-    time.sleep(1)
+    time.sleep(0.1)
 
     while not my_filter.stop_flag:
-        merit_time_series.append(my_filter.optimum_merit)
-        iteration_value.append(my_filter.optimum_iteration)
+        if my_filter.optimization_method != current_optimization_method:
+            # Plot an additional line in the merit graph indicating the switch
+            # to a new method
+            i += 1
+            current_optimization_method = data["optimizationMethod"][i]
 
-        # Create a Plotly figure using the data
-        # fig = go.Figure(data=go.Scatter(x=iteration_value, y=merit_time_series))
-        # Convert the first column to a list and all following columns to a list of lists
-        plotting_data = {
-            "x": iteration_value,
-            "y": merit_time_series,
-        }
+            # Start a new trace
+            traces.append({
+                "x": [],
+                "y": [],
+                "color": colors[i],
+                "name": current_optimization_method
+            })
 
-        # Emit the figure to the client
-        socketio.emit("update_merit_graph", plotting_data)
+        # Add the current data to the current trace
+        traces[-1]["x"].append(my_filter.optimum_iteration)
+        traces[-1]["y"].append(my_filter.optimum_merit)
+
+        # Emit the traces to the client
+        socketio.emit("update_merit_graph", traces)
 
         # Update the stack representation
         (
@@ -907,7 +923,7 @@ def start_optimization(data):
             },
         )
 
-        time.sleep(1)
+        time.sleep(0.5)
 
 
 @socketio.on("stop_optimization")

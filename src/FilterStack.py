@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from scipy.optimize import (
-    #dual_annealing,
+    # dual_annealing,
     minimize,
     differential_evolution,
     basinhopping,
@@ -17,7 +17,7 @@ from scipy.optimize import (
     brute,
 )
 
-from optimization import dual_annealing
+from optimization import dual_annealing, gradient_descent, gradient, hessian
 
 
 def ignore(msg=None):
@@ -104,10 +104,8 @@ class FilterStack:
         self.layer_switch_allowed_by_user = filter_definition_by_user[
             "layer_switch_allowed"
         ]
-        self.bounds_by_user = filter_definition_by_user[
-            "bounds"
-        ]
-        #---
+        self.bounds_by_user = filter_definition_by_user["bounds"]
+        # ---
 
         self.filter_definition["structure_thicknesses"] = np.array(
             self.filter_definition["structure_thicknesses"]
@@ -133,6 +131,7 @@ class FilterStack:
         # Helper variables that store states during optimization
         self.last_log_time = 0
         self.optimum_merit = None
+        self.optimum_x = None
         self.optimum_number = 0
         self.optimum_iteration = None
         self.last_optimum_number = 0
@@ -598,7 +597,7 @@ class FilterStack:
     ############# Filter Optimization Area ##############
     #####################################################
 
-    def perform_optimisation(self, optimisation_type, save_optimized_to_file=True):
+    def perform_optimisation(self, opt_methods, save_optimized_to_file=True):
         """
         Performs the optimization process based on the specified optimization
         type. This function sets up the initial conditions and bounds for the
@@ -609,7 +608,7 @@ class FilterStack:
         optionally saves these values to a file.
 
         Parameters:
-        optimisation_type (str): The type of optimization to perform. This can
+        opt_methods (str): The type of optimization to perform. This can
         be "dual_annealing", "differential_evolution", "basinhopping", "brute",
         "shgo", or "minimize".
         save_optimized_to_file (bool, optional): Whether to save the optimized
@@ -623,171 +622,217 @@ class FilterStack:
 
         print("running optimisation...")
 
-        self.lib.initialise_optimization(
-            self.my_filter, self.target_wavelength, int(np.size(self.target_wavelength))
-        )
+        for optimization_method in opt_methods:
+            print("running " + optimization_method + "...")
 
-        # Reset some variables
-        self.stop_flag = False
-        self.initial_merit = 0
-        self.iteration_no = 0
-        self.callback_call = 0
-        self.optimization_method = optimisation_type
-
-        start_time = time.time()
-
-        x_initial = []
-        bounds = []
-
-        if np.any(self.filter_definition["thickness_opt_allowed"]):
-            # Assemble initial values and bounds depending on the layers that
-            # were selected for optimization
-            x_initial = (
-                x_initial
-                + self.filter_definition["structure_thicknesses"][
-                    self.filter_definition["thickness_opt_allowed"]
-                ].tolist()
+            self.lib.initialise_optimization(
+                self.my_filter,
+                self.target_wavelength,
+                int(np.size(self.target_wavelength)),
             )
 
-            # There must be a better way of indexing!
-            for i in range(np.shape(self.bounds)[0]):
-                if self.filter_definition["thickness_opt_allowed"][i]:
-                    bounds.append(self.bounds[i])
+            # Reset some variables
+            self.stop_flag = False
+            self.initial_merit = 0
+            self.iteration_no = 0
+            self.callback_call = 0
+            self.optimization_method = optimization_method
 
-        if np.any(self.filter_definition["layer_switch_allowed"]):
-            # If layer switching is allowed add the additional parameter that
-            # decides the layer positions
+            start_time = time.time()
 
-            # Evently distribute the initial layer positions over the stack to
-            # minimize interference during optimization.
+            x_initial = []
+            bounds = []
 
-            initial_positions = np.where(
-                self.filter_definition["layer_switch_allowed"]
-            )[0].tolist()
-
-            x_initial = x_initial + initial_positions
-
-            # Set the first layer positions to the initial positions
-            self.previous_layer_positions = initial_positions
-
-            for i in range(np.sum(self.filter_definition["layer_switch_allowed"])):
-                bounds.append(
-                    (
-                        -0.5,
-                        np.size(self.initial_structure_thicknesses) + 0.5,
-                    )
+            if np.any(self.filter_definition["thickness_opt_allowed"]):
+                # Assemble initial values and bounds depending on the layers that
+                # were selected for optimization
+                x_initial = (
+                    x_initial
+                    + self.filter_definition["structure_thicknesses"][
+                        self.filter_definition["thickness_opt_allowed"]
+                    ].tolist()
                 )
 
-        ret = 0
+                # There must be a better way of indexing!
+                for i in range(np.shape(self.bounds)[0]):
+                    if self.filter_definition["thickness_opt_allowed"][i]:
+                        bounds.append(self.bounds[i])
 
-        # With scipy we cannot do integer optimization
-        if optimisation_type == "dual_annealing":
-            ret = dual_annealing(
-                self.merit_function,
-                bounds=bounds,
-                callback=self.scipy_callback,
-                x0=x_initial,
-                maxiter = 10000,
-                minimizer_kwargs = {"callback": self.scipy_callback}
-            )
-        elif optimisation_type == "differential_evolution":
-            ret = differential_evolution(
-                self.merit_function,
-                bounds=bounds,
-                x0 = x_initial,
-                maxiter = 100000,
-                callback = self.scipy_callback,
-                # callback = self.callback_func_advanced
-            )
-        elif optimisation_type == "basinhopping":
-            # This algorithm does
-            # 1. a random perturbation of the features
-            # 2. then a scipy.minimize
-            # 3. accepts of rejects the new optimum value
-            ret = basinhopping(
-                self.merit_function,
-                x0=x_initial,
-                callback = self.scipy_callback,
-                minimizer_kwargs={
-                    "method": "Nelder-Mead",
-                    "bounds": bounds,
-                    "callback": self.scipy_callback
-                },
-            )
+            if np.any(self.filter_definition["layer_switch_allowed"]):
+                # If layer switching is allowed add the additional parameter that
+                # decides the layer positions
 
-        elif optimisation_type == "brute":
-            # Brute force optimization: only sensible for a low number of
-            # features (e.g., 3). Depending on Ns, the number of points to
-            # try is established  (Ns^(#features) = number of iterations)
-            ret = brute(
-                self.merit_function,
-                ranges=bounds,
-                Ns=2,
-                # maxiter = 50000,
-            )
-        elif optimisation_type == "shgo":
-            # Doesn't really start
-            ret = shgo(
-                self.merit_function,
-                bounds=bounds,
-                # maxiter = 50000,
-            )
-        elif optimisation_type == "minimize":
-            ret = minimize(
-                self.merit_function,
-                x0=x_initial,
-                bounds=bounds,
-                method="Nelder-Mead",
-                # the below values for xatol and fatol were found to prevent the function
-                # from overoptimising
-                # options={"xatol": 1e-1, "fatol": 1e-1},
-                callback=self.scipy_callback,
-            )
+                # Obtain the index of the layers that are allowed to switch
+                switched_layers = np.where(
+                    self.filter_definition["layer_switch_allowed"]
+                )[0].tolist()
 
-            # Rerun multiple times (10 for now)
-            for i in range(9):
-                ret = minimize(
+                # Find the current position of these layers in the stack
+                initial_positions = [
+                    self.layer_order.tolist().index(element)
+                    for element in switched_layers
+                    if element in self.layer_order.tolist()
+                ]
+
+                x_initial = x_initial + initial_positions
+
+                # Set the first layer positions to the initial positions
+                self.previous_layer_positions = initial_positions
+
+                for i in range(np.sum(self.filter_definition["layer_switch_allowed"])):
+                    bounds.append(
+                        (
+                            -0.5,
+                            np.size(self.initial_structure_thicknesses) + 0.5,
+                        )
+                    )
+
+            ret = 0
+
+            # With scipy we cannot do integer optimization
+            if optimization_method == "dual_annealing":
+                ret = dual_annealing(
                     self.merit_function,
-                    x0=ret.x,
                     bounds=bounds,
-                    method="Nelder-Mead",
-                    # the below values for xatol and fatol were found to prevent the function
-                    # from overoptimising
-                    # options={"xatol": 1e-1, "fatol": 1e-1},
+                    callback=self.scipy_callback,
+                    x0=x_initial,
+                    maxiter=10000,
+                    minimizer_kwargs={"callback": self.scipy_callback},
+                )
+            elif optimization_method == "differential_evolution":
+                ret = differential_evolution(
+                    self.merit_function,
+                    bounds=bounds,
+                    x0=x_initial,
+                    maxiter=100000,
+                    callback=self.scipy_callback,
+                    # callback = self.callback_func_advanced
+                )
+            elif optimization_method == "basinhopping":
+                # This algorithm does
+                # 1. a random perturbation of the features
+                # 2. then a scipy.minimize
+                # 3. accepts of rejects the new optimum value
+                ret = basinhopping(
+                    self.merit_function,
+                    x0=x_initial,
+                    callback=self.scipy_callback,
+                    minimizer_kwargs={
+                        "method": "Nelder-Mead",
+                        "bounds": bounds,
+                        "callback": self.scipy_callback,
+                    },
+                )
+
+            elif optimization_method == "brute":
+                # Brute force optimization: only sensible for a low number of
+                # features (e.g., 3). Depending on Ns, the number of points to
+                # try is established  (Ns^(#features) = number of iterations)
+                ret = brute(
+                    self.merit_function,
+                    ranges=bounds,
+                    Ns=2,
+                    # maxiter = 50000,
+                )
+            elif optimization_method == "shgo":
+                # Doesn't really start
+                ret = shgo(
+                    self.merit_function,
+                    bounds=bounds,
+                    # maxiter = 50000,
+                )
+            elif optimization_method == "LM":
+                ret = gradient_descent(
+                    self.merit_function,
+                    x0=x_initial,
+                    bounds=bounds,
                     callback=self.scipy_callback,
                 )
+            elif optimization_method == "TNC":
+                # Truncated newton method
+                ret = minimize(
+                    self.merit_function,
+                    x0=x_initial,
+                    bounds=bounds,
+                    # method="Newton-CG", # 40908 after 45600 iterations (cannot handle bounds)
+                    method="TNC",  # 41570 after 10000 iterations
+                    # method="trust-ncg", # no bounds, 40255 after 58000 iterations (no bounds)
+                    # method = "trust-krylov", # 40051 after 42000 iterations (no bounds)
+                    # method = "trust-exact", #  41464 after 60000 iterations interrupted manually (no bounds)
+                    jac=lambda x: gradient(self.merit_function, x),
+                    # hess=lambda x: hessian(self.merit_function, x),
+                    callback=self.scipy_callback,
+                    # tol = 1e-2,
+                )
+            elif optimization_method == "Nelder-Mead":
+                # Truncated newton method
+                ret = minimize(
+                    self.merit_function,
+                    x0=x_initial,
+                    bounds=bounds,
+                    method="Nelder-Mead",
+                    # method="Newton-CG", # 40908 after 45600 iterations
+                    # method="TNC", # 41570 after 10000 iterations
+                    # method="trust-ncg", # no bounds, 40255 after 58000 iterations (no bounds)
+                    # method = "trust-krylov", # 40051 after 42000 iterations (no bounds)
+                    # method = "trust-exact", #  41464 after 60000 iterations interrupted manually (no bounds)
+                    # jac=lambda x: gradient(self.merit_function, x),
+                    # hess=lambda x: hessian(self.merit_function, x),
+                    callback=self.scipy_callback,
+                    # tol = 1e-2,
+                )
 
-        thicknesses, self.layer_order = (
-            self.extract_thickness_and_position_from_features(ret.x)
-        )
+                """
+                # Rerun multiple times (10 for now)
+                for i in range(9):
+                    ret = minimize(
+                        self.merit_function,
+                        x0=ret.x,
+                        bounds=bounds,
+                        method="Nelder-Mead",
+                        # the below values for xatol and fatol were found to prevent the function
+                        # from overoptimising
+                        # options={"xatol": 1e-1, "fatol": 1e-1},
+                        callback=self.scipy_callback,
+                    )
+                """
+            # The result from the optimization is not necessarily the global
+            # result (as e.g. gradients are also calculated that could have a
+            # lower merit)
+            ret.x = self.optimum_x
+            ret.fun_best = self.optimum_merit
 
-        # Change the filter stack to the optimized values (in C++ and in python)
-        self.filter_definition["structure_thicknesses"] = thicknesses
-        self.lib.change_material_thickness(
-            self.my_filter, thicknesses, int(np.size(thicknesses))
-        )
-        self.filter_definition["structure_materials"] = [
-            self.initial_structure_materials[el] for el in self.layer_order
-        ]
-        self.lib.change_material_order(
-            self.my_filter, self.layer_order, int(np.size(self.layer_order))
-        )
+            thicknesses, self.layer_order = (
+                self.extract_thickness_and_position_from_features(self.optimum_x)
+            )
 
-        self.lib.get_material_order(self.my_filter)
-        self.lib.get_thicknesses(self.my_filter)
+            # Change the filter stack to the optimized values (in C++ and in python)
+            self.filter_definition["structure_thicknesses"] = thicknesses
+            self.lib.change_material_thickness(
+                self.my_filter, thicknesses, int(np.size(thicknesses))
+            )
+            self.filter_definition["structure_materials"] = [
+                self.initial_structure_materials[el] for el in self.layer_order
+            ]
+            self.lib.change_material_order(
+                self.my_filter, self.layer_order, int(np.size(self.layer_order))
+            )
 
-        # The stop flag is also be used as an "optimization done" indicator
-        self.stop_flag = True
+            self.lib.get_material_order(self.my_filter)
+            self.lib.get_thicknesses(self.my_filter)
 
-        self.log_func("Optimization time: ", time.time() - start_time, "s")
-        self.log_func(
-            "Optimized thicknesses: ", [thicknesses[el] for el in self.layer_order]
-        )
-        self.log_func(
-            "Optimized layer order: ", self.filter_definition["structure_materials"]
-        )
-        self.log_func("Optimized merit value: ", self.optimum_merit)
-        self.log_func("Number of function evaluations: ", ret.nfev)
+            # The stop flag is also be used as an "optimization done" indicator
+            self.stop_flag = True
+
+            self.log_func("Optimization time: ", time.time() - start_time, "s")
+            self.log_func(
+                "Optimized thicknesses: ", [thicknesses[el] for el in self.layer_order]
+            )
+            self.log_func(
+                "Optimized layer order: ", self.filter_definition["structure_materials"]
+            )
+            self.log_func("Optimized merit value: ", self.optimum_merit)
+            self.log_func("Number of function evaluations: ", ret.nfev)
 
         # self.save_current_design_to_json("current_structure")
 
@@ -913,6 +958,7 @@ class FilterStack:
             self.optimum_merit = f
             self.optimum_iteration = self.iteration_no
             self.optimum_number += 1
+            self.optimum_x = x
 
         self.callback_call += 1
 
@@ -944,8 +990,14 @@ class FilterStack:
         This is used to stop the scipy optimize function
         """
         if self.stop_flag:
-            if self.optimization_method == "minimize":
+            if self.optimization_method == "TNC":
                 raise StopIteration
+            # elif self.optimization_method == "NCG":
+            # raise StopIteration
+            elif self.optimization_method == "Nelder-Mead":
+                raise StopIteration
+            elif self.optimization_method == "LM":
+                return True
             elif self.optimization_method == "dual_annealing":
                 return True
             elif self.optimization_method == "basinhopping":
@@ -1180,7 +1232,7 @@ class FilterStack:
         azimuthal_angles=None,
         target_type=None,
         polarization=None,
-        is_general_core = False,
+        is_general_core=False,
         save_figure=False,
         save_data=False,
         web=False,

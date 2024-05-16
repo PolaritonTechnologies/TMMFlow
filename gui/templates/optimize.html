@@ -73,7 +73,10 @@
                                 <div class="form-group row">
                                     <div class="col-sm-10">
                                         <select class="form-control" id="optimizationMethod" name="optimizationMethod">
-                                            <option value="minimize">Nelder-Mead</option>
+                                            <option value="LM">Levenberg-Marquardt (Gradient Descent)</option>
+                                            <option value="TNC">Truncated Newton (Gradient Descent)</option>
+                                            <!-- <option value="NCG">Newton CG (Gradient Descent)</option> -->
+                                            <option value="Nelder-Mead">Nelder-Mead (Direct Search)</option>
                                             <option value="dual_annealing">Dual annealing</option>
                                             <option value="basinhopping">Basin Hopping</option>
                                             <option value="differential_evolution">Differential Evolution</option>
@@ -201,14 +204,25 @@
 
     document.getElementById('startOptimization').addEventListener('click', function (e) {
         e.preventDefault();
-        // Show the spinner
-        // document.getElementById('loadingOpt').style.display = 'block';
 
-        var optimizationMethod = document.getElementById('optimizationMethod').value;
+        // Get the elements from selectedMethods
+        var selectedMethods = $('#selectedMethods').children();
 
-        // Emit a custom event with the selected optimization method
-        socket.emit('start_optimization', { optimizationMethod: optimizationMethod });
-        document.getElementById("stopOptimization").disabled = false;
+        // Check if selectedMethods has at least one child
+        if (selectedMethods.length > 0) {
+            var optimizationMethod = selectedMethods.map(function () {
+                var text = $(this).text();
+                // Remove leading number and trailing dash
+                return text.replace(/^\d+|-$/g, '');
+            }).get();
+            console.log(optimizationMethod);
+
+            // Emit a custom event with the selected optimization method
+            socket.emit('start_optimization', { optimizationMethod: optimizationMethod });
+            document.getElementById("stopOptimization").disabled = false;
+        } else {
+            console.log("No methods selected");
+        }
     });
 
     document.getElementById('stopOptimization').addEventListener('click', function (e) {
@@ -220,14 +234,20 @@
         socket.emit('stop_optimization');
     });
 
-    socket.on('update_merit_graph', function (data) {
-        var trace = {
-            x: data.x,
-            y: data.y,
-            mode: 'lines',
-        };
+    socket.on('update_merit_graph', function (traces) {
+        var data = traces.map(function (trace) {
+            return {
+                x: trace.x,
+                y: trace.y,
+                mode: 'lines',
+                line: {
+                    color: trace.color
+                },
+                name: trace.name
+            };
+        });
 
-        Plotly.newPlot('merit_graph', [trace], layout);
+        Plotly.newPlot('merit_graph', data, layout);
     });
 
     socket.on('update_filter_representation', function (data) {

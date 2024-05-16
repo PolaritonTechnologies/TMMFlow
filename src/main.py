@@ -13,14 +13,14 @@ parser.add_argument(
     "optimisation_method",
     type=str,
     help="The optimisation method",
-    default="minimize",
+    default=["LM", "dual_annealing"],
     nargs="?",
 )
 parser.add_argument(
     "file",
     type=str,
     help="The input file path",
-    default="../src/temp/current_structure.json",
+    default="../examples/demo_test.json",
     nargs="?",
 )
 
@@ -41,7 +41,7 @@ features = filter_stack.perform_optimisation(
 # print(filter_stack.merit_function(features) *  filter_stack.initial_merit)
 
 # Calculate the data for
-filter_stack.calculate_ar_data(
-    save_figure=True,
-    save_data=True,
-)
+# filter_stack.calculate_ar_data(
+#     save_figure=True,
+#     save_data=True,
+# )
