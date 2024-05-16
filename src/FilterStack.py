@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from scipy.optimize import (
-    # dual_annealing,
+    #  dual_annealing,
     minimize,
     differential_evolution,
     basinhopping,
@@ -316,17 +316,6 @@ class FilterStack:
 
         lib.destroyFilterStack.argtypes = [c_string_array]
 
-        lib.calculate_reflection_transmission_absorption.argtypes = [
-            c_string_array,
-            ctypes.c_char_p,
-            ctypes.c_char_p,
-            ctypes.c_double,
-            ctypes.c_double,
-            ctypes.c_double,
-            ctypes.c_bool,
-        ]
-        lib.calculate_reflection_transmission_absorption.restype = ctypes.c_double
-
         lib.calculate_reflection_transmission_absorption_para.argtypes = [
             c_string_array,
             ctypes.c_char_p,
@@ -337,7 +326,6 @@ class FilterStack:
             ctypes.c_size_t,
             c_double_array,
             ctypes.c_size_t,
-            ctypes.c_bool,
         ]
         lib.calculate_reflection_transmission_absorption_para.restype = ctypes.c_char_p
 
@@ -1232,7 +1220,6 @@ class FilterStack:
         azimuthal_angles=None,
         target_type=None,
         polarization=None,
-        is_general_core=False,
         save_figure=False,
         save_data=False,
         web=False,
@@ -1278,16 +1265,6 @@ class FilterStack:
         if polarization is None:
             polarization = self.filter_definition["polarization"]
 
-        # if self.filter_definition["core_selection"] == "general":
-        #     is_general_core = True
-        # elif self.filter_definition["core_selection"] == "fast":
-        #     is_general_core = False
-        # else:
-        #     if polarization != "s":
-        #         is_general_core = self.lib.getGeneralMaterialsInStack()
-        #     else:
-        #         is_general_core = False
-
         initial_time = time.time()
 
         result_string = self.lib.calculate_reflection_transmission_absorption_para(
@@ -1300,7 +1277,6 @@ class FilterStack:
             int(np.size(polar_angles)),
             np.ascontiguousarray(azimuthal_angles).astype(np.float64),
             int(np.size(azimuthal_angles)),
-            is_general_core,
         )
 
         self.stored_data = self.read_results_from_cpp(
@@ -1349,70 +1325,3 @@ class FilterStack:
                 self.stored_data[0].to_csv(temp_path, sep=",", header=True, mode="a")
 
             plt.show()
-
-    #####################################################
-    ################### Unit Testing ####################
-    #####################################################
-
-    # check targets is used in unit testing
-    def check_targets(self, thicknesses):
-        """
-        Function that returns true if all targets are met, for unit testing only
-        """
-        test_pass = True
-
-        for i in range(0, np.size(self.target_value)):
-
-            target_calculated = self.lib.calculate_reflection_transmission_absorption(
-                self.my_filter,
-                self.target_type[i].encode("utf-8"),
-                self.target_polarization[i].encode("utf-8"),
-                self.target_wavelength[i],
-                self.target_polar_angle[i],
-                self.target_azimuthal_angle[i],
-                self.is_general_core,
-            )
-
-            if self.target_condition[i] == "=" and target_calculated != float(
-                self.target_value[i]
-            ):
-
-                print(
-                    "Target not met: at ",
-                    self.target_wavelength[i],
-                    "nm: ",
-                    target_calculated,
-                    " != ",
-                    self.target_value[i],
-                )
-                test_pass = False
-
-            if self.target_condition[i] == ">" and target_calculated <= float(
-                self.target_value[i]
-            ):
-
-                print(
-                    "Target not met: at ",
-                    self.target_wavelength[i],
-                    "nm: ",
-                    target_calculated,
-                    " <= ",
-                    self.target_value[i],
-                )
-                test_pass = False
-
-            if self.target_condition[i] == "<" and target_calculated > float(
-                self.target_value[i]
-            ):
-
-                print(
-                    "Target not met: at ",
-                    self.target_wavelength[i],
-                    "nm: ",
-                    target_calculated,
-                    " >= ",
-                    self.target_value[i],
-                )
-                test_pass = False
-
-        return test_pass

@@ -26,10 +26,10 @@ public:
     bool general_materials_in_stack = true;
 
     // Public methods
-    // std::pair<Matrix2cd, Matrix2cd> calculate_transmission_reflection_matrices(double wavelength, double theta_0, double phi_0);
-    double calculate_reflection_transmission_absorption(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0, bool is_general_case);                                                                                       //, std::vector<double> d_list);
-    std::vector<std::vector<std::vector<double>>> calculate_reflection_transmission_absorption_para(const char *type, const char *polarization, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0, bool is_general_case); //, std::vector<double> d_list);
-    double calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector, const char *core_selection);
+
+    double calculate_reflection_transmission_absorption(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0);
+    std::vector<std::vector<std::vector<double>>> calculate_reflection_transmission_absorption_para(const char *type, const char *polarization, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0);
+    double calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector);
     bool check_general_materials();
 
     // void calculate_and_save_ar_reflection();
@@ -85,7 +85,7 @@ private:
     void initialise_e_list_3x3_optim(std::map<std::string, std::vector<tk::spline>> material_splines, std::vector<double> wavelengths);
 };
 
-std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_transmission_absorption_para(const char *type, const char *polarization, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0, bool is_general_case)
+std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_transmission_absorption_para(const char *type, const char *polarization, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0)
 {
     std::vector<std::vector<std::vector<double>>> result(phis_0.size(), std::vector<std::vector<double>>(thetas_0.size(), std::vector<double>(wavelengths.size())));
 
@@ -107,15 +107,15 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
 
                 if (strcmp(polarization, "s") == 0)
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt_s(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]), is_general_case);
+                    std::tie(reflectivity, transmissivity) = calculate_rt_s(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));
                 }
                 else if (strcmp(polarization, "p") == 0)
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt_p(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]), is_general_case);
+                    std::tie(reflectivity, transmissivity) = calculate_rt_p(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));
                 }
                 else
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]), is_general_case);
+                    std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));
                 }
 
                 if (strcmp(type, "t") == 0)
@@ -143,38 +143,16 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
     return result;
 }
 
-double FilterStack::calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector, const char *core_selection)
+double FilterStack::calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector)
 {
     double merit = 0.0;
-    bool is_general_core;
 
 #pragma omp parallel for reduction(+ : merit)
     for (size_t i = 0; i < target_value_vector.size(); i++)
     {
 
-        // Select which core to use
-        if (core_selection == "general")
-        {
-            is_general_core = true;
-        }
-        else if (core_selection == "fast")
-        {
-            is_general_core = false;
-        }
-        else
-        {
-            if (target_polarization_vector[i][0] != 's')
-            {
-                is_general_core = getGeneralMaterialsInStack();
-            }
-            else
-            {
-                is_general_core = false;
-            }
-        }
-
         // Calculate actual value
-        double target_calculated = calculate_reflection_transmission_absorption(target_type_vector[i], target_polarization_vector[i], target_wavelength_vector[i], target_polar_angle_vector[i], target_azimuthal_angle_vector[i], is_general_core);
+        double target_calculated = calculate_reflection_transmission_absorption(target_type_vector[i], target_polarization_vector[i], target_wavelength_vector[i], target_polar_angle_vector[i], target_azimuthal_angle_vector[i]);
 
         // Calculate merit for equal condition
         if (target_condition_vector[i][0] == '=' && target_calculated != target_value_vector[i])
@@ -198,52 +176,7 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
     return merit;
 }
 
-// double FilterStack::calculate_reflection_transmission_absorption_reasemble(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0, bool is_general_case)
-// {
-//     std::vector<double> d_list = calculation_order.structure_thicknesses;
-
-//     // Add 0 to the beginning - substrate
-//     d_list.insert(d_list.begin(), 0.0);
-//     // Add 0 to the end - incident medium
-//     d_list.push_back(0.0);
-//     theta_0 = theta_0 * M_PI / 180.0;
-
-//     // std::cout << "Type: " << type << " Polarization: " << polarization << " Wavelength: " << wavelength << " Theta_0: " << theta_0 << " Phi_0: " << phi_0 << std::endl;
-//     double reflectivity, transmissivity;
-
-//     if (strcmp(polarization, "s") == 0)
-//     {
-//         std::tie(reflectivity, transmissivity) = calculate_rt_s(asemble, d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
-//     }
-//     else if (strcmp(polarization, "p") == 0)
-//     {
-//         std::tie(reflectivity, transmissivity) = calculate_rt_p(dict_assembled_e_list_3x3[static_cast<int>(wavelength * 10)], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
-//     }
-//     else
-//     {
-//         std::tie(reflectivity, transmissivity) = calculate_rt(dict_assembled_e_list_3x3[static_cast<int>(wavelength * 10)], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
-//     }
-
-//     if (strcmp(type, "t") == 0)
-//     {
-//         return transmissivity;
-//     }
-//     else if (strcmp(type, "r") == 0)
-//     {
-//         return reflectivity;
-//     }
-//     else if (strcmp(type, "a") == 0)
-//     {
-//         return 1 - reflectivity - transmissivity;
-//     }
-//     else
-//     {
-//         std::cout << "Invalid type. Please use 't', 'r' or 'a'." << std::endl;
-//         return 0;
-//     }
-// }
-
-double FilterStack::calculate_reflection_transmission_absorption(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0, bool is_general_case)
+double FilterStack::calculate_reflection_transmission_absorption(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0)
 {
     std::vector<double> d_list = calculation_order.structure_thicknesses;
 
@@ -254,21 +187,19 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
     theta_0 = theta_0 * M_PI / 180.0;
 
     double wavelength_key = static_cast<int>(wavelength * 10);
-
-    // std::cout << "Type: " << type << " Polarization: " << polarization << " Wavelength: " << wavelength << " Theta_0: " << theta_0 << " Phi_0: " << phi_0 << std::endl;
     double reflectivity, transmissivity;
 
     if (strcmp(polarization, "s") == 0)
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt_s(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+        std::tie(reflectivity, transmissivity) = calculate_rt_s(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength));
     }
     else if (strcmp(polarization, "p") == 0)
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt_p(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+        std::tie(reflectivity, transmissivity) = calculate_rt_p(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength));
     }
     else
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength), is_general_case);
+        std::tie(reflectivity, transmissivity) = calculate_rt(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength));
     }
 
     if (strcmp(type, "t") == 0)

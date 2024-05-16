@@ -688,7 +688,6 @@ def calculate_and_plot(data):
         azimuthal_angles=[float(data["azimuthalAngle"])],
         target_type=target_type,
         polarization=polarization,
-        is_general_core=data["generalCore"],
         web=True,
     )
     calculated_data_df = my_filter.stored_data[0]
@@ -859,12 +858,9 @@ def start_optimization(data):
     current_optimization_method = data["optimizationMethod"][i]
     colors = generate_colors(len(data["optimizationMethod"]))
     traces = []
-    traces.append({
-        "x": [],
-        "y": [],
-        "color": colors[i],
-        "name": current_optimization_method
-    })
+    traces.append(
+        {"x": [], "y": [], "color": colors[i], "name": current_optimization_method}
+    )
 
     time.sleep(0.1)
 
@@ -876,12 +872,14 @@ def start_optimization(data):
             current_optimization_method = data["optimizationMethod"][i]
 
             # Start a new trace
-            traces.append({
-                "x": [],
-                "y": [],
-                "color": colors[i],
-                "name": current_optimization_method
-            })
+            traces.append(
+                {
+                    "x": [],
+                    "y": [],
+                    "color": colors[i],
+                    "name": current_optimization_method,
+                }
+            )
 
         # Add the current data to the current trace
         traces[-1]["x"].append(my_filter.optimum_iteration)
