@@ -545,7 +545,8 @@ def save_json():
         [
             [float(x), float(y)] if y != "" else float(x)
             for x, y in zip(layers[3::6].tolist(), layers[4::6].tolist())
-        ], axis = 0
+        ],
+        axis=0,
     ).tolist()
     data_to_json["layer_switch_allowed"] = np.flip(
         [s.lower() == "true" for s in layers[5::6]]
@@ -606,7 +607,7 @@ def download_file():
 
         with open(path_to_file, "r") as input_file:
             input_dic = json.load(input_file)
-        
+
         path_to_file = export_to_open_filter(
             input_dic, selected_file.split("/")[-1].split(".")[0] + "_converted"
         )
@@ -805,7 +806,15 @@ def handle_plot_xy(data):
     y = my_filter.stored_data[0].loc[:, data["x"]].to_list()
 
     # Create a dictionary with the x and y data
-    plot_data = {"x": x, "y": y, "name": str(data["x"])}
+    plot_data = {
+        "x": x,
+        "y": y,
+        "name": str(data["x"])
+        + "°, "
+        + str(data["mode"])
+        + ", "
+        + str(data["polarization"]),
+    }
 
     # Emit the data
     socketio.emit("update_xy_plot", plot_data)
