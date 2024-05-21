@@ -16,6 +16,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-theme/0.1.0-beta.10/select2-bootstrap.min.css"
         rel="stylesheet" />
 
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
     <!-- jQuery CDN -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
@@ -67,8 +70,50 @@
                         <input type="file" class="custom-file-input" id="customFile" name="file">
                         <label class="custom-file-label" for="customFile">{{ default_values.file_label }}</label>
                     </div>
-                    <button type="submit" class="btn btn-primary mt-3" value="upload" id="upload_button">Upload</button>
+                    <div class="row">
+                        <button type="submit" class="btn btn-primary mt-3" value="upload"
+                            id="upload_button">Upload</button>
                 </form>
+                <button type="submit" class="btn btn-secondary mt-3" value="rename" id="start_new_design_button"
+                    style="margin-left: 1em;">Start New Design</button>
+            </div>
+
+            <!-- Start New Design Modal -->
+            <div class="modal fade" id="newDesignModal" tabindex="-1" role="dialog"
+                aria-labelledby="newDesignModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="newDesignModalLabel">Start New Design</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <form>
+                                <div class="form-group">
+                                    <label for="filterName">Filter Name</label>
+                                    <input type="text" class="form-control" id="filterName"
+                                        placeholder="Enter filter name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="templateSelect">Select Template</label>
+                                    <select class="form-control select2" id="templateSelect">
+                                        {% for template in default_values.available_templates %}
+                                        <option value="{{ template }}">{{ template }}</option>
+                                        {% endfor %}
+                                        <!-- Options will be populated from Flask -->
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary" id="saveNewDesign">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             </div>
             <div class="modal" tabindex="-1" role="dialog" id="materialLoadModal">
@@ -149,12 +194,12 @@
                     <h4 style="margin-bottom: 1em;"> Filter Design Summary </h4>
                 </div>
                 <div class="row">
-                    <div class="col-6 text-end"><b>Total no. layers:</b></div>
-                    <div class="col-6 text-start"><span id="layerCount"></span></div>
+                    <div class="col-7 text-end"><b>Total no. layers:</b></div>
+                    <div class="col-5 text-start"><span id="layerCount"></span></div>
                 </div>
                 <div class="row">
-                    <div class="col-6 text-end"><b>Total thickness:</b></div>
-                    <div class="col-6 text-start"><span id="totalThickness"></span> nm</div>
+                    <div class="col-7 text-end"><b>Total thickness:</b></div>
+                    <div class="col-5 text-start"><span id="totalThickness"></span> nm</div>
                 </div>
             </div>
 
@@ -196,30 +241,37 @@
                 </tr>
                 <tr>
                     <td><label for="calculation_wavelength_min">Calculation Wavelength:</label></td>
-                    <td><input type="number" id="calculation_wavelength_min" name="calculation_wavelength_min"
-                            class="form-control" value="{{ default_values.wavelengthMin }}"></td>
-                    <td><input type="number" id="calculation_wavelength_max" name="calculation_wavelength_max"
-                            class="form-control" value="{{ default_values.wavelengthMax }}"></td>
-                    <td><input type="number" id="calculation_wavelength_step" name="calculation_wavelength_step"
-                            class="form-control" value="{{ default_values.wavelengthStep }}"></td>
+                    <td><input type="number" min="10" max="10000" step="any" required id="calculation_wavelength_min"
+                            name="calculation_wavelength_min" class="form-control"
+                            value="{{ default_values.wavelengthMin }}"></td>
+                    <td><input type="number" min="10" max="10000" step="any" required id="calculation_wavelength_max"
+                            name="calculation_wavelength_max" class="form-control"
+                            value="{{ default_values.wavelengthMax }}"></td>
+                    <td><input type="number" min="0" max="1000" step="any" required id="calculation_wavelength_step"
+                            name="calculation_wavelength_step" class="form-control"
+                            value="{{ default_values.wavelengthStep }}"></td>
                 </tr>
                 <tr>
                     <td><label for="polar_angle_min">Polar Angle:</label></td>
-                    <td><input type="number" id="polar_angle_min" name="polar_angle_min" class="form-control"
-                            value="{{ default_values.polarAngleMin }}"></td>
-                    <td><input type="number" id="polar_angle_max" name="polar_angle_max" class="form-control"
-                            value="{{ default_values.polarAngleMax }}"></td>
-                    <td><input type="number" id="polar_angle_step" name="polar_angle_step" class="form-control"
-                            value="{{ default_values.polarAngleStep }}"></td>
+                    <td><input type="number" min="0" max="90" step="any" required id="polar_angle_min"
+                            name="polar_angle_min" class="form-control" value="{{ default_values.polarAngleMin }}"></td>
+                    <td><input type="number" min="0" max="90" step="any" required id="polar_angle_max"
+                            name="polar_angle_max" class="form-control" value="{{ default_values.polarAngleMax }}"></td>
+                    <td><input type="number" min="0" max="90" step="any" required id="polar_angle_step"
+                            name="polar_angle_step" class="form-control" value="{{ default_values.polarAngleStep }}">
+                    </td>
                 </tr>
                 <tr>
                     <td><label for="azimuthal_angle_min">Azimuthal Angle:</label></td>
-                    <td><input type="number" id="azimuthal_angle_min" name="azimuthal_angle_min" class="form-control"
-                            value="{{ default_values.azimAngleMin }}"></td>
-                    <td><input type="number" id="azimuthal_angle_max" name="azimuthal_angle_max" class="form-control"
-                            value="{{ default_values.azimAngleMax }}"></td>
-                    <td><input type="number" id="azimuthal_angle_step" name="azimuthal_angle_step" class="form-control"
-                            value="{{ default_values.azimAngleStep }}"></td>
+                    <td><input type="number" min="0" max="90" step="any" required id="azimuthal_angle_min"
+                            name="azimuthal_angle_min" class="form-control" value="{{ default_values.azimAngleMin }}">
+                    </td>
+                    <td><input type="number" min="0" max="90" step="any" required id="azimuthal_angle_max"
+                            name="azimuthal_angle_max" class="form-control" value="{{ default_values.azimAngleMax }}">
+                    </td>
+                    <td><input type="number" min="0" max="90" step="any" required id="azimuthal_angle_step"
+                            name="azimuthal_angle_step" class="form-control" value="{{ default_values.azimAngleStep }}">
+                    </td>
                 </tr>
                 <tr>
                     <td><label for="substrate_material_type">Substrate Material Type:</label></td>
@@ -239,7 +291,8 @@
 
                 <tr>
                     <td><label for="substrate_thickness">Substrate Thickness:</label></td>
-                    <td><input type="number" id="substrate_thickness" name="substrate_thickness" class="form-control"
+                    <td><input type="number" min="0" max="100000000" step="any" id="substrate_thickness"
+                            name="substrate_thickness" class="form-control"
                             value="{{ default_values.substrate_thickness }}"></td>
                 </tr>
                 <tr>
@@ -271,15 +324,6 @@
                     </td>
                 </tr>
                 <tr>
-                    <td><label for="general_core">General Core:</label></td>
-                    <td>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" id="general_core" {% if
-                                default_values.core_selection=="general" %} checked {% endif %}>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
                     <td colspan="4">
 
                         <button id="add_layer" type="button" class="btn btn-primary" style="margin-bottom: 1em;">Add
@@ -293,9 +337,19 @@
                                     <th>Layer</th>
                                     <th>Value</th>
                                     <th>Thickness</th>
-                                    <th>Thickness Opt</th>
+                                    <th>Thickness Opt
+                                        <button id="toggleThicknessOptCheckboxes" type="button"
+                                            class="btn btn-primary btn-sm" style="margin-left: 1em;">
+                                            <i class="fas fa-check-square"></i>
+                                        </button>
+                                    </th>
                                     <th>Thickness Bounds</th>
-                                    <th>Position Opt</th>
+                                    <th>Position Opt
+                                        <button id="togglePositionOptCheckboxes" type="button"
+                                            class="btn btn-primary btn-sm" style="margin-left: 1em;">
+                                            <i class="fas fa-check-square"></i>
+                                        </button>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -317,6 +371,8 @@
                                         </select>
                                     </td>
                                     <td><input type="text" class="form-control"
+                                            pattern="^\d+(\.\d+)?$|^\[\d+(\.\d+)?(,\s*\d+(\.\d+)?)*\]$"
+                                            title="Only [ ] , . or numbers are allowed."
                                             value="{{ default_values.structure_thicknesses[i] }}"></td>
                                     <td>
                                         <div class="custom-control custom-checkbox">
@@ -329,10 +385,10 @@
                                     </td>
                                     <td>
                                         <div class="input-group">
-                                            <input type="number" class="form-control" placeholder="Min"
-                                                value="{{ default_values.bounds[i][0] }}">
-                                            <input type="number" class="form-control" placeholder="Max"
-                                                value="{{ default_values.bounds[i][1] }}">
+                                            <input type="number" min="0" max="10000" step="any" class="form-control"
+                                                placeholder="Min" value="{{ default_values.bounds[i][0] }}">
+                                            <input type="number" min="0" max="10000" step="any" class="form-control"
+                                                placeholder="Max" value="{{ default_values.bounds[i][1] }}">
                                         </div>
                                     </td>
                                     <td>
@@ -398,32 +454,38 @@
 
                                 <td>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" placeholder="Min"
+                                        <input type="number" min="0" max="90" step="any" class="form-control"
+                                            placeholder="Min"
                                             value="{{ default_values.targets_polar_angle[i][0] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else default_values.targets_polar_angle[i] }}">
-                                        <input type="number" class="form-control" placeholder="Max"
+                                        <input type="number" min="0" max="90" step="any" class="form-control"
+                                            placeholder="Max"
                                             value="{{ default_values.targets_polar_angle[i][1] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else '' }}">
-                                        <input type="number" class="form-control" placeholder="Step"
-                                            value="{{ default_values.polar_angle_steps[i] }}">
+                                        <input type="number" min="0" max="90" step="any" class="form-control"
+                                            placeholder="Step" value="{{ default_values.polar_angle_steps[i] }}">
                                     </div>
                                 </td>
                                 <td>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" placeholder="Min"
+                                        <input type="number" min="0" max="90" step="any" class="form-control"
+                                            placeholder="Min"
                                             value="{{ default_values.targets_azimuthal_angle[i][0] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else default_values.targets_azimuthal_angle[i] }}">
-                                        <input type="number" class="form-control" placeholder="Max"
+                                        <input type="number" min="0" max="90" step="any" class="form-control"
+                                            placeholder="Max"
                                             value="{{ default_values.targets_azimuthal_angle[i][1] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else '' }}">
-                                        <input type="number" class="form-control" placeholder="Step"
-                                            value="{{ default_values.azimuthal_angle_steps[i] }}">
+                                        <input type="number" min="0" max="90" step="any" class="form-control"
+                                            placeholder="Step" value="{{ default_values.azimuthal_angle_steps[i] }}">
                                     </div>
                                 </td>
                                 <td>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" placeholder="Min"
+                                        <input type="number" min="10" max="10000" step="any" class="form-control"
+                                            placeholder="Min"
                                             value="{{ default_values.targets_wavelengths[i][0] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else default_values.targets_wavelengths[i] }}">
-                                        <input type="number" class="form-control" placeholder="Max"
+                                        <input type="number" min="10" max="10000" step="any" class="form-control"
+                                            placeholder="Max"
                                             value="{{ default_values.targets_wavelengths[i][1] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else '' }}">
-                                        <input type="number" class="form-control" placeholder="Step"
-                                            value="{{ default_values.wavelength_steps[i] }}">
+                                        <input type="number" min="0" max="10000" step="any" class="form-control"
+                                            placeholder="Step" value="{{ default_values.wavelength_steps[i] }}">
                                     </div>
                                 </td>
                                 <td>
@@ -437,9 +499,9 @@
                                             endif %}>=</option>
                                     </select>
                                 </td>
-                                <td><input type="number" class="form-control"
+                                <td><input type="number" min="0" max="1" step="any" class="form-control"
                                         value="{{ default_values.targets_value[i] }}"></td>
-                                <td><input type="number" class="form-control"
+                                <td><input type="number" min="0" max="1" step="any" class="form-control"
                                         value="{{ default_values.targets_tolerance[i] }}"></td>
 
 
@@ -555,7 +617,6 @@
                     // show the modal with the error message
                     var tableBody = $('#modalTableBody');
                     tableBody.empty();
-                    console.log(response.mismatched_materials)
 
                     $.each(response.mismatched_materials, function (i, material) {
                         var row = $('<tr>');
@@ -794,17 +855,17 @@
                     }
                 });
 
-                cell3.innerHTML = '<input type="text" class="form-control">';
+                cell3.innerHTML = '<input type="text" class="form-control" pattern="^\\d+$|^\\[\\d+(,\\s*\\d+)*\\]$" title="Only [ ] , . or numbers are allowed." class="form-control">';
                 cell4.innerHTML = `
                 <div class="custom-control custom-checkbox">
-                    <input type="checkbox" class="custom-control-input" id="checkbox_thickness_opt_${checkboxCounter}">
+                    <input type="checkbox" checked class="custom-control-input" id="checkbox_thickness_opt_${checkboxCounter}">
                     <label class="custom-control-label" for="checkbox_thickness_opt_${checkboxCounter}"></label>
                 </div> `;
                 checkboxCounter++;
                 cell5.innerHTML = `
                 <div class="input-group">
-                    <input type="number" class="form-control" placeholder="Min">
-                    <input type="number" class="form-control" placeholder="Max">
+                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Min" value = 0>
+                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Max" value = 100>
                 </div>
                 `;
                 cell6.innerHTML = `
@@ -892,23 +953,23 @@
                     `;
                 cells[3].innerHTML = `
                     <div class="input-group">
-                        <input type="number" class="form-control" placeholder="Min">
-                        <input type="number" class="form-control" placeholder="Max">
-                        <input type="number" class="form-control" placeholder="Step">
+                        <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Min">
+                        <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Max">
+                        <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Step">
                     </div>
                     `;
                 cells[4].innerHTML = `
                     <div class="input-group">
-                        <input type="number" class="form-control" placeholder="Min">
-                        <input type="number" class="form-control" placeholder="Max">
-                        <input type="number" class="form-control" placeholder="Step">
+                        <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Min">
+                        <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Max">
+                        <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Step">
                     </div>
                     `;
                 cells[5].innerHTML = `
                     <div class="input-group">
-                        <input type="number" class="form-control" placeholder="Min">
-                        <input type="number" class="form-control" placeholder="Max">
-                        <input type="number" class="form-control" placeholder="Step">
+                        <input type="number" min="10" max="10000" step="any" class="form-control" placeholder="Min">
+                        <input type="number" min="10" max="10000" step="any" class="form-control" placeholder="Max">
+                        <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Step">
                     </div>
                     `;
                 cells[6].innerHTML = `
@@ -918,8 +979,8 @@
                         <option value="=">=</option>
                     </select>
                     `;
-                cells[7].innerHTML = '<input type="number" class="form-control">';
-                cells[8].innerHTML = '<input type="number" class="form-control">';
+                cells[7].innerHTML = '<input type="number" min="0" max="1" step="any" class="form-control">';
+                cells[8].innerHTML = '<input type="number" min="0" max="1" step="any" class="form-control">';
                 cells[9].innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
             }
 
@@ -1007,10 +1068,211 @@
         xhr.send(JSON.stringify(data));
     }
 
+    // Check input
+    // $(document).ready(function () {
+    //     // Get all input elements with type="number"
+    //     var numberInputs = document.querySelectorAll('input[type="number"]');
+
+    //     // Add event listener to each input element
+    //     numberInputs.forEach(function (input) {
+    //         input.addEventListener('keydown', function (e) {
+    //             // Allow: backspace, delete, tab, escape, enter, and .
+    //             if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190]) !== -1 ||
+    //                 // Allow: Ctrl+A
+    //                 (e.keyCode == 65 && e.ctrlKey === true) ||
+    //                 // Allow: home, end, left, right
+    //                 (e.keyCode >= 35 && e.keyCode <= 39)) {
+    //                 // let it happen, don't do anything
+    //                 return;
+    //             }
+    //             // Ensure that it is a number and stop the keypress
+    //             if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+    //                 e.preventDefault();
+    //             }
+    //         });
+    //     });
+    // });
+
+    function validateInput() {
+        var errorMessages = []; // array to store error messages in
+        // Wavelengths 
+        var min_wavelength = document.getElementById("calculation_wavelength_min");
+        var max_wavelength = document.getElementById("calculation_wavelength_max");
+        var wavelength_step = document.getElementById("calculation_wavelength_step");
+
+        // Check if user input is valid
+        if (min_wavelength.value === "" || max_wavelength.value === "" || wavelength_step.value === "") {
+            errorMessages.push("All fields must be filled");
+            min_wavelength.style.borderColor = "red";  // Mark the input field in red
+            min_wavelength.title = "This field cannot be empty";  // Show info box
+        } else if (parseFloat(min_wavelength.value) > parseFloat(max_wavelength.value)) {
+            errorMessages.push("Minimum wavelength must be smaller than maximum wavelength");
+            min_wavelength.style.borderColor = "red";  // Mark the input field in red
+            min_wavelength.title = "Must be smaller or equal the maximum wavelength";  // Show info box
+        } else if (parseFloat(wavelength_step.value) > (parseFloat(max_wavelength.value) - parseFloat(min_wavelength.value))) {
+            errorMessages.push("Wavelength step must be smaller or equal the difference between maximum and minimum wavelength");
+            wavelength_step.style.borderColor = "red";  // Mark the input field in red
+            wavelength_step.title = "Must be smaller than the difference between maximum and minimum wavelength";  // Show info box
+        } else {
+            min_wavelength.style.borderColor = "";  // Reset border color if input is valid
+            min_wavelength.title = "";  // Reset info box
+            max_wavelength.style.borderColor = "";  // Reset border color if input is valid
+            max_wavelength.title = "";  // Reset info box
+            wavelength_step.style.borderColor = "";  // Reset border color if input is valid
+            wavelength_step.title = "";  // Reset info box
+        }
+
+        // Polar angles
+        var min_polar_angle = document.getElementById("polar_angle_min");
+        var max_polar_angle = document.getElementById("polar_angle_max");
+        var polar_angle_step = document.getElementById("polar_angle_step");
+
+        // Check if user input is valid
+        if (min_polar_angle.value === "" || max_polar_angle.value === "" || polar_angle_step.value === "") {
+            errorMessages.push("All fields must be filled");
+            min_polar_angle.style.borderColor = "red";  // Mark the input field in red
+            min_polar_angle.title = "This field cannot be empty";  // Show info box
+        } else if (parseFloat(min_polar_angle.value) > parseFloat(max_polar_angle.value)) {
+            errorMessages.push("Minimum polar angle must be smaller or equals the maximum polar angle");
+            min_polar_angle.style.borderColor = "red";  // Mark the input field in red
+            min_polar_angle.title = "Must be smaller than maximum polar angle";  // Show info box
+        } else if (parseFloat(polar_angle_step.value) > (parseFloat(max_polar_angle.value) - parseFloat(min_polar_angle.value))) {
+            errorMessages.push("Polar angle step must be smaller than the difference between maximum and minimum polar angle");
+            polar_angle_step.style.borderColor = "red";  // Mark the input field in red
+            polar_angle_step.title = "Must be smaller or equal the the difference between maximum and minimum polar angle";  // Show info box
+        } else {
+            min_polar_angle.style.borderColor = "";  // Reset border color if input is valid
+            min_polar_angle.title = "";  // Reset info box
+            max_polar_angle.style.borderColor = "";  // Reset border color if input is valid
+            max_polar_angle.title = "";  // Reset info box
+            polar_angle_step.style.borderColor = "";  // Reset border color if input is valid
+            polar_angle_step.title = "";  // Reset info box
+        }
+
+        // Azimuthal angles
+        var min_azimuthal_angle = document.getElementById("azimuthal_angle_min");
+        var max_azimuthal_angle = document.getElementById("azimuthal_angle_max");
+        var azimuthal_angle_step = document.getElementById("azimuthal_angle_step");
+
+        // Check if user input is valid
+        if (min_azimuthal_angle.value === "" || max_azimuthal_angle.value === "" || azimuthal_angle_step.value === "") {
+            errorMessages.push("All fields must be filled");
+            min_azimuthal_angle.style.borderColor = "red";  // Mark the input field in red
+            min_azimuthal_angle.title = "This field cannot be empty";  // Show info box
+        } else if (parseFloat(min_azimuthal_angle.value) > parseFloat(max_azimuthal_angle.value)) {
+            errorMessages.push("Minimum azimuthal angle must be smaller or equals the maximum azimuthal angle");
+            min_azimuthal_angle.style.borderColor = "red";  // Mark the input field in red
+            min_azimuthal_angle.title = "Must be smaller than maximum azimuthal angle";  // Show info box
+            // } else if (parseFloat(azimuthal_angle_step.value) > (parseFloat(max_azimuthal_angle.value) - parseFloat(min_azimuthal_angle.value))) {
+            // errorMessages.push("Azimuthal angle step must be smaller than the difference between maximum and minimum azimuthal angle");
+            // azimuthal_angle_step.style.borderColor = "red";  // Mark the input field in red
+            // azimuthal_angle_step.title = "Must be smaller or equal the difference between maximum and minimum azimuthal angle";  // Show info box
+        } else {
+            min_azimuthal_angle.style.borderColor = "";  // Reset border color if input is valid
+            min_azimuthal_angle.title = "";  // Reset info box
+            max_azimuthal_angle.style.borderColor = "";  // Reset border color if input is valid
+            max_azimuthal_angle.title = "";  // Reset info box
+            azimuthal_angle_step.style.borderColor = "";  // Reset border color if input is valid
+            azimuthal_angle_step.title = "";  // Reset info box
+        }
+
+        var table = document.getElementById("layers");
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            //iterate through rows
+            //rows would be accessed using the "row" variable assigned in the for loop
+            var layerNumber;
+
+            for (var j = 0, col; col = row.cells[j]; j++) {
+                //iterate through columns
+                //columns would be accessed using the "col" variable assigned in the for loop
+                var input = col.getElementsByTagName('input')[0]; // get the input element
+
+                if (j === 0) {
+                    layerNumber = col.textContent;
+
+                }
+                else if (j === 1) { // second column
+                    var selectElement = col.getElementsByTagName('select')[0]; // get the select element
+                    var selectedText = selectElement.options[selectElement.selectedIndex].text; // get the selected text
+                    var underscoreCount = (selectedText.match(/_/g) || []).length; // count the underscores
+                } else if (j === 2) { // third column
+                    if (underscoreCount === 0 || underscoreCount === 1) {
+                        // input should be a number
+                        if (!/^\d+(\.\d+)?$/.test(input.value)) {
+                            errorMessages.push('Invalid input. Only numbers are allowed.');
+                        }
+                    } else if (underscoreCount >= 2) {
+                        // input should be of the form [number1, number2, ...]
+                        var expectedCount = underscoreCount;
+                        var match = input.value.match(/^\[(\d+(\.\d+)?(,\s*\d+(\.\d+)?)*)\]$/);
+                        if (!match || (match[1].split(/,\s*/).length !== expectedCount)) {
+                            errorMessages.push('Number of materials does not match thicknesses for layer ' + layerNumber + '. Expected ' + expectedCount + ' numbers in brackets.');
+                        }
+                    }
+                } else if (j === 4) {
+                    var inputs = col.getElementsByTagName('input'); // get all input elements
+                    if (inputs.length >= 2) { // make sure there are at least two input elements
+                        var value1 = parseFloat(inputs[0].value);
+                        var value2 = parseFloat(inputs[1].value);
+                        if (value1 >= value2) {
+                            errorMessages.push('Invalid thickness bound input for layer ' + layerNumber + '. The lower wavelength bound should be smaller than the higher wavelength bound.');
+                        }
+                    }
+                }
+            }
+        }
+
+        var table = document.getElementById("target");
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            //iterate through rows
+            //rows would be accessed using the "row" variable assigned in the for loop
+
+            for (var j = 0, col; col = row.cells[j]; j++) {
+                //iterate through columns
+                //columns would be accessed using the "col" variable assigned in the for loop
+
+                if (j === 3 || j === 4 || j === 5) {
+                    var inputs = col.getElementsByTagName('input'); // get all input elements
+                    if (inputs.length >= 2) { // make sure there are at least two input elements
+                        var value1 = parseFloat(inputs[0].value);
+                        var value2 = parseFloat(inputs[1].value);
+                        if (value1 > value2) {
+                            errorMessages.push('Invalid input in column ' + (j + 1) + ' of row ' + i + '. The first input should be smaller or equal to the second input.');
+                        }
+                        if (inputs.length >= 3) { // make sure there are at least three input elements
+                            var value3 = parseFloat(inputs[2].value);
+                            if (value3 > (value2 - value1)) {
+                                errorMessages.push('Invalid input in column ' + (j + 1) + ' of row ' + i + '. The third input should be smaller or equal to the difference between the first two inputs.');
+                            }
+                        }
+                    }
+                } else if (j === 8) {
+                    var value = parseFloat(col.textContent);
+                    var input = parseFloat(row.cells[7].getElementsByTagName('input')[0].value);
+                    if (value > input) {
+                        errorMessages.push('Invalid input in row ' + i + '. The value in column 9 should be smaller than the input in column 8.');
+                    }
+                }
+            }
+        }
+
+
+        if (errorMessages.length > 0) {
+            errorMessages.unshift("There are issues with your filter definition:\n")
+            alert(errorMessages.join('\n• ')); // join error messages with bullet points and show the alert
+            return false;
+        }
+
+        // If all checks pass, return true
+        return true;
+    }
 
     document.getElementById("saveButton").addEventListener("click", function (e) {
         e.preventDefault();
-        saveData('save');
+        // Only save data if user input is valid
+        if (validateInput()) {
+            saveData('save');
+        }
     });
 
     document.getElementById("downloadButton").addEventListener("click", function (e) {
@@ -1079,7 +1341,6 @@
             var layerNumber = parseInt(layerType.split('_')[0]);
 
             var thicknessField = $(this).find('td').eq(2).find('input').val();
-            console.log(thicknessField);
             if (!isNaN(layerNumber)) {
                 layerCount += layerNumber * (layerType.split('_').length - 1);
                 var thicknessValues = thicknessField.replace('[', '').replace(']', '').split(',').map(Number);
@@ -1094,14 +1355,65 @@
 
         // Display the statistics
         $("#layerCount").text(layerCount);
-        $("#totalThickness").text(totalThickness);
+        $("#totalThickness").text(totalThickness.toFixed(0));
     });
 </script>
 
-<!-- <script>
-    // Pass the server-side variable to JavaScript
-    var structureMaterials = {{ default_values.structure_materials | tojson | safe }};
+<script>
+    document.getElementById('toggleThicknessOptCheckboxes').addEventListener('click', function () {
+        toggleCheckboxesInColumn(3);
+    });
 
-    // Print the values to the console
-    console.log(structureMaterials);
-</script> -->
+    document.getElementById('togglePositionOptCheckboxes').addEventListener('click', function () {
+        toggleCheckboxesInColumn(5);
+    });
+
+    function toggleCheckboxesInColumn(columnIndex) {
+        var table = document.getElementById('layers');
+        var checkboxes = [];
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            var checkbox = row.cells[columnIndex].getElementsByTagName('input')[0];
+            if (checkbox && checkbox.type === 'checkbox') {
+                checkboxes.push(checkbox);
+            }
+        }
+
+        var checkedCount = checkboxes.filter(function (checkbox) {
+            return checkbox.checked;
+        }).length;
+
+        var newCheckedState = checkedCount <= checkboxes.length / 2;
+        checkboxes.forEach(function (checkbox) {
+            checkbox.checked = newCheckedState;
+        });
+    }
+</script>
+
+<script>
+    // Open the modal when the "Start New Design" button is clicked
+    document.getElementById('start_new_design_button').addEventListener('click', function () {
+        $('#newDesignModal').modal('show');
+    });
+
+    document.getElementById('saveNewDesign').addEventListener('click', function () {
+        var filterName = document.getElementById('filterName').value;
+        var template = document.getElementById('templateSelect').value;
+
+        $.ajax({
+            url: '/start_new_design',
+            type: 'POST',
+            data: { filter_name: filterName, template: template },
+            complete: function (jqXHR, textStatus) {
+                // If the status code is 302, reload the page
+                if (jqXHR.status === 200) {
+                    location.reload();
+                }
+            },
+            error: function (error) {
+                // Handle error
+            }
+        });
+
+        $('#newDesignModal').modal('hide');
+    });
+</script>

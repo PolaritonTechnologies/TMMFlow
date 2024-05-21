@@ -14,6 +14,9 @@ from flask import (
 from flask_socketio import SocketIO
 from flask_cors import CORS
 
+from flask.sessions import SecureCookieSessionInterface
+
+
 # Plotting graphs
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -33,12 +36,27 @@ import pandas as pd
 import json
 import ast
 
-from utility import allowed_file, generate_colors, get_available_materials, is_number
+from utility import allowed_file, generate_colors, get_available_materials, get_available_templates, is_number
 from open_filter_converter import import_from_open_filter, export_to_open_filter
 from FilterStack import FilterStack
 
+class CustomSecureCookieSessionInterface(SecureCookieSessionInterface):
+    def get_cookie_domain(self, app):
+        return app.config.get('SESSION_COOKIE_DOMAIN')
+
+    def get_cookie_path(self, app):
+        return app.config.get('SESSION_COOKIE_PATH')
+
+    def get_cookie_samesite(self, app):
+        return app.config.get('SESSION_COOKIE_SAMESITE')
+
 # Configure flask app
 app = Flask(__name__)
+app.session_interface = CustomSecureCookieSessionInterface()
+app.config.update(
+    SESSION_COOKIE_SAMESITE='Lax',  # or 'Strict' or 'None'
+    SESSION_COOKIE_SECURE=True,
+)
 
 # Enable CORS for all routes which has to be done for the socketio to work,
 # however, for the production server, it is important that cors_allowed_origins
@@ -50,6 +68,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 app.secret_key = "your secret key"
 app.config["UPLOAD_FOLDER"] = "../src/temp/"
 app.config["MATERIAL_FOLDER"] = "../materials/"
+app.config["TEMPLATE_FOLDER"] = "../examples/"
 
 # Global variables necessary for calculation (as data is shared)
 my_filter = None
@@ -99,6 +118,7 @@ def stack():
 
     # Specify the directory you want to search
     material_list = get_available_materials(app.config["MATERIAL_FOLDER"])
+    template_list = get_available_templates(app.config["TEMPLATE_FOLDER"])
 
     default_values = {
         "num_boxes": num_boxes,
@@ -109,6 +129,7 @@ def stack():
         "legend_colors": unique_colors,
         "file_label": selected_file,
         "available_materials": material_list,
+        "available_templates": template_list,
     }
 
     # Add the entire filter definition to the default values to render it
@@ -128,38 +149,6 @@ def stack():
     default_values["thickness_opt_allowed"] = my_filter.thickness_opt_allowed_by_user
     default_values["layer_switch_allowed"] = my_filter.layer_switch_allowed_by_user
     default_values["bounds"] = my_filter.bounds_by_user
-    #     "calculation_type": my_filter.filter_definition["calculation_type"],
-    #     "polarization": my_filter.filter_definition["polarization"],
-    #     "polarAngleMin": my_filter.filter_definition["polarAngleMin"],
-    #     "polarAngleMax": my_filter.filter_definition["polarAngleMax"],
-    #     "polarAngleStep": my_filter.filter_definition["polarAngleStep"],
-    #     "azimAngleMin": my_filter.filter_definition["azimAngleMin"],
-    #     "azimAngleMax": my_filter.filter_definition["azimAngleMax"],
-    #     "azimAngleStep": my_filter.filter_definition["azimAngleStep"],
-    #     "wavelengthMin": my_filter.filter_definition["wavelengthMin"],
-    #     "wavelengthMax": my_filter.filter_definition["wavelengthMax"],
-    #     "wavelengthStep": my_filter.filter_definition["wavelengthStep"],
-    #         "structure_materials": my_filter.filter_definition["structure_materials"],
-    # "structure_thicknesses": my_filter.filter_definition["structure_thicknesses"],
-    # "thickness_opt_allowed": my_filter.filter_definition["thickness_opt_allowed"],
-    # "layer_switch_allowed": my_filter.filter_definition["layer_switch_allowed"],
-    # "substrate_material": my_filter.filter_definition["substrate_material"],
-    # "substrate_thickness": my_filter.filter_definition["substrate_thickness"],
-    # "incident_medium": my_filter.filter_definition["incident_medium"],
-    # "exit_medium": my_filter.filter_definition["exit_medium"],
-    # "targets_type": my_filter.filter_definition["targets_type"],
-    # "targets_polarization": my_filter.filter_definition["targets_polarization"],
-    # "targets_condition": my_filter.filter_definition["targets_condition"],
-    # "targets_value": my_filter.filter_definition["targets_value"],
-    # "targets_polar_angle": my_filter.filter_definition["targets_polar_angle"],
-    # "polar_angle_steps": my_filter.filter_definition["polar_angle_steps"],
-    # "targets_azimuthal_angle": my_filter.filter_definition["targets_azimuthal_angle"],
-    # "azimuthal_angle_steps": my_filter.filter_definition["azimuthal_angle_steps"],
-    # "targets_wavelengths": my_filter.filter_definition["targets_wavelengths"],
-    # "wavelength_steps": my_filter.filter_definition["wavelength_steps"],
-    # "targets_tolerance": my_filter.filter_definition["targets_tolerance"],
-    #     "bounds": my_filter.filter_definition["bounds"],
-    # }
 
     return render_template(
         "stack.html",
@@ -186,7 +175,6 @@ def simulate():
         "stepWavelength": my_filter.filter_definition["wavelengthStep"],
         "polarization": my_filter.filter_definition["polarization"],
         "azimuthalAngle": my_filter.filter_definition["azimAngleMin"],
-        "generalCore": my_filter.filter_definition["core_selection"],
         "dataPresent": dataPresent,
     }
 
@@ -443,6 +431,8 @@ def upload_file(provided_filename=None):
         # )
 
 
+
+
 def extract_filter_design(filter):
     """
     Extracts the filter design information.
@@ -513,11 +503,8 @@ def save_json():
     data_to_json["substrate_thickness"] = float(data[6].get("1").get("values")[0])
     data_to_json["incident_medium"] = data[7].get("1").get("values")[0]
     data_to_json["exit_medium"] = data[8].get("1").get("values")[0]
-    data_to_json["core_selection"] = (
-        "general" if bool(data[9].get("1").get("values")[0]) else "fast"
-    )
 
-    layers = np.array(data[10].get("0").get("values"))
+    layers = np.array(data[9].get("0").get("values"))
     # Because of the way the structures are displayed (being different to the
     # order in the .json file), all entries concerning a layers must be flipped
     # here. Additionally, all entries containing muliple materials (e.g.
@@ -556,7 +543,7 @@ def save_json():
         [s.lower() == "true" for s in layers[5::6]]
     ).tolist()
 
-    targets = np.array(data[11].get("0").get("values"))
+    targets = np.array(data[10].get("0").get("values"))
     data_to_json["targets_type"] = targets[0::14].tolist()
     data_to_json["targets_polarization"] = targets[1::14].tolist()
     data_to_json["targets_polar_angle"] = [
@@ -651,6 +638,21 @@ def reset_filter():
 
     # Reload page
     return redirect("/")
+
+@app.route('/start_new_design', methods=['POST'])
+def start_new_design():
+    filter_name = request.form.get('filter_name') + ".json"
+    template = request.form.get('template') + ".json"
+
+    new_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filter_name)
+
+    # Copy the template to the temp folder
+    shutil.copy(os.path.join(app.config['TEMPLATE_FOLDER'], template), new_file_path)
+
+    # Run the upload function with the new file
+    upload_file(new_file_path)
+
+    return '', 200
 
 
 ##############################################

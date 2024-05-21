@@ -25,6 +25,14 @@ def get_available_materials(directory):
     ]
     return material_list
 
+def get_available_templates(directory):
+    template_list = [
+        os.path.splitext(f)[0]
+        for f in os.listdir(directory)
+        if os.path.isfile(os.path.join(directory, f)) and f.endswith(".json")
+    ]
+    return template_list
+
 def is_number(string):
     try:
         int(string)

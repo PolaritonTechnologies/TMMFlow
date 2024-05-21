@@ -136,7 +136,7 @@ class FilterStack:
         self.optimum_iteration = None
         self.last_optimum_number = 0
         self.first_zero = True
-        self.is_general_core = True
+        # self.is_general_core = True
         self.stop_flag = False
 
         self.initial_merit = 0
@@ -884,7 +884,7 @@ class FilterStack:
             ),
             self.target_tolerance,
             int(np.size(self.target_value)),
-            self.filter_definition["core_selection"],
+            # self.filter_definition["core_selection"],
         )
 
         # If merit is zero, the optimization has reached the target
@@ -1185,7 +1185,7 @@ class FilterStack:
         polarization,
         polar_angle,
         azimuthal_angle,
-        is_general_core,
+        # is_general_core,
     ):
         """
         Function to only get the results for one particular angle given a wavelength range
@@ -1205,7 +1205,7 @@ class FilterStack:
             int(np.size(polar_angle)),
             np.ascontiguousarray(azimuthal_angle).astype(np.float64),
             int(np.size(azimuthal_angle)),
-            is_general_core,
+            # is_general_core,
         )
 
         return pd.Series(
