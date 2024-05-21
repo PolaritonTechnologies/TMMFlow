@@ -34,13 +34,18 @@ for target in ["t", "r", "a"]:
 
         open_filter_df = pd.read_csv("../tests/" + polarization + "_" + target + ".csv", sep = "\t")
 
+        complete_ease_df = pd.read_csv("../tests/" + polarization + "_" + target + "_CE.csv", sep = "\t")
+
         # x = 1e-3
         # calculated_data_df = calculated_data_df.where(calculated_data_df >= x, 0)
         # open_filter_df = open_filter_df.where(open_filter_df >= x, 0)
         temp_diff = abs(calculated_data_df - open_filter_df)
-        print(temp_diff)
+        temp_diff_ce_of = abs(complete_ease_df - open_filter_df)
+        # print(temp_diff)
+        print(temp_diff_ce_of)
         print("Maximum deviations: ")
-        print(temp_diff.max())
+        # print(temp_diff.max())
+        print(temp_diff_ce_of.max())
 
         # Plot this to get a feeling for where the inaccuracies are the worst
 
