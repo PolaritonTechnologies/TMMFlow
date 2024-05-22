@@ -3,20 +3,59 @@
 
 from FilterStack import FilterStack
 import pandas as pd
+import numpy as np
+
+
+#########################
+# Convert data exported from openFilters for comparison to our standard
+# dataframe format
+
+def convert_open_filter_datastructure(file_path, columns):
+    """
+    Convert the weird open filter file format to something comparable to our
+    pandas dataframe
+    """
+    # Read the file line by line, skipping lines that start with whitespace
+    # followed by 'wavelength', 'Reflection', 'Transmission' or 'Absorption'
+    with open(file_path, 'r') as f:
+        lines = [line for line in f if not line.lstrip().startswith(('wavelength', 'Reflection', 'Transmission', 'Absorption'))]
+
+    # Convert the list of lines to a single string
+    data = '\n'.join(lines)
+
+    # Use StringIO to read the string as a file
+    from io import StringIO
+    data_io = StringIO(data)
+
+    # Read the CSV data
+    df = pd.read_csv(data_io, sep = '\s+', names=['wavelength', 'R'])
+
+    # Reorder the dataframe so that it contains  
+    number_of_angles = int(np.size(columns) - 1)
+    unique_wavelength = np.unique(df.to_numpy().T[0])
+    intensity_data = df.to_numpy().T[1].reshape(int(number_of_angles), int(df.to_numpy().T[1].size / number_of_angles))
+    full_frame_data = np.concatenate([unique_wavelength.reshape(1, np.size(unique_wavelength)), intensity_data], axis = 0)
+    df_to_write = pd.DataFrame(full_frame_data.T, columns = columns) 
+
+    # Write dataframe to file
+    df_to_write.to_csv('.'.join(np.append(file_path.split(".")[:-1], '_conv.csv')), sep='\t', index=False)
+
+# convert_open_filter_datastructure("../tests/a_p_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+# convert_open_filter_datastructure("../tests/a_s_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+# convert_open_filter_datastructure("../tests/t_p_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+# convert_open_filter_datastructure("../tests/t_s_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+# convert_open_filter_datastructure("../tests/r_p_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+# convert_open_filter_datastructure("../tests/r_s_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
 
 #########################
 # Input parameters
-json_file_path = "../examples/demo_test.json"
+# json_file_path = "../examples/demo_test.json"
+json_file_path = "../examples/bandpass_flat_top_600nm.json"
 
 #########################
 
 # Create filter stack
 filter_stack = FilterStack(json_file_path)
-
-# Optimize stack
-# filter_stack.lib.get_thicknesses()
-# filter_stack.lib.get_material_order()
-
 
 # def test():
 # assert optimization.check_targets(cavity_optimisation())
@@ -32,20 +71,20 @@ for target in ["t", "r", "a"]:
         calculated_data_df = pd.read_csv("../src/temp/value.csv", sep = ",")
         calculated_data_df = calculated_data_df.rename(columns={"Unnamed: 0": "wavelength"})
 
-        open_filter_df = pd.read_csv("../tests/" + polarization + "_" + target + ".csv", sep = "\t")
+        open_filter_df = pd.read_csv("../tests/" + polarization + "_" + target + "_flat_top.csv", sep = "\t")
 
-        complete_ease_df = pd.read_csv("../tests/" + polarization + "_" + target + "_CE.csv", sep = "\t")
+        # complete_ease_df = pd.read_csv("../tests/" + polarization + "_" + target + "_CE.csv", sep = "\t")
 
         # x = 1e-3
         # calculated_data_df = calculated_data_df.where(calculated_data_df >= x, 0)
         # open_filter_df = open_filter_df.where(open_filter_df >= x, 0)
         temp_diff = abs(calculated_data_df - open_filter_df)
-        temp_diff_ce_of = abs(complete_ease_df - open_filter_df)
-        # print(temp_diff)
-        print(temp_diff_ce_of)
+        # temp_diff_ce_of = abs(complete_ease_df - open_filter_df)
+        print(temp_diff)
+        # print(temp_diff_ce_of)
         print("Maximum deviations: ")
-        # print(temp_diff.max())
-        print(temp_diff_ce_of.max())
+        print(temp_diff.max())
+        # print(temp_diff_ce_of.max())
 
         # Plot this to get a feeling for where the inaccuracies are the worst
 
