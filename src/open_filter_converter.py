@@ -244,7 +244,7 @@ def export_to_open_filter(dictionary_input, file_name):
         if isinstance(dictionary_input["targets_wavelengths"][i], list):
             target_block = f"""Target:
     Kind: {dictionary_type[dictionary_input['targets_type'][i]]}
-    Angle: {dictionary_input['targets_polar_angle'][i] if len(dictionary_input['targets_polar_angle']) == 1 else dictionary_input['targets_polar_angle'][i][0]}
+    Angle: {dictionary_input['targets_polar_angle'][i] if np.size(dictionary_input['targets_polar_angle'][i]) == 1 else dictionary_input['targets_polar_angle'][i][0]}
     Polarization: {dictionary_polarization[dictionary_input['targets_polarization'][i]]}
     Direction: Normal
     From: {dictionary_input['targets_wavelengths'][i][0]}
