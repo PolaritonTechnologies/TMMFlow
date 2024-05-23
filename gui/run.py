@@ -682,7 +682,7 @@ def calculate_and_plot(data):
     #     float(data["stepAzimuthalAngle"]),
     # )
     target_type = data["mode"]
-    polarization = data["polarization"]
+    polarization = "" if data["polarization"] == "None" else data["polarization"]
 
     my_filter.calculate_ar_data(
         wavelengths,
