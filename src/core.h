@@ -17,8 +17,8 @@ std::tuple<double, double, Matrix2cd> calculate_rt_coherent(std::vector<Matrix3c
     std::complex<double> quotient_dynamical;
     // Here total_Matrix represents the electric displacement
     Matrix2cd total_Matrix = Matrix2cd::Identity();
-    Matrix2cd dynamical = Matrix2cd::Zero();
-    Matrix2cd propa = Matrix2cd::Zero();
+    Matrix2cd dynamical;
+    Matrix2cd propa;
     double transmissivity;  
     for (int i = 1; i < d_list.size() ; ++i)
     {
