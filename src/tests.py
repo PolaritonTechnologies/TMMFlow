@@ -50,7 +50,8 @@ def convert_open_filter_datastructure(file_path, columns):
 #########################
 # Input parameters
 # json_file_path = "../examples/demo_test.json"
-json_file_path = "../examples/bandpass_flat_top_600nm.json"
+json_file_path = "../examples/demo_test.json"
+# json_file_path = "../examples/bandpass_flat_top_600nm.json"
 
 #########################
 
@@ -71,7 +72,8 @@ for target in ["t", "r", "a"]:
         calculated_data_df = pd.read_csv("../src/temp/value.csv", sep = ",")
         calculated_data_df = calculated_data_df.rename(columns={"Unnamed: 0": "wavelength"})
 
-        open_filter_df = pd.read_csv("../tests/" + polarization + "_" + target + "_flat_top.csv", sep = "\t")
+        open_filter_df = pd.read_csv("../tests/" + polarization + "_" + target + ".csv", sep = "\t")
+        # open_filter_df = pd.read_csv("../tests/" + polarization + "_" + target + "_flat_top.csv", sep = "\t")
 
         # complete_ease_df = pd.read_csv("../tests/" + polarization + "_" + target + "_CE.csv", sep = "\t")
 
