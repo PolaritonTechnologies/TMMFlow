@@ -716,104 +716,104 @@
 
 <script>
     // Scripts on the stack tables for adding layers and optimization parameters
-    $(function () {
-        // Function to make table rows draggable
-        function makeRowsDraggable() {
-            $("#layers tbody").sortable({
-                items: ".draggable",
-                cursor: 'move',
-                opacity: 0.6,
-                stop: function () {
-                    // Update row numbers after drag and drop
-                    var totalRows = $(this).find("tr").length;
-                    $(this).find("tr").each(function (index) {
-                        var rowNumber = totalRows - index;
-                        $(this).data('row-number', rowNumber);
-                        $(this).find("td:first").text(rowNumber);
-                    });
-                }
-            });
-            $("#target tbody").sortable({
-                items: ".draggable",
-                cursor: 'move',
-                opacity: 0.6,
-                stop: function () {
-                    // Update row numbers after drag and drop
-                    $(this).find("tr").each(function (index) {
-                        var rowNumber = index;
-                        $(this).data('row-number', rowNumber);
-                        $(this).find("td:first").text(rowNumber);
-                    });
-                }
-            });
-        }
-
-        // Initial call to make existing rows draggable
-        makeRowsDraggable();
-
-        // Delete row on button click
-        $("#layers").on("click", ".delete-row", function () {
-            var tbody = $(this).closest("tbody");
-            $(this).closest("tr").remove();
-
-            // Update row numbers after deletion
-            var totalRows = tbody.find("tr").length;
-            tbody.find("tr").each(function (index) {
-                var rowNumber = totalRows - index;
-                $(this).data('row-number', rowNumber);
-                $(this).find("td:first").text(rowNumber);
-            });
-        });
-        $("#target").on("click", ".delete-row", function () {
-            var tbody = $(this).closest("tbody");
-            $(this).closest("tr").remove();
-
-            // Update row numbers after deletion
-            tbody.find("tr").each(function (index) {
-                var rowNumber = index;
-                $(this).data('row-number', rowNumber);
-                $(this).find("td:first").text(rowNumber);
-            });
-
-        });
-
-        document.getElementById('add_layer').addEventListener('click', function () {
-            addRow('layers');
-        });
-
-        document.getElementById('add_incoherent_layer').addEventListener('click', function () {
-            addRow('layers', 'incoherent');
-        });
-
-        document.getElementById('add_target').addEventListener('click', function () {
-            addRow('target');
-        });
-
-        // Get number of checkboxes to obtain number of layers (minus the
-        // general core checkbox)
-        let checkboxCounter = (document.querySelectorAll('input[type="checkbox"]').length - 1) / 2;
-
-        function addRow(tableId, type = 'coherent') {
-            var table = document.getElementById(tableId);
-            if (tableId == "target") {
-                var row = table.insertRow(-1);
-            } else {
-                var row = table.insertRow(1);
+    // Function to make table rows draggable
+    function makeRowsDraggable() {
+        $("#layers tbody").sortable({
+            items: ".draggable",
+            cursor: 'move',
+            opacity: 0.6,
+            stop: function () {
+                // Update row numbers after drag and drop
+                var totalRows = $(this).find("tr").length;
+                $(this).find("tr").each(function (index) {
+                    var rowNumber = totalRows - index;
+                    $(this).data('row-number', rowNumber);
+                    $(this).find("td:first").text(rowNumber);
+                });
             }
-            row.dataset.rowNumber = table.rows.length - 1;
-            row.className = 'draggable';
-            var cell1 = row.insertCell(0);
-            cell1.textContent = row.dataset.rowNumber;
+        });
+        $("#target tbody").sortable({
+            items: ".draggable",
+            cursor: 'move',
+            opacity: 0.6,
+            stop: function () {
+                // Update row numbers after drag and drop
+                $(this).find("tr").each(function (index) {
+                    var rowNumber = index;
+                    $(this).data('row-number', rowNumber);
+                    $(this).find("td:first").text(rowNumber);
+                });
+            }
+        });
+    }
 
-            if (tableId === 'layers' && type === 'coherent') {
-                var cell2 = row.insertCell(1);
-                var cell3 = row.insertCell(2);
-                var cell4 = row.insertCell(3);
-                var cell5 = row.insertCell(4);
-                var cell6 = row.insertCell(5);
-                var cell7 = row.insertCell(6);
-                var cell8 = row.insertCell(7);
-                cell2.innerHTML = `
+    // Initial call to make existing rows draggable
+    makeRowsDraggable();
+
+    // Delete row on button click
+    $("#layers").on("click", ".delete-row", function () {
+        var tbody = $(this).closest("tbody");
+        $(this).closest("tr").remove();
+
+        // Update row numbers after deletion
+        var totalRows = tbody.find("tr").length;
+        tbody.find("tr").each(function (index) {
+            var rowNumber = totalRows - index;
+            $(this).data('row-number', rowNumber);
+            $(this).find("td:first").text(rowNumber);
+        });
+    });
+    $("#target").on("click", ".delete-row", function () {
+        var tbody = $(this).closest("tbody");
+        $(this).closest("tr").remove();
+
+        // Update row numbers after deletion
+        tbody.find("tr").each(function (index) {
+            var rowNumber = index;
+            $(this).data('row-number', rowNumber);
+            $(this).find("td:first").text(rowNumber);
+        });
+
+    });
+
+    document.getElementById('add_layer').addEventListener('click', function () {
+        addRow('layers');
+    });
+
+    document.getElementById('add_incoherent_layer').addEventListener('click', function () {
+        addRow('layers', 'incoherent');
+    });
+
+    document.getElementById('add_target').addEventListener('click', function () {
+        addRow('target');
+    });
+
+    // Get number of checkboxes to obtain number of layers (minus the
+    // general core checkbox)
+    let checkboxCounter = (document.querySelectorAll('input[type="checkbox"]').length - 1) / 2;
+
+    function addRow(tableId, type = 'coherent', sourceRow = null) {
+        var table = document.getElementById(tableId);
+        if (tableId == "target") {
+            var row = table.insertRow(-1);
+        } else {
+            var row = table.insertRow(1);
+        }
+        row.dataset.rowNumber = table.rows.length - 1;
+        row.className = 'draggable';
+        var cell1 = row.insertCell(0);
+        cell1.textContent = row.dataset.rowNumber;
+
+        if (tableId === 'layers' && type === 'coherent') {
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            var cell5 = row.insertCell(4);
+            var cell6 = row.insertCell(5);
+            var cell7 = row.insertCell(6);
+            var cell8 = row.insertCell(7);
+
+            cell2.innerHTML = `
                     <select class="form-control select2">
                         {% for material in default_values.available_materials %}
                         {% if material == default_values.exit_medium %}
@@ -824,70 +824,83 @@
                         {% endfor %}
                     </select>`;
 
-                // Initialize Select2 on the new element
-                $(cell2).find('select').select2({
-                    theme: 'bootstrap',
-                    width: 'resolve',
-                    tags: true,
-                    createTag: function (params) {
-                        var term = $.trim(params.term);
 
-                        if (term === '') {
-                            return null;
-                        }
 
-                        return {
-                            id: term,
-                            text: term,
-                            newOption: true
-                        }
-                    },
-                    templateResult: function (data) {
-                        var $result = $("<span></span>");
-
-                        $result.text(data.text);
-
-                        if (data.newOption) {
-                            $result.append(" <em>(add new)</em>");
-                        }
-
-                        return $result;
-                    }
-                });
-
-                cell3.innerHTML = '<input type="text" class="form-control" pattern="^\\d+$|^\\[\\d+(,\\s*\\d+)*\\]$" title="Only [ ] , . or numbers are allowed." class="form-control">';
-                cell4.innerHTML = `
+            cell3.innerHTML = '<input type="text" class="form-control" pattern="^\\d+(\\.\\d+)?$|^\\[\\d+(\\.\\d+)?(,\\s*\\d+(\\.\\d+)?)*\\]$" title="Only [ ] , . or numbers are allowed." class="form-control">';
+            cell4.innerHTML = `
                 <div class="custom-control custom-checkbox">
                     <input type="checkbox" checked class="custom-control-input" id="checkbox_thickness_opt_${checkboxCounter}">
                     <label class="custom-control-label" for="checkbox_thickness_opt_${checkboxCounter}"></label>
                 </div> `;
-                checkboxCounter++;
-                cell5.innerHTML = `
+            checkboxCounter++;
+            cell5.innerHTML = `
                 <div class="input-group">
-                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Min" value = 0>
-                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Max" value = 100>
+                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Min" value = 0.0>
+                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Max" value = 100.0>
                 </div>
                 `;
-                cell6.innerHTML = `
+            cell6.innerHTML = `
                 <div class="custom-control custom-checkbox">
                     <input type="checkbox" class="custom-control-input" id="checkbox_layer_switch_${checkboxCounter}">
                     <label class="custom-control-label" for="checkbox_layer_switch_${checkboxCounter}"></label>
                 </div> `;
-                cell7.innerHTML = '<button class="btn btn-success duplicate-row">x2</button>';
-                cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
-                checkboxCounter++;
-            } else if (tableId === 'layers' && type === "incoherent") {
-                // Use a different color for the incoherent layer
-                row.style.backgroundColor = "#D3D3D3";
+            cell7.innerHTML = '<button class="btn btn-success duplicate-row">x2</button>';
+            cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+            // If sourceRow is provided, populate the new row with the values from sourceRow
+            if (sourceRow) {
+                var sourceCells = sourceRow.cells;
+                var sourceSelect2Values = $(sourceCells[1]).find('select').val();
+                $(cell2).find('select').select2().val(sourceSelect2Values).trigger('change');
+                $(cell3).find('input').val($(sourceCells[2]).find('input').val());
+                $(cell4).find('input').prop('checked', $(sourceCells[3]).find('input').prop('checked'));
+                $(cell5).find('input').each(function (index) {
+                    $(this).val($(sourceCells[4]).find('input').eq(index).val());
+                });
+                $(cell6).find('input').prop('checked', $(sourceCells[5]).find('input').prop('checked'));
+            }
+            // Initialize Select2 on the new element
+            $(cell2).find('select').select2({
+                theme: 'bootstrap',
+                width: 'resolve',
+                tags: true,
+                createTag: function (params) {
+                    var term = $.trim(params.term);
 
-                var cell2 = row.insertCell(1);
-                var cell3 = row.insertCell(2);
-                var cell4 = row.insertCell(3);
-                var cell5 = row.insertCell(4);
-                var cell6 = row.insertCell(5);
-                var cell7 = row.insertCell(6);
-                var cell8 = row.insertCell(7);
-                cell2.innerHTML = `
+                    if (term === '') {
+                        return null;
+                    }
+
+                    return {
+                        id: term,
+                        text: term,
+                        newOption: true
+                    }
+                },
+                templateResult: function (data) {
+                    var $result = $("<span></span>");
+
+                    $result.text(data.text);
+
+                    if (data.newOption) {
+                        $result.append(" <em>(add new)</em>");
+                    }
+
+                    return $result;
+                }
+            });
+            checkboxCounter++;
+        } else if (tableId === 'layers' && type === "incoherent") {
+            // Use a different color for the incoherent layer
+            row.style.backgroundColor = "#D3D3D3";
+
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            var cell5 = row.insertCell(4);
+            var cell6 = row.insertCell(5);
+            var cell7 = row.insertCell(6);
+            var cell8 = row.insertCell(7);
+            cell2.innerHTML = `
                     <select class="form-control select2">
                         {% for material in default_values.available_materials %}
                         {% if material == default_values.exit_medium %}
@@ -898,115 +911,102 @@
                         {% endfor %}
                     </select>`;
 
-                // Initialize Select2 on the new element
-                $(cell2).find('select').select2({
-                    theme: 'bootstrap',
-                    width: 'resolve',
-                    tags: true,
-                    createTag: function (params) {
-                        var term = $.trim(params.term);
+            // Initialize Select2 on the new element
+            $(cell2).find('select').select2({
+                theme: 'bootstrap',
+                width: 'resolve',
+                tags: true,
+                createTag: function (params) {
+                    var term = $.trim(params.term);
 
-                        if (term === '') {
-                            return null;
-                        }
-
-                        return {
-                            id: term,
-                            text: term,
-                            newOption: true
-                        }
-                    },
-                    templateResult: function (data) {
-                        var $result = $("<span></span>");
-
-                        $result.text(data.text);
-
-                        if (data.newOption) {
-                            $result.append(" <em>(add new)</em>");
-                        }
-
-                        return $result;
+                    if (term === '') {
+                        return null;
                     }
-                });
 
-                cell3.innerHTML = '<input type="text" class="form-control">';
-                cell7.innerHTML = '<button class="btn btn-success duplicate-row">x2</button>';
-                cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
-            } else if (tableId === 'target') {
-                var cells = [];
-                for (var i = 1; i <= 10; i++) {
-                    cells[i] = row.insertCell(i);
+                    return {
+                        id: term,
+                        text: term,
+                        newOption: true
+                    }
+                },
+                templateResult: function (data) {
+                    var $result = $("<span></span>");
+
+                    $result.text(data.text);
+
+                    if (data.newOption) {
+                        $result.append(" <em>(add new)</em>");
+                    }
+
+                    return $result;
                 }
-                cells[1].innerHTML = `
+            });
+
+            cell3.innerHTML = '<input type="text" class="form-control">';
+            cell7.innerHTML = '<button class="btn btn-success duplicate-row">x2</button>';
+            cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+        } else if (tableId === 'target') {
+            var cells = [];
+            for (var i = 1; i <= 10; i++) {
+                cells[i] = row.insertCell(i);
+            }
+            cells[1].innerHTML = `
                     <select class="form-control">
                         <option value="t">t</option>
                         <option value="r">r</option>
                         <option value="a">a</option>
                     </select>
                     `;
-                cells[2].innerHTML = `
+            cells[2].innerHTML = `
                     <select class="form-control">
                         <option value="s">s</option>
                         <option value="p">p</option>
                         <option value="">None</option>
                     </select>
                     `;
-                cells[3].innerHTML = `
+            cells[3].innerHTML = `
                     <div class="input-group">
                         <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Min">
                         <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Max">
                         <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Step">
                     </div>
                     `;
-                cells[4].innerHTML = `
+            cells[4].innerHTML = `
                     <div class="input-group">
                         <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Min">
                         <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Max">
                         <input type="number" min="0" max="90" step="any" class="form-control" placeholder="Step">
                     </div>
                     `;
-                cells[5].innerHTML = `
+            cells[5].innerHTML = `
                     <div class="input-group">
                         <input type="number" min="10" max="10000" step="any" class="form-control" placeholder="Min">
                         <input type="number" min="10" max="10000" step="any" class="form-control" placeholder="Max">
                         <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Step">
                     </div>
                     `;
-                cells[6].innerHTML = `
+            cells[6].innerHTML = `
                     <select class="form-control">
                         <option value="<"><</option>
                         <option value=">">></option>
                         <option value="=">=</option>
                     </select>
                     `;
-                cells[7].innerHTML = '<input type="number" min="0" max="1" step="any" class="form-control">';
-                cells[8].innerHTML = '<input type="number" min="0" max="1" step="any" class="form-control">';
-                cells[9].innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
-            }
-
-
-            // Refresh sortable functionality after adding new row
-            makeRowsDraggable();
+            cells[7].innerHTML = '<input type="number" min="0" max="1" step="any" class="form-control">';
+            cells[8].innerHTML = '<input type="number" min="0" max="1" step="any" class="form-control">';
+            cells[9].innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
         }
-    });
-    $(document).ready(function () {
-        $(document).on('click', '.duplicate-row', function (event) {
-            event.preventDefault();
-            var row = $(this).closest('tr');  // Find the row
-            var clone = row.clone();  // Clone the row
 
-            // Get the number of the last row
-            var lastRowNumber = parseInt($('#layers tr:first-child td:first-child').text());
 
-            // Set the number of the new row
-            clone.find('td:first-child').text(lastRowNumber + 1);
+        // Refresh sortable functionality after adding new row
+        makeRowsDraggable();
+    }
 
-            // Copy the styles from the original row to the cloned row
-            clone.attr('style', row.attr('style'));
-
-            $('#layers tbody').prepend(clone);  // Append the row to the table
-        });
-    });
+    $(document).on('click', '.duplicate-row', function (event) {
+        event.preventDefault();
+        var sourceRow = $(this).closest('tr')[0];  // Find the row
+        addRow('layers', 'coherent', sourceRow);  // Add a new row with the values from sourceRow
+    });    
 </script>
 
 <script>
