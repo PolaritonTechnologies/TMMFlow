@@ -107,11 +107,13 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
 
                 if (strcmp(polarization, "") == 0)
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));        
+                    // std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));        
+                    std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized_incoherent(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));                        
                 }
                 else
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, polarization, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));
+                    // std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, polarization, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));
+                    std::tie(reflectivity,transmissivity) = calculate_rt_incoherent(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, polarization, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));
                 }
 
                 if (strcmp(type, "t") == 0)
@@ -187,7 +189,7 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
 
     if (strcmp(polarization, "") == 0)
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength));
+        std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength));    
     }
     else
     {
