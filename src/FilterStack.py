@@ -184,6 +184,7 @@ class FilterStack:
         # translate the structure
 
         structure_materials = optimisation_order["structure_materials"]
+        incoherent = optimisation_order["incoherent"]
         structure_thicknesses = optimisation_order["structure_thicknesses"]
         thickness_opt_allowed = optimisation_order["thickness_opt_allowed"]
         layer_switch_allowed = optimisation_order["layer_switch_allowed"]
@@ -191,6 +192,7 @@ class FilterStack:
         bounds = optimisation_order["bounds"]
 
         updated_structure_materials = []
+        updated_incoherent = []
         updated_structure_thicknesses = []
         updated_thickness_opt_allowed = []
         updated_layer_switch_allowed = []
@@ -220,6 +222,8 @@ class FilterStack:
                     updated_thickness_opt_allowed.append(thickness_opt_allowed[m_idx])
                     updated_layer_switch_allowed.append(layer_switch_allowed[m_idx])
                     updated_layer_switch_allowed.append(layer_switch_allowed[m_idx])
+                    updated_incoherent.append(incoherent[m_idx])
+                    updated_incoherent.append(incoherent[m_idx])
                     updated_bounds.append(bounds[m_idx])
                     updated_bounds.append(bounds[m_idx])
 
@@ -228,9 +232,11 @@ class FilterStack:
                 updated_structure_thicknesses.append(structure_thicknesses[m_idx])
                 updated_thickness_opt_allowed.append(thickness_opt_allowed[m_idx])
                 updated_layer_switch_allowed.append(layer_switch_allowed[m_idx])
+                updated_incoherent.append(incoherent[m_idx])
                 updated_bounds.append(bounds[m_idx])
 
         updated_optimisation_order["structure_materials"] = updated_structure_materials
+        updated_optimisation_order["incoherent"] = updated_incoherent
         updated_optimisation_order["structure_thicknesses"] = (
             updated_structure_thicknesses
         )
