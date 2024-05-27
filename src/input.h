@@ -234,9 +234,8 @@ struct CalculationInfo
     double wavelengthMin;
     double wavelengthMax;
     double wavelengthStep;
-    double substrateThickness;
-    std::string substrateMaterial;
     std::vector<std::string> structure_materials;
+    std::vector<bool> incoherent;
     std::vector<double> structure_thicknesses;
     std::vector<double> azimuthalAngles;
     std::string polarization;
@@ -259,9 +258,8 @@ struct CalculationInfo
         double wavelengthStep,
         std::string polarization,
         std::vector<std::string> structure_materials,
+        std::vector<bool> incoherent,
         std::vector<double> structure_thicknesses,
-        std::string substrateMaterial,
-        double substrateThickness,
         std::string incidentMediumMaterial,
         std::string exitMediumMaterial) : calculation_type(calculation_type),
                        polarAngleMin(polarAngleMin),
@@ -275,9 +273,8 @@ struct CalculationInfo
                        wavelengthStep(wavelengthStep),
                        polarization(polarization),
                        structure_materials(structure_materials),
+                       incoherent(incoherent),
                        structure_thicknesses(structure_thicknesses),
-                       substrateMaterial(substrateMaterial),
-                       substrateThickness(substrateThickness),
                        incidentMediumMaterial(incidentMediumMaterial),
                        exitMediumMaterial(exitMediumMaterial) {}
 };
@@ -289,6 +286,7 @@ CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
     file >> calculation_order;
 
     std::vector<std::string> structure_materials = calculation_order["structure_materials"];
+    std::vector<bool> incoherent = calculation_order["incoherent"];
     std::vector<double> structure_thicknesses = calculation_order["structure_thicknesses"];
 
     CalculationInfo calculation_info(
@@ -304,9 +302,8 @@ CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
         calculation_order["wavelengthStep"],
         calculation_order["polarization"],
         structure_materials,
+        incoherent,
         structure_thicknesses,
-        calculation_order["substrate_material"],
-        calculation_order["substrate_thickness"],
         calculation_order["incident_medium"],
         calculation_order["exit_medium"]
         );
