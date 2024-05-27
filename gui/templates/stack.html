@@ -165,10 +165,10 @@
                     </div>
                     {% endfor %}
                     {% endif %}
-                    <div class="substrate_box"
-                        style="background-color:#A9A9A9; height: 50px; display: flex; justify-content: center; align-items: center;">
-                        Substrate
-                    </div>
+                    <!-- <div class="substrate_box" -->
+                    <!-- style="background-color:#A9A9A9; height: 50px; display: flex; justify-content: center; align-items: center;"> -->
+                    <!-- Substrate -->
+                    <!-- </div> -->
                 </div>
             </div>
             <div class="col-lg-2 col-md-4">
@@ -273,28 +273,28 @@
                             name="azimuthal_angle_step" class="form-control" value="{{ default_values.azimAngleStep }}">
                     </td>
                 </tr>
-                <tr>
-                    <td><label for="substrate_material_type">Substrate Material Type:</label></td>
-                    <td>
-                        <select id="substrate_material_type" name="substrate_material_type"
-                            class="form-control select2">
-                            {% for material in default_values.available_materials %}
-                            {% if material == default_values.substrate_material %}
-                            <option value="{{ material }}" selected>{{ material }}</option>
-                            {% else %}
-                            <option value="{{ material }}">{{ material }}</option>
-                            {% endif %}
-                            {% endfor %}
-                        </select>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td><label for="substrate_thickness">Substrate Thickness:</label></td>
-                    <td><input type="number" min="0" max="100000000" step="any" id="substrate_thickness"
-                            name="substrate_thickness" class="form-control"
-                            value="{{ default_values.substrate_thickness }}"></td>
-                </tr>
+                <!-- <tr> -->
+                <!-- <td><label for="substrate_material_type">Substrate Material Type:</label></td> -->
+                <!-- <td> -->
+                <!-- <select id="substrate_material_type" name="substrate_material_type" -->
+                <!-- class="form-control select2"> -->
+                <!-- {% for material in default_values.available_materials %} -->
+                <!-- {% if material == default_values.substrate_material %} -->
+                <!-- <option value="{{ material }}" selected>{{ material }}</option> -->
+                <!-- {% else %} -->
+                <!-- <option value="{{ material }}">{{ material }}</option> -->
+                <!-- {% endif %} -->
+                <!-- {% endfor %} -->
+                <!-- </select> -->
+                <!-- </td> -->
+                <!-- </tr> -->
+                <!--  -->
+                <!-- <tr> -->
+                <!-- <td><label for="substrate_thickness">Substrate Thickness:</label></td> -->
+                <!-- <td><input type="number" min="0" max="100000000" step="any" id="substrate_thickness" -->
+                <!-- name="substrate_thickness" class="form-control" -->
+                <!-- value="{{ default_values.substrate_thickness }}"></td> -->
+                <!-- </tr> -->
                 <tr>
                     <td><label for="incident_medium">Incident Medium:</label></td>
                     <td>
@@ -354,6 +354,50 @@
                             </thead>
                             <tbody>
                                 {% for i in range(default_values.structure_materials|length)|reverse %}
+                                {% if default_values.incoherent[i] %}
+                                <tr class="draggable" style="background-color: #D3D3D3;">
+                                    <td>{{ i+1 }}</td>
+                                    <td>
+                                        <select class="form-control select2" autocomplete="off">
+                                            <option value="{{ default_values.structure_materials[i] }}" selected>{{
+                                                default_values.structure_materials[i] }}</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" class="form-control"
+                                            pattern="^\d+(\.\d+)?$|^\[\d+(\.\d+)?(,\s*\d+(\.\d+)?)*\]$"
+                                            title="Only [ ] , . or numbers are allowed."
+                                            value="{{ default_values.structure_thicknesses[i] }}">
+                                    </td>
+
+                                    <td>
+                                        <div class="custom-control custom-checkbox" style="display: none;">
+                                            <input type="checkbox" class="custom-control-input"
+                                                id="checkbox_thickness_opt_{{ i }}">
+                                            <label class="custom-control-label"
+                                                for="checkbox_thickness_opt_{{ i }}"></label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="input-group" style="display: none;">
+                                            <input type="number" class="form-control" value="0">
+                                            <input type="number" class="form-control" value="0">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="custom-control custom-checkbox" style="display: none;">
+                                            <input type="checkbox" class="custom-control-input"
+                                                name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}">
+                                            <label class="custom-control-label"
+                                                for="checkbox_layer_switch_{{ i }}"></label>
+                                        </div>
+                                    </td>
+                                    <td> </td>
+                                    <td>
+                                        <button class="btn btn-danger delete-row">Delete</button>
+                                        <input type="hidden" class="incoherent" value="true">
+                                    </td>
+                                </tr>
+                                {%else%}
                                 <tr class="draggable">
                                     <td>{{ i+1 }}</td>
                                     <td>
@@ -405,8 +449,10 @@
                                     </td>
                                     <td>
                                         <button class="btn btn-danger delete-row">Delete</button>
+                                        <input type="hidden" class="incoherent" value="false">
                                     </td>
                                 </tr>
+                                {% endif %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -845,7 +891,7 @@
                     <label class="custom-control-label" for="checkbox_layer_switch_${checkboxCounter}"></label>
                 </div> `;
             cell7.innerHTML = '<button class="btn btn-success duplicate-row">x2</button>';
-            cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+            cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button><input type="hidden" class="incoherent" value="false">';
             // If sourceRow is provided, populate the new row with the values from sourceRow
             if (sourceRow) {
                 var sourceCells = sourceRow.cells;
@@ -943,7 +989,25 @@
             });
 
             cell3.innerHTML = '<input type="text" class="form-control">';
-            cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+            cell4.innerHTML = `
+                <div class="custom-control custom-checkbox" style="display: none;">
+                    <input type="checkbox" class="custom-control-input" id="checkbox_thickness_opt_${checkboxCounter}">
+                    <label class="custom-control-label" for="checkbox_thickness_opt_${checkboxCounter}"></label>
+                </div> `;
+            checkboxCounter++;
+            cell5.innerHTML = `
+                <div class="input-group" style="display: none;">
+                    <input type="number" class="form-control" value = 0>
+                    <input type="number" class="form-control" value = 0>
+                </div>
+                `;
+            cell6.innerHTML = `
+                <div class="custom-control custom-checkbox" style="display: none;">
+                    <input type="checkbox" class="custom-control-input" id="checkbox_layer_switch_${checkboxCounter}">
+                    <label class="custom-control-label" for="checkbox_layer_switch_${checkboxCounter}"></label>
+                </div> `;
+            checkboxCounter++;
+            cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button><input type="hidden" class="incoherent" value="true">';
         } else if (tableId === 'target') {
             var cells = [];
             for (var i = 1; i <= 10; i++) {
@@ -1039,6 +1103,10 @@
             for (var j = 0, cell; cell = row.cells[j]; j++) {
                 rowData[j] = getCellData(cell);
             }
+            // Add the incoherent value as an additional column
+            if (row.querySelector('.incoherent')) {
+                rowData[row.cells.length] = row.querySelector('.incoherent').value === 'true';
+            }
             data.push(rowData);
         }
 
@@ -1048,6 +1116,16 @@
     function saveData(button) {
         var table = document.getElementById('jsonTable');
         var data = getTableData(table);
+        // Retrieve incoherent information from the hidden variable in the
+        // tables (incoherent rows are marked grey)
+        // var incoherent = $('.incoherent').map(function () {
+        //     return $(this).val() === 'true';
+        // }).get();
+
+        // Add the incoherent information to each row of data
+        // for (var i = 0; i < data.length; i++) {
+        //     data[i]['incoherent'] = incoherent[i];
+        // }
 
         var xhr = new XMLHttpRequest();
         xhr.open('POST', '/save_json?button=' + button, true);
@@ -1213,8 +1291,8 @@
                     if (inputs.length >= 2) { // make sure there are at least two input elements
                         var value1 = parseFloat(inputs[0].value);
                         var value2 = parseFloat(inputs[1].value);
-                        if (value1 >= value2) {
-                            errorMessages.push('Invalid thickness bound input for layer ' + layerNumber + '. The lower wavelength bound should be smaller than the higher wavelength bound.');
+                        if (value1 > value2) {
+                            errorMessages.push('Invalid thickness bound input for layer ' + layerNumber + '. The lower thickness bound should be smaller or equal to the higher thickness bound.');
                         }
                     }
                 }
@@ -1372,7 +1450,7 @@
         var checkboxes = [];
         for (var i = 1, row; row = table.rows[i]; i++) {
             var checkbox = row.cells[columnIndex].getElementsByTagName('input')[0];
-            if (checkbox && checkbox.type === 'checkbox') {
+            if (checkbox && checkbox.type === 'checkbox' && checkbox.parentNode.style.display !== 'none') {
                 checkboxes.push(checkbox);
             }
         }

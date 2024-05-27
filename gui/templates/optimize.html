@@ -122,9 +122,9 @@
                                 </div>
                                 {% endfor %}
                                 {% endif %}
-                                <div class="substrate_box"
-                                    style="background-color:#A9A9A9; height: 50px; display: flex; justify-content: center; align-items: center;">
-                                </div>
+                                <!-- <div class="substrate_box" -->
+                                <!-- style="background-color:#A9A9A9; height: 50px; display: flex; justify-content: center; align-items: center;"> -->
+                                <!-- </div> -->
                             </div>
                         </div>
                         <div class="col-lg-6 col-md-6">
@@ -278,11 +278,11 @@
             container.appendChild(div);
         }
         // Create substrate box
-        var substrateBox = document.createElement('div');
-        substrateBox.className = 'substrate_box';
-        substrateBox.style.backgroundColor = '#A9A9A9'; // Change this to the desired color of the substrate box
-        substrateBox.style.height = '50px'; // Change this to the desired height of the substrate box
-        container.appendChild(substrateBox);
+        // var substrateBox = document.createElement('div');
+        // substrateBox.className = 'substrate_box';
+        // substrateBox.style.backgroundColor = '#A9A9A9'; // Change this to the desired color of the substrate box
+        // substrateBox.style.height = '50px'; // Change this to the desired height of the substrate box
+        // container.appendChild(substrateBox);
 
         $('#iterations').html('<strong>Iterations:</strong> ' + data.iterations);
         $('#merit').html('<strong>Latest Merit:</strong> ' + data.merit);

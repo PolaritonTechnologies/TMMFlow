@@ -105,6 +105,7 @@ def stack():
             num_legend_items,
             unique_materials,
             unique_colors,
+            incoherent,
         ) = upload_file(temp_default_file)
     else:
         (
@@ -114,6 +115,7 @@ def stack():
             num_legend_items,
             unique_materials,
             unique_colors,
+            incoherent
         ) = extract_filter_design(my_filter)
 
     # Specify the directory you want to search
@@ -149,6 +151,7 @@ def stack():
     default_values["thickness_opt_allowed"] = my_filter.thickness_opt_allowed_by_user
     default_values["layer_switch_allowed"] = my_filter.layer_switch_allowed_by_user
     default_values["bounds"] = my_filter.bounds_by_user
+    default_values["incoherent"] = my_filter.incoherent_by_user
 
     return render_template(
         "stack.html",
@@ -198,6 +201,7 @@ def optimize():
             num_legend_items,
             unique_materials,
             unique_colors,
+            incoherent
         ) = upload_file(temp_default_file)
     else:
         (
@@ -207,6 +211,7 @@ def optimize():
             num_legend_items,
             unique_materials,
             unique_colors,
+            incoherent
         ) = extract_filter_design(my_filter)
 
     return render_template(
@@ -217,6 +222,7 @@ def optimize():
         num_legend_items=num_legend_items,
         unique_materials=unique_materials,
         legend_colors=unique_colors,
+        incoherent,
     )
 
 
@@ -329,9 +335,9 @@ def upload_file(provided_filename=None):
 
         # We need to reverse engineer, which of the following ones are not
         # available.
-        if filter_definition_json["substrate_material"] not in available_materials:
-            filter_definition_json["substrate_material"] = replacements[-1]
-            replacements = np.delete(replacements, -1)
+        # if filter_definition_json["substrate_material"] not in available_materials:
+        # filter_definition_json["substrate_material"] = replacements[-1]
+        # replacements = np.delete(replacements, -1)
         if filter_definition_json["incident_medium"] not in available_materials:
             filter_definition_json["incident_medium"] = replacements[-1]
             replacements = np.delete(replacements, -1)
@@ -366,7 +372,7 @@ def upload_file(provided_filename=None):
         not np.all(material_available)
         or filter_definition_json["exit_medium"] not in available_materials
         or filter_definition_json["incident_medium"] not in available_materials
-        or filter_definition_json["substrate_material"] not in available_materials
+        # or filter_definition_json["substrate_material"] not in available_materials
     ):
         # This is a bit more complicated, as each of the materials could
         # potentially not be available
@@ -380,8 +386,8 @@ def upload_file(provided_filename=None):
             unavailable_materials.append(filter_definition_json["exit_medium"])
         if filter_definition_json["incident_medium"] not in available_materials:
             unavailable_materials.append(filter_definition_json["incident_medium"])
-        if filter_definition_json["substrate_material"] not in available_materials:
-            unavailable_materials.append(filter_definition_json["substrate_material"])
+        # if filter_definition_json["substrate_material"] not in available_materials:
+            # unavailable_materials.append(filter_definition_json["substrate_material"])
 
         # open a modal to inform the user that some materials are not available
         # and break the loading (or better for the future: open a modal that
@@ -405,6 +411,7 @@ def upload_file(provided_filename=None):
         number_unique_materials,
         unique_materials,
         unique_colors,
+        incoherent
     ) = extract_filter_design(my_filter)
 
     if provided_filename is not None:
@@ -415,6 +422,7 @@ def upload_file(provided_filename=None):
             number_unique_materials,
             unique_materials,
             unique_colors,
+            incoherent,
         )
 
     else:
@@ -461,12 +469,16 @@ def extract_filter_design(filter):
             np.array(filter.filter_definition["structure_materials"])
             == np.unique(filter.filter_definition["structure_materials"])[i]
         ] = unique_colors[i]
-
-    ordered_thicknesses = [
+    
+    ordered_thicknesses = np.array([
         filter.filter_definition["structure_thicknesses"][i] for i in filter.layer_order
-    ]
+    ])
+    # Set the incoherent layer thicknesses to a specific value so that it does
+    # not go out of control thick
+    ordered_thicknesses[np.array(filter.filter_definition["incoherent"])] = 100
 
     heights = np.round(np.array(ordered_thicknesses) / sum(ordered_thicknesses) * 300)
+    incoherent = filter.filter_definition["incoherent"]
     return (
         num_boxes,
         colors.tolist(),
@@ -474,6 +486,7 @@ def extract_filter_design(filter):
         len(unique_materials),
         unique_materials.tolist(),
         unique_colors,
+        incoherent
     )
 
 
@@ -499,19 +512,20 @@ def save_json():
     data_to_json["azimAngleMin"] = float(data[4].get("1").get("values")[0])
     data_to_json["azimAngleMax"] = float(data[4].get("2").get("values")[0])
     data_to_json["azimAngleStep"] = float(data[4].get("3").get("values")[0])
-    data_to_json["substrate_material"] = data[5].get("1").get("values")[0]
-    data_to_json["substrate_thickness"] = float(data[6].get("1").get("values")[0])
-    data_to_json["incident_medium"] = data[7].get("1").get("values")[0]
-    data_to_json["exit_medium"] = data[8].get("1").get("values")[0]
+    # data_to_json["substrate_material"] = data[5].get("1").get("values")[0]
+    # data_to_json["substrate_thickness"] = float(data[6].get("1").get("values")[0])
+    data_to_json["incident_medium"] = data[5].get("1").get("values")[0]
+    data_to_json["exit_medium"] = data[6].get("1").get("values")[0]
 
-    layers = np.array(data[9].get("0").get("values"))
+    layers = np.array(data[7].get("0").get("values"))
+    number_of_columns = 7
     # Because of the way the structures are displayed (being different to the
     # order in the .json file), all entries concerning a layers must be flipped
     # here. Additionally, all entries containing muliple materials (e.g.
     # 5_SiO2_Ta2O5), have to be reverted, too (5_Ta2O5_SiO2) so that things make
     # sense. This is slighty confusing, however, and we should consider changing
     # the order in the .json file instead.
-    temp_material_list = np.flip(layers[0::6]).tolist()
+    temp_material_list = np.flip(layers[0::number_of_columns]).tolist()
     data_to_json["structure_materials"] = [
         (
             item.split("_")[0] + "_" + "_".join(item.split("_")[1:][::-1])
@@ -522,7 +536,7 @@ def save_json():
     ]
     temp_structure_thicknesses = np.flip(
         np.array(
-            [ast.literal_eval(i) if "," in i else float(i) for i in layers[1::6]],
+            [ast.literal_eval(i) if "," in i else float(i) for i in layers[1::number_of_columns]],
             dtype=object,
         )
     ).tolist()
@@ -530,20 +544,23 @@ def save_json():
         np.flip(a).tolist() for a in temp_structure_thicknesses
     ]
     data_to_json["thickness_opt_allowed"] = np.flip(
-        [s.lower() == "true" for s in layers[2::6]]
+        [s.lower() == "true" for s in layers[2::number_of_columns]]
     ).tolist()
     data_to_json["bounds"] = np.flip(
         [
             [float(x), float(y)] if y != "" else float(x)
-            for x, y in zip(layers[3::6].tolist(), layers[4::6].tolist())
+            for x, y in zip(layers[3::number_of_columns].tolist(), layers[4::number_of_columns].tolist())
         ],
         axis=0,
     ).tolist()
     data_to_json["layer_switch_allowed"] = np.flip(
-        [s.lower() == "true" for s in layers[5::6]]
+        [s.lower() == "true" for s in layers[5::number_of_columns]]
+    ).tolist()
+    data_to_json["incoherent"] = np.flip(
+        [s.lower() == "true" for s in layers[6::number_of_columns]]
     ).tolist()
 
-    targets = np.array(data[10].get("0").get("values"))
+    targets = np.array(data[8].get("0").get("values"))
     data_to_json["targets_type"] = targets[0::14].tolist()
     data_to_json["targets_polarization"] = targets[1::14].tolist()
     data_to_json["targets_polar_angle"] = [
@@ -897,6 +914,7 @@ def start_optimization(data):
             number_unique_materials,
             unique_materials,
             unique_colors,
+            incoherent
         ) = extract_filter_design(my_filter)
 
         # Package the values into a dictionary

@@ -104,6 +104,9 @@ class FilterStack:
         self.layer_switch_allowed_by_user = filter_definition_by_user[
             "layer_switch_allowed"
         ]
+        self.incoherent_by_user = filter_definition_by_user[
+            "incoherent"
+        ]
         self.bounds_by_user = filter_definition_by_user["bounds"]
         # ---
 
