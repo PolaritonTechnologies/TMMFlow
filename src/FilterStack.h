@@ -116,8 +116,8 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
                 }
                 else
                 {
-                    std::tie(reflectivity,transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, incoherent, polarization, wavelengths[i], thetas_0[n], phis_0[p]);
-                }
+                    std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, incoherent, polarization, wavelengths[i], thetas_0[n], phis_0[p]);
+                }   
 
                 if (strcmp(type, "t") == 0)
                 {
@@ -181,7 +181,7 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
 {
     std::vector<double> d_list = calculation_order.structure_thicknesses;
     std::vector<bool> incoherent = calculation_order.incoherent;
-    
+
     // Add 0 to the beginning - substrate
     d_list.insert(d_list.begin(), 0.0);
     // Add 0 to the end - incident medium
