@@ -18,6 +18,7 @@ public:
     // Save the current material order as int positions of the layers
     std::vector<int> material_order_int;
     std::vector<double> d_list_initial;
+    std::vector<bool> incoherent_initial;
     std::vector<double> d_list_in_initial_order;
     std::vector<std::string> material_order_initial;
     std::vector<double> unique_wavelengths_vector;
@@ -64,6 +65,7 @@ public:
         calculation_order = loadCalculationInfo(full_path);
         d_list_initial = calculation_order.structure_thicknesses;
         d_list_in_initial_order = d_list_initial;
+        incoherent_initial = calculation_order.incoherent;
         material_order_initial = calculation_order.structure_materials;
         material_order_int.resize(calculation_order.structure_materials.size());
         for (int i = 0; i < calculation_order.structure_materials.size(); ++i)
@@ -90,11 +92,14 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
     std::vector<std::vector<std::vector<double>>> result(phis_0.size(), std::vector<std::vector<double>>(thetas_0.size(), std::vector<double>(wavelengths.size())));
 
     std::vector<double> d_list = calculation_order.structure_thicknesses;
+    std::vector<bool> incoherent = calculation_order.incoherent;
 
-    // Add 0 to the beginning - substrate
+    // Add 0 to the beginning and false - exit medium
     d_list.insert(d_list.begin(), 0.0);
-    // Add 0 to the end - incident medium
+    incoherent.insert(incoherent.begin(), false);
+    // Add 0 to the end and false - incident medium
     d_list.push_back(0.0);
+    incoherent.push_back(false);
 
     // #pragma omp parallel for collapse(3)
     for (int p = 0; p < phis_0.size(); p++)
@@ -107,13 +112,11 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
 
                 if (strcmp(polarization, "") == 0)
                 {
-                    // std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));        
-                    std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized_incoherent(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));                        
+                    std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, incoherent, wavelengths[i], thetas_0[n], phis_0[p]);                        
                 }
                 else
                 {
-                    // std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, polarization, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));
-                    std::tie(reflectivity,transmissivity) = calculate_rt_incoherent(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, polarization, wavelengths[i], thetas_0[n], phis_0[p], material_splines[calculation_order.exitMediumMaterial][0](wavelengths[i]));
+                    std::tie(reflectivity,transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, incoherent, polarization, wavelengths[i], thetas_0[n], phis_0[p]);
                 }
 
                 if (strcmp(type, "t") == 0)
@@ -177,7 +180,8 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
 double FilterStack::calculate_reflection_transmission_absorption(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0)
 {
     std::vector<double> d_list = calculation_order.structure_thicknesses;
-
+    std::vector<bool> incoherent = calculation_order.incoherent;
+    
     // Add 0 to the beginning - substrate
     d_list.insert(d_list.begin(), 0.0);
     // Add 0 to the end - incident medium
@@ -189,11 +193,11 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
 
     if (strcmp(polarization, "") == 0)
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength));    
+        std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, incoherent, wavelength, theta_0, phi_0);    
     }
     else
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, polarization, wavelength, theta_0, phi_0, material_splines[calculation_order.exitMediumMaterial][0](wavelength));
+        std::tie(reflectivity, transmissivity) = calculate_rt(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, incoherent, polarization, wavelength, theta_0, phi_0);
     }
 
     if (strcmp(type, "t") == 0)
@@ -221,11 +225,13 @@ std::pair<std::map<std::string, std::vector<tk::spline>>, bool> FilterStack::ass
     CalculationInfo calculation_order = loadCalculationInfo(full_path);
 
     std::vector<std::string> list_materials = calculation_order.structure_materials;
-    // Append substrate
-    list_materials.push_back(calculation_order.substrateMaterial);
+
     // Append incident medium
+
     list_materials.push_back(calculation_order.incidentMediumMaterial);
+
     // Append exit medium
+
     list_materials.push_back(calculation_order.exitMediumMaterial);
 
     std::vector<std::string> unique_materials = getUniqueMembers(list_materials);
@@ -281,14 +287,13 @@ std::vector<Matrix3cd> FilterStack::assemble_e_list_3x3(std::map<std::string, st
 {
     std::vector<Matrix3cd> e_list_3x3;
 
-    // substrate
-    Matrix3cd substrate_layer_tensor =
-        (Matrix3cd(3, 3) << std::complex<double>(material_splines[calculation_order.substrateMaterial][0](wavelength), std::max(material_splines[calculation_order.substrateMaterial][1](wavelength), 0.0)), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[calculation_order.substrateMaterial][2](wavelength), std::max(material_splines[calculation_order.substrateMaterial][3](wavelength), 0.0)), std::complex<double>(0.0, 0.0),
-         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[calculation_order.substrateMaterial][4](wavelength), std::max(material_splines[calculation_order.substrateMaterial][5](wavelength), 0.0)))
+    // exit medium
+    Matrix3cd exit_layer_tensor =
+        (Matrix3cd(3, 3) << std::complex<double>(material_splines[calculation_order.exitMediumMaterial][0](wavelength), std::max(material_splines[calculation_order.exitMediumMaterial][1](wavelength), 0.0)), std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[calculation_order.exitMediumMaterial][2](wavelength), std::max(material_splines[calculation_order.exitMediumMaterial][3](wavelength), 0.0)), std::complex<double>(0.0, 0.0),
+         std::complex<double>(0.0, 0.0), std::complex<double>(0.0, 0.0), std::complex<double>(material_splines[calculation_order.exitMediumMaterial][4](wavelength), std::max(material_splines[calculation_order.exitMediumMaterial][5](wavelength), 0.0)))
             .finished();
-
-    e_list_3x3.push_back(substrate_layer_tensor.conjugate());
+    e_list_3x3.push_back(exit_layer_tensor.conjugate());
 
     for (const auto &material : calculation_order.structure_materials)
     {
