@@ -42,10 +42,10 @@ def convert_open_filter_datastructure(file_path, columns):
 
 # convert_open_filter_datastructure("../tests/a_p_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
 # convert_open_filter_datastructure("../tests/a_s_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
-# convert_open_filter_datastructure("../tests/t_p_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
-# convert_open_filter_datastructure("../tests/t_s_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
-# convert_open_filter_datastructure("../tests/r_p_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
-# convert_open_filter_datastructure("../tests/r_s_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+# convert_open_filter_datastructure("../tests/p_t_with_backside.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+# convert_open_filter_datastructure("../tests/s_t_with_backside.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+# convert_open_filter_datastructure("../tests/p_r_with_backside.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+# convert_open_filter_datastructure("../tests/s_r_with_backside.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
 
 #########################
 # Input parameters
@@ -60,7 +60,7 @@ filter_stack = FilterStack(json_file_path)
 
 # def test():
 # assert optimization.check_targets(cavity_optimisation())
-for target in ["t", "r", "a"]: 
+for target in ["t", "r"]: 
     for polarization in ["s", "p"]:
         print("Target: " + target + ", Pol.: " + polarization)
         filter_stack.calculate_ar_data(
@@ -82,7 +82,7 @@ for target in ["t", "r", "a"]:
         # open_filter_df = open_filter_df.where(open_filter_df >= x, 0)
         temp_diff = abs(calculated_data_df - open_filter_df)
         # temp_diff_ce_of = abs(complete_ease_df - open_filter_df)
-        print(temp_diff)
+        # print(temp_diff)
         # print(temp_diff_ce_of)
         print("Maximum deviations: ")
         print(temp_diff.max())

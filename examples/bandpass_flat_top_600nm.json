@@ -10,12 +10,11 @@
   "azimAngleMin": 0.0,
   "azimAngleMax": 1.0,
   "azimAngleStep": 2.0,
-  "substrate_material": "FusedSilica",
-  "substrate_thickness": 1000000.0,
   "incident_medium": "Air",
   "exit_medium": "Air",
   "core_selection": "fast",
   "structure_materials": [
+    "FusedSilica",
     "2_Ta2O5_SiO2",
     "Ta2O5",
     "5_Ta2O5_SiO2",
@@ -28,7 +27,22 @@
     "Ta2O5",
     "2_Ta2O5_SiO2"
   ],
+  "incoherent": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  ],
   "structure_thicknesses": [
+    1000000.0,
     [71.9, 102.5],
     71.9,
     [71.9, 102.5],
@@ -52,9 +66,11 @@
     true,
     true,
     true,
+    true,
     true
   ],
   "bounds": [
+    [0.0, 0.0],
     [5.0, 200.0],
     [5.0, 200.0],
     [5.0, 200.0],
@@ -68,6 +84,7 @@
     [5.0, 200.0]
   ],
   "layer_switch_allowed": [
+    false,
     false,
     false,
     false,
