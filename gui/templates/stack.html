@@ -161,7 +161,7 @@
                     {% if default_values.num_boxes and default_values.colors is defined %}
                     {% for i in range(default_values.num_boxes)|reverse %}
                     <div class="box"
-                        style="background-color: {{ default_values.colors[i % default_values.colors|length] }}; height: {{ default_values.heights[i % default_values.heights|length] }}px;">
+                        style="background-color: {{ default_values.colors[i % default_values.colors|length] }}; height: {{ default_values.heights[i % default_values.heights|length] }}px; width: {{ '100%' if default_values.incoherent[i % default_values.heights|length] else '80%' }};">
                     </div>
                     {% endfor %}
                     {% endif %}
@@ -359,8 +359,16 @@
                                     <td>{{ i+1 }}</td>
                                     <td>
                                         <select class="form-control select2" autocomplete="off">
+                                            <!-- Add an option for the selected material -->
                                             <option value="{{ default_values.structure_materials[i] }}" selected>{{
                                                 default_values.structure_materials[i] }}</option>
+
+                                            {% for material in default_values.available_materials %}
+                                            <!-- Only add an option for the material if it is not the selected material -->
+                                            {% if material != default_values.structure_materials[i] %}
+                                            <option value="{{ material }}">{{ material }}</option>
+                                            {% endif %}
+                                            {% endfor %}
                                         </select>
                                     </td>
                                     <td><input type="text" class="form-control"
@@ -1258,6 +1266,8 @@
             //iterate through rows
             //rows would be accessed using the "row" variable assigned in the for loop
             var layerNumber;
+            var valueInColumn2;
+            var lowerBound, upperBound;
 
             for (var j = 0, col; col = row.cells[j]; j++) {
                 //iterate through columns
@@ -1273,6 +1283,7 @@
                     var selectedText = selectElement.options[selectElement.selectedIndex].text; // get the selected text
                     var underscoreCount = (selectedText.match(/_/g) || []).length; // count the underscores
                 } else if (j === 2) { // third column
+                    valueInColumn2 = parseFloat(input.value);
                     if (underscoreCount === 0 || underscoreCount === 1) {
                         // input should be a number
                         if (!/^\d+(\.\d+)?$/.test(input.value)) {
@@ -1289,13 +1300,26 @@
                 } else if (j === 4) {
                     var inputs = col.getElementsByTagName('input'); // get all input elements
                     if (inputs.length >= 2) { // make sure there are at least two input elements
-                        var value1 = parseFloat(inputs[0].value);
-                        var value2 = parseFloat(inputs[1].value);
-                        if (value1 > value2) {
+                        lowerBound = parseFloat(inputs[0].value);
+                        upperBound = parseFloat(inputs[1].value);
+                        if (lowerBound > upperBound) {
                             errorMessages.push('Invalid thickness bound input for layer ' + layerNumber + '. The lower thickness bound should be smaller or equal to the higher thickness bound.');
                         }
                     }
                 }
+
+
+            }
+            // Get the input element in cell 8
+            var cell8InputValue = row.cells[7].getElementsByClassName('incoherent')[0].value;
+            var incoherentBoolean = JSON.parse(cell8InputValue.toLowerCase());
+
+            // Now incoherentBoolean is a boolean
+            console.log(incoherentBoolean);
+
+            // Check that the value in column 2 is within the bounds given in column 4, unless the input element in cell 8 has the class "incoherent"
+            if (!incoherentBoolean && (valueInColumn2 < lowerBound || valueInColumn2 > upperBound)) {
+                errorMessages.push('Invalid thickness input for layer ' + layerNumber + '. The value should be within the bounds [' + lowerBound + ', ' + upperBound + '].');
             }
         }
 

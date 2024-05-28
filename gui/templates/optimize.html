@@ -118,7 +118,7 @@
                                 {% if num_boxes and colors is defined %}
                                 {% for i in range(num_boxes)|reverse %}
                                 <div class="box"
-                                    style="background-color: {{ colors[i % colors|length] }}; height: {{ heights[i % heights|length] }}px;">
+                                    style="background-color: {{ colors[i % colors|length] }}; height: {{ heights[i % heights|length] }}px; width: {{ '100%' if incoherent[i % heights|length] else '80%' }};">
                                 </div>
                                 {% endfor %}
                                 {% endif %}
@@ -260,6 +260,7 @@
         var number_unique_materials = filter_representation.number_unique_materials;
         var unique_materials = filter_representation.unique_materials;
         var unique_colors = filter_representation.unique_colors;
+        var incoherent = filter_representation.incoherent;
 
         // Get the container element
         var container = document.querySelector('.container');
@@ -275,6 +276,11 @@
             div.className = 'box';
             div.style.backgroundColor = colors[i];
             div.style.height = heights[i] + 'px';
+            if (incoherent[i]) {
+                div.style.width = '80%';
+            } else {
+                div.style.width = '100%';
+            }
             container.appendChild(div);
         }
         // Create substrate box

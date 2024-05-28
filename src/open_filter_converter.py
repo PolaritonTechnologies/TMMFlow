@@ -35,12 +35,13 @@ def import_from_open_filter(input_file):
         "polar_angle_steps": [],
         "targets_azimuthal_angle": [],
         "azimuthal_angle_steps": [],
+        "incoherent": [],
         "targets_wavelengths": [],
         "wavelength_steps": [],
         "targets_tolerance": [],
         "bounds": [],
-        "substrate_material": None,
-        "substrate_thickness": None,
+        # "substrate_material": None,
+        # "substrate_thickness": None,
         "incident_medium": None,
         "exit_medium": None,
         "core_selection": None,
@@ -119,10 +120,10 @@ def import_from_open_filter(input_file):
         if line.startswith("Tolerance:"):
             parts = line.split(" ")
             data["targets_tolerance"].append(float(parts[1]))
-        if line.startswith("Substrate:"):
-            parts = line.split(" ")
-            data["substrate_material"] = str(parts[1])
-            data["substrate_thickness"] = float(parts[2])
+        # if line.startswith("Substrate:"):
+            # parts = line.split(" ")
+            # data["substrate_material"] = str(parts[1])
+            # data["substrate_thickness"] = float(parts[2])
         if line.startswith("FrontMedium:"):
             parts = line.split(" ")
             if parts[1] == "void":
@@ -163,12 +164,14 @@ def import_from_open_filter(input_file):
         data["targets_azimuthal_angle"] = list(np.zeros_like(data["targets_tolerance"]))
     if data["azimuthal_angle_steps"] == []:
         data["azimuthal_angle_steps"] = list(np.ones_like(data["targets_tolerance"]))
+    if data["incoherent"] == []:
+        data["incoherent"] = list(np.full_like(data["structure_materials"], False, dtype=bool).tolist())
     if data["bounds"] == []:
         data["bounds"] = [[0, 200]] * len(data["structure_materials"])
-    if data["substrate_material"] is None:
-        data["substrate_material"] = "FusedSilica"
-    if data["substrate_thickness"] is None:
-        data["substrate_thickness"] = 1000000.0
+    # if data["substrate_material"] is None:
+        # data["substrate_material"] = "FusedSilica"
+    # if data["substrate_thickness"] is None:
+        # data["substrate_thickness"] = 1000000.0
     if data["incident_medium"] is None:
         data["incident_medium"] = "Air"
     if data["exit_medium"] is None:
@@ -192,7 +195,7 @@ def export_to_open_filter(dictionary_input, file_name):
     Comment:
     End
     Filter:
-        Substrate: {dictionary_input['substrate_material']} {dictionary_input['substrate_thickness']}
+        Substrate: {dictionary_input['structure_materials'][0]} {dictionary_input['structure_thicknesses'][0]}
         FrontMedium: {dictionary_input['incident_medium'] if dictionary_input == 'Air' else 'void'}
         BackMedium: {dictionary_input['exit_medium'] if dictionary_input == 'Air' else 'void'}
         CenterWavelength: 450.000000
@@ -213,7 +216,7 @@ def export_to_open_filter(dictionary_input, file_name):
 
     to_export = to_export + header
 
-    for i, el in enumerate(dictionary_input["structure_materials"]):
+    for i, el in enumerate(dictionary_input["structure_materials"][1:]):
 
         material_block = f"""   FrontLayer: {dictionary_input['structure_materials'][i]} {dictionary_input['structure_thicknesses'][i]}
     RefineThickness: {int(dictionary_input['thickness_opt_allowed'][i])}

@@ -686,6 +686,12 @@ class FilterStack:
 
             ret = 0
 
+            # Make sure the initial values are within the bounds otherwise the
+            # results will be bad an hard to debug
+            for x, bound in zip(x_initial, bounds):
+                if not (bound[0] <= x <= bound[1]):
+                    raise ValueError(f"Initial value {x} is not within the bounds {bound}")
+
             # With scipy we cannot do integer optimization
             if optimization_method == "dual_annealing":
                 ret = dual_annealing(
@@ -1071,10 +1077,11 @@ class FilterStack:
             # )
             raise ValueError
 
+        # Clip the thicknesses to the bounds (but only if an optimization was done in the first place)
         return np.array(
             [
-                np.clip(np.round(t, 1), b[0], b[1])
-                for t, b in zip(thicknesses, self.bounds)
+                np.clip(np.round(t, 1), b[0], b[1]) if self.filter_definition["thickness_opt_allowed"][i] else t
+                for i, (t, b) in enumerate(zip(thicknesses, self.bounds))
             ],
             dtype=np.float64,
         ), layer_order.astype(np.int32)
