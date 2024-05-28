@@ -101,7 +101,7 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
     d_list.push_back(0.0);
     incoherent.push_back(false);
 
-    // #pragma omp parallel for collapse(3)
+    //#pragma omp parallel for collapse(3)
     for (int p = 0; p < phis_0.size(); p++)
     {
         for (int n = 0; n < thetas_0.size(); n++)
@@ -182,10 +182,12 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
     std::vector<double> d_list = calculation_order.structure_thicknesses;
     std::vector<bool> incoherent = calculation_order.incoherent;
 
-    // Add 0 to the beginning - substrate
+    // Add 0 to the beginning and false - exit medium
     d_list.insert(d_list.begin(), 0.0);
-    // Add 0 to the end - incident medium
+    incoherent.insert(incoherent.begin(), false);
+    // Add 0 to the end and false - incident medium
     d_list.push_back(0.0);
+    incoherent.push_back(false);
     theta_0 = theta_0 * M_PI / 180.0;
 
     double wavelength_key = static_cast<int>(wavelength * 10);
