@@ -73,7 +73,9 @@ class FilterStack:
 
         # translate json file to a readable format for the C++ code that does
         # not involve abbreviations that we use for filter design
-        self.json_file_path_cpp = self.translate_order_for_cpp(filter_definition_by_user)
+        self.json_file_path_cpp = self.translate_order_for_cpp(
+            filter_definition_by_user
+        )
 
         # Create the filter stack in C++
         self.my_filter, self.lib = self.create_filter_in_cpp(self.json_file_path_cpp)
@@ -104,9 +106,7 @@ class FilterStack:
         self.layer_switch_allowed_by_user = filter_definition_by_user[
             "layer_switch_allowed"
         ]
-        self.incoherent_by_user = filter_definition_by_user[
-            "incoherent"
-        ]
+        self.incoherent_by_user = filter_definition_by_user["incoherent"]
         self.bounds_by_user = filter_definition_by_user["bounds"]
         # ---
 
@@ -274,9 +274,7 @@ class FilterStack:
         """
 
         # Generate file path relative to this file
-        file_path = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "./temp/temp_cpp_order.json"
-        )
+        file_path = os.path.join(os.getcwd(), "temp", "temp_cpp_order.json")
 
         with open(file_path, "w") as f:
             json.dump(updated_optimisation_order, f)
@@ -582,10 +580,7 @@ class FilterStack:
             for el in self.layer_order
         ]
 
-        temp_path = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "./temp/" + file_name + ".json",
-        )
+        temp_path = os.path.join(os.getcwd(), "temp", +f"{file_name}.json")
 
         with open(temp_path, "w") as file:
             json.dump(temp_json, file)
@@ -685,12 +680,6 @@ class FilterStack:
                     )
 
             ret = 0
-
-            # Make sure the initial values are within the bounds otherwise the
-            # results will be bad an hard to debug
-            for x, bound in zip(x_initial, bounds):
-                if not (bound[0] <= x <= bound[1]):
-                    raise ValueError(f"Initial value {x} is not within the bounds {bound}")
 
             # With scipy we cannot do integer optimization
             if optimization_method == "dual_annealing":
@@ -1077,11 +1066,10 @@ class FilterStack:
             # )
             raise ValueError
 
-        # Clip the thicknesses to the bounds (but only if an optimization was done in the first place)
         return np.array(
             [
-                np.clip(np.round(t, 1), b[0], b[1]) if self.filter_definition["thickness_opt_allowed"][i] else t
-                for i, (t, b) in enumerate(zip(thicknesses, self.bounds))
+                np.clip(np.round(t, 1), b[0], b[1])
+                for t, b in zip(thicknesses, self.bounds)
             ],
             dtype=np.float64,
         ), layer_order.astype(np.int32)
@@ -1302,9 +1290,7 @@ class FilterStack:
             header_lines = []
 
             # Save header lines indicating what the simulation represents
-            temp_path = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "./temp/value.csv"
-            )
+            temp_path = os.path.join(os.getcwd(), "temp", "value.csv")
             with open(temp_path, "w") as the_file:
                 the_file.write("\n".join(header_lines))
 
@@ -1330,10 +1316,7 @@ class FilterStack:
             plt.ylabel("Wavelength (nm)")
             # Save the figure before showing it
             # plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
-            temp_path = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "./temp/plot.png"
-            )
+            temp_path = os.path.join(os.path.dirname(os.getcwd()), "temp", "plot.png")
             plt.savefig(temp_path, format="png", dpi=300)
             plt.show()
             # Save X, Y, Z to csv files
-
