@@ -75,7 +75,7 @@ extern "C"
 		return std::strcpy(new char[result_string.str().length() + 1], result_string.str().c_str());
 	}
 
-	double calculate_merit(FilterStack *filter_stack, char **target_type, char **target_polarization, double *target_value, double *target_wavelength, double *target_polar_angle, double *target_azimuthal_angle, double *target_weights, char **target_condition, double *target_tolerance, size_t target_size)
+	double calculate_merit(FilterStack *filter_stack, char **target_type, char **target_polarization, double *target_value, double *target_wavelength, double *target_polar_angle, double *target_azimuthal_angle, double *target_weights, char **target_condition, double *target_tolerance, char **target_arithmetic, size_t target_size)
 	{
 		std::vector<double> target_value_vector(target_value, target_value + target_size);
 		std::vector<double> target_wavelength_vector(target_wavelength, target_wavelength + target_size);
@@ -86,8 +86,9 @@ extern "C"
 		std::vector<char *> target_condition_vector(target_condition, target_condition + target_size);
 		std::vector<char *> target_type_vector(target_type, target_type + target_size);
 		std::vector<char *> target_polarization_vector(target_polarization, target_polarization + target_size);
+		std::vector<char *> target_arithmetic_vector(target_arithmetic, target_arithmetic + target_size);
 
-		double merit = filter_stack->calculate_merit(target_value_vector, target_wavelength_vector, target_polar_angle_vector, target_azimuthal_angle_vector, target_weights_vector, target_condition_vector, target_tolerance_vector, target_type_vector, target_polarization_vector);
+		double merit = filter_stack->calculate_merit(target_value_vector, target_wavelength_vector, target_polar_angle_vector, target_azimuthal_angle_vector, target_weights_vector, target_condition_vector, target_tolerance_vector, target_type_vector, target_polarization_vector, target_arithmetic_vector);
 		return merit;
 	}
 
@@ -123,5 +124,4 @@ extern "C"
 		std::vector<double> target_wavelengths_vector(target_wavelengths, target_wavelengths + size_wavelengths);
 		filter_stack->initialise_optimization(target_wavelengths_vector);
 	}
-
 };

@@ -480,6 +480,7 @@
                                 <th>Cond.</th>
                                 <th>Value</th>
                                 <th>Tolerance</th>
+                                <th>Arithmetics</th>
                             </tr>
                             {% for i in range(default_values.targets_value|length) %}
                             <tr class="draggable">
@@ -553,10 +554,12 @@
                                             endif %}>=</option>
                                     </select>
                                 </td>
-                                <td><input type="number" min="0" max="1" step="any" class="form-control"
+                                <td><input type="number" min="0" step="any" class="form-control"
                                         value="{{ default_values.targets_value[i] }}"></td>
-                                <td><input type="number" min="0" max="1" step="any" class="form-control"
+                                <td><input type="number" min="0" step="any" class="form-control"
                                         value="{{ default_values.targets_tolerance[i] }}"></td>
+                                <td><input type="text" class="form-control"
+                                        value="{{ default_values.targets_arithmetic[i] }}"></td>
 
 
                                 <td>
@@ -1063,9 +1066,10 @@
                         <option value="=">=</option>
                     </select>
                     `;
-            cells[7].innerHTML = '<input type="number" min="0" max="1" step="any" class="form-control">';
-            cells[8].innerHTML = '<input type="number" min="0" max="1" step="any" class="form-control">';
-            cells[9].innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+            cells[7].innerHTML = '<input type="number" min="0" step="any" class="form-control">';
+            cells[8].innerHTML = '<input type="number" min="0" step="any" class="form-control">';
+            cells[9].innerHTML = '<input type="text" class="form-control">';
+            cells[10].innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
         }
 
 

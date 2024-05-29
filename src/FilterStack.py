@@ -4,7 +4,7 @@ import os
 import time
 
 import numpy as np
-import math
+import re
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -137,6 +137,7 @@ class FilterStack:
             self.target_condition,
             self.target_tolerance,
             self.target_type,
+            self.target_arithmetic,
         ) = self.convert_range_targets(self.filter_definition)
 
         # Helper variables that store states during optimization
@@ -282,7 +283,10 @@ class FilterStack:
         """
 
         # Generate file path relative to this file
-        file_path = os.path.join(os.getcwd(), "temp", "temp_cpp_order.json")
+        file_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "./temp/temp_cpp_order.json"
+        )
+        # file_path = os.path.join(os.getcwd(), "temp", "temp_cpp_order.json")
 
         with open(file_path, "w") as f:
             json.dump(updated_optimisation_order, f)
@@ -366,6 +370,7 @@ class FilterStack:
             c_double_array,
             c_string_array,
             c_double_array,
+            c_string_array,
             ctypes.c_size_t,
         ]
         lib.calculate_merit.restype = ctypes.c_double
@@ -414,6 +419,11 @@ class FilterStack:
         target_azimuthal_angle = np.empty(0)
         target_type = np.empty(0)
         target_tolerance = np.empty(0)
+        target_arithmetic = np.empty(0, dtype="U20")
+
+        old_index = []
+        num_elements = 1
+        index = 1 
 
         for target_idx in range(0, np.size(filter_definition["targets_type"])):
 
@@ -486,6 +496,10 @@ class FilterStack:
 
                 interval_wvl = [filter_definition["targets_wavelengths"][target_idx]]
                 weight_wvl = 1
+            
+
+            old_index.append(num_elements) 
+            num_elements += len(interval_polar) * len(interval_azim) * len(interval_wvl)
 
             for polar_angle in interval_polar:
 
@@ -528,6 +542,31 @@ class FilterStack:
                             target_type,
                             filter_definition["targets_type"][target_idx],
                         )
+
+                        if filter_definition["targets_arithmetic"][target_idx] == "":
+                            target_arithmetic = np.append(
+                                target_arithmetic,
+                                filter_definition["targets_arithmetic"][target_idx],
+                            )
+                        else:
+                            target_arithmetic = np.append(target_arithmetic, index)
+                        
+                        index += 1
+
+        # Now actually fill the target_arithmetic with the contents from the initial array to allow for arithmetics
+        unexpanded_targets_arithmetic = np.empty(np.size(filter_definition["targets_arithmetic"]), dtype="U20")
+
+        # Iterate over the list and replace the numbers
+        for i in range(len(unexpanded_targets_arithmetic)):
+            # Split the string into components
+            components = re.split('([-+/*])', filter_definition["targets_arithmetic"][i])
+            # Replace the numbers with the corresponding values from old_index
+            new_components = [str(old_index[int(comp) - 1]) if comp.isdigit() else comp for comp in components]
+            # Join the components back together
+            unexpanded_targets_arithmetic[i] = ''.join(new_components)
+
+        target_arithmetic[np.array(old_index)-1] = unexpanded_targets_arithmetic 
+
         return (
             target_wavelength,
             target_polar_angle,
@@ -538,6 +577,7 @@ class FilterStack:
             target_condition,
             target_tolerance,
             target_type,
+            target_arithmetic,
         )
 
     def reset(self):
@@ -687,7 +727,9 @@ class FilterStack:
             # results will be bad an hard to debug
             for x, bound in zip(x_initial, bounds):
                 if not (bound[0] <= x <= bound[1]):
-                    raise ValueError(f"Initial value {x} is not within the bounds {bound}")
+                    raise ValueError(
+                        f"Initial value {x} is not within the bounds {bound}"
+                    )
 
             # With scipy we cannot do integer optimization
             if optimization_method == "dual_annealing":
@@ -831,7 +873,7 @@ class FilterStack:
             )
             self.log_func(
                 "Optimized layer order: "
-                + str(self.filter_definition["structure_materials"])
+                + str(self.filter_definition["structure_materials"]))
             self.log_func("Optimized merit value: " + str(self.optimum_merit))
             self.log_func("Number of function evaluations: " + str(ret.nfev))
 
@@ -896,6 +938,9 @@ class FilterStack:
                 *[s.encode("utf-8") for s in self.target_condition.tolist()]
             ),
             self.target_tolerance,
+            (ctypes.c_char_p * len(self.target_arithmetic.tolist()))(
+                *[s.encode("utf-8") for s in self.target_arithmetic.tolist()]
+            ),
             int(np.size(self.target_value)),
             # self.filter_definition["core_selection"],
         )
@@ -1075,7 +1120,11 @@ class FilterStack:
         # Clip the thicknesses to the bounds (but only if an optimization was done in the first place)
         return np.array(
             [
-                np.clip(np.round(t, 1), b[0], b[1]) if self.filter_definition["thickness_opt_allowed"][i] else t
+                (
+                    np.clip(np.round(t, 1), b[0], b[1])
+                    if self.filter_definition["thickness_opt_allowed"][i]
+                    else t
+                )
                 for i, (t, b) in enumerate(zip(thicknesses, self.bounds))
             ],
             dtype=np.float64,
@@ -1297,7 +1346,10 @@ class FilterStack:
             header_lines = []
 
             # Save header lines indicating what the simulation represents
-            temp_path = os.path.join(os.getcwd(), "temp", "value.csv")
+            temp_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "./temp/value.csv"
+            )
+            # temp_path = os.path.join(os.getcwd(), "temp", "value.csv")
             with open(temp_path, "w") as the_file:
                 the_file.write("\n".join(header_lines))
 
@@ -1323,7 +1375,10 @@ class FilterStack:
             plt.ylabel("Wavelength (nm)")
             # Save the figure before showing it
             # plt.savefig(f"{phi}-plot.png", format="png", dpi=300)
-            temp_path = os.path.join(os.path.dirname(os.getcwd()), "temp", "plot.png")
+            temp_path = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "./temp/plot.png"
+            )
+            # temp_path = os.path.join(os.path.dirname(os.getcwd()), "temp", "plot.png")
             plt.savefig(temp_path, format="png", dpi=300)
             plt.show()
             # Save X, Y, Z to csv files

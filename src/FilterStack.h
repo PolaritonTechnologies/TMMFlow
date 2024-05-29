@@ -30,7 +30,7 @@ public:
 
     double calculate_reflection_transmission_absorption(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0);
     std::vector<std::vector<std::vector<double>>> calculate_reflection_transmission_absorption_para(const char *type, const char *polarization, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0);
-    double calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector);
+    double calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector, std::vector<char *> target_arithmetic);
     bool check_general_materials();
 
     // void calculate_and_save_ar_reflection();
@@ -144,10 +144,13 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
     return result;
 }
 
-double FilterStack::calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector)
+double FilterStack::calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector, std::vector<char *> target_arithmetic)
 {
+    std::vector<double> target_calculated_values;
+
     double merit = 0.0;
 
+    // First calculate the actual values for the different targets
 #pragma omp parallel for reduction(+ : merit)
     for (size_t i = 0; i < target_value_vector.size(); i++)
     {
@@ -155,8 +158,57 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
 
         // Calculate actual value
         double target_calculated = calculate_reflection_transmission_absorption(target_type_vector[i], target_polarization_vector[i], target_wavelength_vector[i], target_polar_angle_vector[i], target_azimuthal_angle_vector[i]);
-        // std::cout << target_calculated << std::endl;
+        target_calculated_values.push_back(target_calculated);
+        // std::cout << target_calculated << std::endl;0
+    }
 
+    // Iterate again over the target values again and potentially do arithmetic
+    // operations between the targets to calculate the merit
+    for (size_t i = 0; i < target_value_vector.size(); i++)
+    {
+        double target_calculated = target_calculated_values[i];
+        // std::cout << target_calculated_values[0] << std::endl;
+        // std::cout << target_calculated_values[1] << std::endl;
+
+        // Perform arithmetic operation if target_arithmetic is not empty
+        if (target_arithmetic[i][0] != '\0')
+        {
+            std::string str(target_arithmetic[i]);
+            // std::cout << str << std::endl;
+            size_t pos = 0;
+            double target_calculated = target_calculated_values[std::stoi(str) - 1];
+            // std::cout << target_calculated << std::endl;
+            char operation;
+
+            while ((pos = str.find_first_of("+-*/", pos)) != std::string::npos)
+            {
+                operation = str[pos];
+                str = str.substr(pos + 1);
+                pos = 0;
+                int index = std::stoi(str.substr(0, str.find_first_of("+-*/", pos))) - 1;
+
+                switch (operation)
+                {
+                case '+':
+                    target_calculated += target_calculated_values[index];
+                    break;
+                case '-':
+                    target_calculated -= target_calculated_values[index];
+                    break;
+                case '*':
+                    target_calculated *= target_calculated_values[index];
+                    break;
+                case '/':
+                    target_calculated /= target_calculated_values[index];
+                    break;
+                }
+            }
+            // std::cout << target_calculated << std::endl;
+        }
+        else
+        {
+            continue;
+        }
         // Calculate merit for equal condition
         if (target_condition_vector[i][0] == '=' && target_calculated != target_value_vector[i])
         {

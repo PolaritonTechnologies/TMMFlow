@@ -69,10 +69,12 @@ def convert_open_filter_datastructure(file_path, columns):
 
 #########################
 # Input parameters
+# json_file_path = os.path.join(
+    # os.path.dirname(os.getcwd()), "examples", "demo_test_with_backside.json"
+# )
 json_file_path = os.path.join(
-    os.path.dirname(os.getcwd()), "examples", "demo_test_with_backside.json"
+    os.path.dirname(os.getcwd()), "examples", "demo_test.json"
 )
-# json_file_path = "../examples/bandpass_flat_top_600nm.json"
 
 #########################
 

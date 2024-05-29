@@ -28,5 +28,6 @@
   "wavelength_steps": [],
   "targets_condition": [],
   "targets_value": [],
-  "targets_tolerance": []
+  "targets_tolerance": [],
+  "targets_arithmetic": []
 }

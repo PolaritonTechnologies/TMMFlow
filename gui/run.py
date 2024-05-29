@@ -561,26 +561,29 @@ def save_json():
     ).tolist()
 
     targets = np.array(data[8].get("0").get("values"))
-    data_to_json["targets_type"] = targets[0::14].tolist()
-    data_to_json["targets_polarization"] = targets[1::14].tolist()
+
+    no_columns_targets = 15
+    data_to_json["targets_type"] = targets[0::no_columns_targets].tolist()
+    data_to_json["targets_polarization"] = targets[1::no_columns_targets].tolist()
     data_to_json["targets_polar_angle"] = [
         [float(x), float(y)] if y != "" else float(x)
-        for x, y in zip(targets[2::14].tolist(), targets[3::14].tolist())
+        for x, y in zip(targets[2::no_columns_targets].tolist(), targets[3::no_columns_targets].tolist())
     ]
-    data_to_json["polar_angle_steps"] = targets[4::14].astype(float).tolist()
+    data_to_json["polar_angle_steps"] = targets[4::no_columns_targets].astype(float).tolist()
     data_to_json["targets_azimuthal_angle"] = [
         [float(x), float(y)] if y != "" else float(x)
-        for x, y in zip(targets[5::14].tolist(), targets[6::14].tolist())
+        for x, y in zip(targets[5::no_columns_targets].tolist(), targets[6::no_columns_targets].tolist())
     ]
-    data_to_json["azimuthal_angle_steps"] = targets[7::14].astype(float).tolist()
+    data_to_json["azimuthal_angle_steps"] = targets[7::no_columns_targets].astype(float).tolist()
     data_to_json["targets_wavelengths"] = [
         [float(x), float(y)] if y != "" else float(x)
-        for x, y in zip(targets[8::14].tolist(), targets[9::14].tolist())
+        for x, y in zip(targets[8::no_columns_targets].tolist(), targets[9::no_columns_targets].tolist())
     ]
-    data_to_json["wavelength_steps"] = targets[10::14].astype(float).tolist()
-    data_to_json["targets_condition"] = targets[11::14].tolist()
-    data_to_json["targets_value"] = targets[12::14].astype(float).tolist()
-    data_to_json["targets_tolerance"] = targets[13::14].astype(float).tolist()
+    data_to_json["wavelength_steps"] = targets[10::no_columns_targets].astype(float).tolist()
+    data_to_json["targets_condition"] = targets[11::no_columns_targets].tolist()
+    data_to_json["targets_value"] = targets[12::no_columns_targets].astype(float).tolist()
+    data_to_json["targets_tolerance"] = targets[13::no_columns_targets].astype(float).tolist()
+    data_to_json["targets_arithmetic"] = targets[14::no_columns_targets].astype(str).tolist()
 
     # If the file is not in the temp folder yet, do not allow for an overwrite
     if selected_file.split("/")[-2] != "temp":
@@ -925,6 +928,7 @@ def start_optimization(data):
             "number_unique_materials": number_unique_materials,
             "unique_materials": unique_materials,
             "unique_colors": unique_colors,
+            "incoherent": incoherent,
         }
 
         # Convert the dictionary to a JSON string

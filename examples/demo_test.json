@@ -32,7 +32,8 @@
   "azimuthal_angle_steps": [1.0, 1.0, 1.0],
   "targets_wavelengths": [530.0, [535.0, 545.0], 550.0],
   "wavelength_steps": [5.0, 5.0, 5.0],
-  "targets_condition": ["<", ">", "<"],
-  "targets_value": [0.01, 0.5, 0.01],
-  "targets_tolerance": [0.001, 0.001, 0.001]
+  "targets_condition": [">", ">", "<"],
+  "targets_value": [2, 0.5, 0.01],
+  "targets_tolerance": [0.01, 0.001, 0.001],
+  "targets_arithmetic": ["1/2", "", ""]
 }

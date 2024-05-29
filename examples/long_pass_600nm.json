@@ -24,10 +24,10 @@
   "thickness_opt_allowed": [false, true, true, true, true],
   "bounds": [
     [0, 0],
-    [0.0, 100.0],
-    [0.0, 100.0],
-    [0.0, 100.0],
-    [0.0, 100.0]
+    [0.0, 200.0],
+    [0.0, 200.0],
+    [0.0, 200.0],
+    [0.0, 200.0]
   ],
   "layer_switch_allowed": [false, true, false, true, true],
   "targets_type": ["t", "t", "t"],
@@ -40,5 +40,6 @@
   "wavelength_steps": [5.0, 5.0, 5.0],
   "targets_condition": ["<", ">", "<"],
   "targets_value": [0.01, 0.5, 0.01],
-  "targets_tolerance": [0.001, 0.001, 0.001]
+  "targets_tolerance": [0.001, 0.001, 0.001],
+  "targets_arithmetic": ["1", "2", "3"]
 }
