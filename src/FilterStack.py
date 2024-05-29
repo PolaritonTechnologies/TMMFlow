@@ -24,6 +24,14 @@ def ignore(msg=None):
     pass
 
 
+def log(message):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    message_with_timestamp = f"{timestamp}: {message}"
+    print(message_with_timestamp)
+    with open("log.txt", "a") as log_file:
+        log_file.write(f"{message_with_timestamp}\n")
+
+
 class FilterStack:
     """
     This class represents an optical filter stack and provides methods for
@@ -45,7 +53,7 @@ class FilterStack:
         json_file_path,
         message_queue=None,
         update_queue=None,
-        log_func=print,
+        log_func=log,
         log_design_func=ignore,
     ):
         """
@@ -481,15 +489,9 @@ class FilterStack:
 
             for polar_angle in interval_polar:
 
-                # print("polar_angle: ", polar_angle)
-
                 for azim_angle in interval_azim:
 
-                    # print("azim_angle: ", azim_angle)
-
                     for wvl in interval_wvl:
-
-                        # print("wavelength: ", wvl)
 
                         target_wavelength = np.append(target_wavelength, wvl)
 
@@ -580,7 +582,7 @@ class FilterStack:
             for el in self.layer_order
         ]
 
-        temp_path = os.path.join(os.getcwd(), "temp", +f"{file_name}.json")
+        temp_path = os.path.join(os.getcwd(), "temp", f"{file_name}.json")
 
         with open(temp_path, "w") as file:
             json.dump(temp_json, file)
@@ -612,10 +614,10 @@ class FilterStack:
         numpy array: The optimized features.
         """
 
-        print("running optimisation...")
+        log("running optimisation...")
 
         for optimization_method in opt_methods:
-            print("running " + optimization_method + "...")
+            log("running " + optimization_method + "...")
 
             self.lib.initialise_optimization(
                 self.my_filter,
@@ -822,15 +824,16 @@ class FilterStack:
             # The stop flag is also be used as an "optimization done" indicator
             self.stop_flag = True
 
-            self.log_func("Optimization time: ", time.time() - start_time, "s")
+            self.log_func("Optimization time: " + str(time.time() - start_time) + "s")
             self.log_func(
-                "Optimized thicknesses: ", [thicknesses[el] for el in self.layer_order]
+                "Optimized thicknesses: "
+                + str([thicknesses[el] for el in self.layer_order])
             )
             self.log_func(
-                "Optimized layer order: ", self.filter_definition["structure_materials"]
-            )
-            self.log_func("Optimized merit value: ", self.optimum_merit)
-            self.log_func("Number of function evaluations: ", ret.nfev)
+                "Optimized layer order: "
+                + str(self.filter_definition["structure_materials"])
+            self.log_func("Optimized merit value: " + str(self.optimum_merit))
+            self.log_func("Number of function evaluations: " + str(ret.nfev))
 
         # self.save_current_design_to_json("current_structure")
 
@@ -1067,9 +1070,6 @@ class FilterStack:
             )
 
         else:
-            # print(
-            # "No optimization has been selected for the thicknesses or layer order."
-            # )
             raise ValueError
 
         # Clip the thicknesses to the bounds (but only if an optimization was done in the first place)
@@ -1305,7 +1305,7 @@ class FilterStack:
             self.stored_data[0].to_csv(temp_path, sep=",", header=True, mode="a")
         if save_figure:
             # Print time elapsed for the generation of the reflectivity matrix
-            print(time.time() - initial_time)
+            log(time.time() - initial_time)
             # Plotting - right now, on the first azimuthal angle
             plt.close()
             X, Y = np.meshgrid(
