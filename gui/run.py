@@ -922,10 +922,10 @@ def start_optimization(data):
 
         # Package the values into a dictionary
         filter_representation = {
-            "num_boxes": num_boxes,
+            "num_boxes": int(num_boxes),
             "colors": colors,
             "heights": heights,
-            "number_unique_materials": number_unique_materials,
+            "number_unique_materials": int(number_unique_materials),
             "unique_materials": unique_materials,
             "unique_colors": unique_colors,
             "incoherent": incoherent,
@@ -939,8 +939,8 @@ def start_optimization(data):
             "update_filter_representation",
             {
                 "filter_json": filter_json,
-                "iterations": my_filter.iteration_no,
-                "merit": np.round(my_filter.last_merit, 1),
+                "iterations": int(my_filter.iteration_no),
+                "merit": int(np.round(my_filter.last_merit, 1)),
             },
         )
 

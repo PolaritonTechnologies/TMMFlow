@@ -2,6 +2,7 @@ import ctypes
 import json
 import os
 import time
+from datetime import datetime
 
 import numpy as np
 import re
@@ -622,7 +623,8 @@ class FilterStack:
             for el in self.layer_order
         ]
 
-        temp_path = os.path.join(os.getcwd(), "temp", f"{file_name}.json")
+        temp_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "temp", f"{file_name}.json")
+
 
         with open(temp_path, "w") as file:
             json.dump(temp_json, file)

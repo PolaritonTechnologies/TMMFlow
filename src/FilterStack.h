@@ -150,8 +150,8 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
 
     double merit = 0.0;
 
-    // First calculate the actual values for the different targets
-#pragma omp parallel for reduction(+ : merit)
+// First calculate the actual values for the different targets
+#pragma omp parallel for // reduction(+ : merit)
     for (size_t i = 0; i < target_value_vector.size(); i++)
     {
         // std::cout << target_type_vector[i] << " " << target_polarization_vector[i] << " " << target_wavelength_vector[i] << " " << target_polar_angle_vector[i] << " " << target_azimuthal_angle_vector[i] << " " << target_condition_vector[i][0] << " ";
@@ -177,6 +177,7 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
             // std::cout << str << std::endl;
             size_t pos = 0;
             double target_calculated = target_calculated_values[std::stoi(str) - 1];
+            // std::cout << std::stoi(str) - 1 << std::endl;
             // std::cout << target_calculated << std::endl;
             char operation;
 
@@ -186,6 +187,9 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
                 str = str.substr(pos + 1);
                 pos = 0;
                 int index = std::stoi(str.substr(0, str.find_first_of("+-*/", pos))) - 1;
+                // std::cout << index << std::endl;
+                // std::cout << operation << std::endl;
+                // std::cout << pos << std::endl;
 
                 switch (operation)
                 {
@@ -219,6 +223,7 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
         else if (target_condition_vector[i][0] == '>' && target_calculated < target_value_vector[i])
         {
             merit += pow((target_calculated - target_value_vector[i]) / target_tolerance_vector[i], 2) * target_weights_vector[i];
+            // std::cout << target_calculated << ", " << target_value_vector[i] << ", " << target_tolerance_vector[i] << ", " << target_weights_vector[i] << std::endl;
         }
 
         // Calculate merit for smaller condition
@@ -226,7 +231,6 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
         {
             merit += pow((target_calculated - target_value_vector[i]) / target_tolerance_vector[i], 2) * target_weights_vector[i];
         }
-
         // std::cout << merit << std::endl;
     }
 
