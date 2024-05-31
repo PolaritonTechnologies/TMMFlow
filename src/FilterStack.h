@@ -150,16 +150,15 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
 
     double merit = 0.0;
 
-// First calculate the actual values for the different targets
-#pragma omp parallel for // reduction(+ : merit)
+    // Preallocate the vector
+    target_calculated_values.resize(target_value_vector.size());
+
+#pragma omp parallel for
     for (size_t i = 0; i < target_value_vector.size(); i++)
     {
-        // std::cout << target_type_vector[i] << " " << target_polarization_vector[i] << " " << target_wavelength_vector[i] << " " << target_polar_angle_vector[i] << " " << target_azimuthal_angle_vector[i] << " " << target_condition_vector[i][0] << " ";
-
         // Calculate actual value
         double target_calculated = calculate_reflection_transmission_absorption(target_type_vector[i], target_polarization_vector[i], target_wavelength_vector[i], target_polar_angle_vector[i], target_azimuthal_angle_vector[i]);
-        target_calculated_values.push_back(target_calculated);
-        // std::cout << target_calculated << std::endl;0
+        target_calculated_values[i] = target_calculated;
     }
 
     // Iterate again over the target values again and potentially do arithmetic
