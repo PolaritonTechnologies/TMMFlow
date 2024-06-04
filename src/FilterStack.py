@@ -97,6 +97,9 @@ class FilterStack:
         self.initial_structure_thicknesses = np.copy(
             np.array(self.filter_definition["structure_thicknesses"])
         )
+        self.initial_incoherent_order = np.copy(
+            np.array(self.filter_definition["incoherent"])
+        )
 
         # This is for displaying in the GUI only as the display for the user is
         # slightly different to the converted version for C++
@@ -424,7 +427,7 @@ class FilterStack:
 
         old_index = []
         num_elements = 1
-        index = 1 
+        index = 1
 
         for target_idx in range(0, np.size(filter_definition["targets_type"])):
 
@@ -497,9 +500,8 @@ class FilterStack:
 
                 interval_wvl = [filter_definition["targets_wavelengths"][target_idx]]
                 weight_wvl = 1
-            
 
-            old_index.append(num_elements) 
+            old_index.append(num_elements)
             num_elements += len(interval_polar) * len(interval_azim) * len(interval_wvl)
 
             for polar_angle in interval_polar:
@@ -551,22 +553,29 @@ class FilterStack:
                             )
                         else:
                             target_arithmetic = np.append(target_arithmetic, index)
-                        
+
                         index += 1
 
         # Now actually fill the target_arithmetic with the contents from the initial array to allow for arithmetics
-        unexpanded_targets_arithmetic = np.empty(np.size(filter_definition["targets_arithmetic"]), dtype="U20")
+        unexpanded_targets_arithmetic = np.empty(
+            np.size(filter_definition["targets_arithmetic"]), dtype="U20"
+        )
 
         # Iterate over the list and replace the numbers
         for i in range(len(unexpanded_targets_arithmetic)):
             # Split the string into components
-            components = re.split('([-+/*])', filter_definition["targets_arithmetic"][i])
+            components = re.split(
+                "([-+/*])", filter_definition["targets_arithmetic"][i]
+            )
             # Replace the numbers with the corresponding values from old_index
-            new_components = [str(old_index[int(comp) - 1]) if comp.isdigit() else comp for comp in components]
+            new_components = [
+                str(old_index[int(comp) - 1]) if comp.isdigit() else comp
+                for comp in components
+            ]
             # Join the components back together
-            unexpanded_targets_arithmetic[i] = ''.join(new_components)
+            unexpanded_targets_arithmetic[i] = "".join(new_components)
 
-        target_arithmetic[np.array(old_index)-1] = unexpanded_targets_arithmetic 
+        target_arithmetic[np.array(old_index) - 1] = unexpanded_targets_arithmetic
 
         return (
             target_wavelength,
@@ -622,9 +631,13 @@ class FilterStack:
             self.filter_definition["layer_switch_allowed"][el]
             for el in self.layer_order
         ]
+        temp_json["incoherent"] = [
+            self.filter_definition["incoherent"][el] for el in self.layer_order
+        ]
 
-        temp_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "temp", f"{file_name}.json")
-
+        temp_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "temp", f"{file_name}.json"
+        )
 
         with open(temp_path, "w") as file:
             json.dump(temp_json, file)
@@ -875,7 +888,8 @@ class FilterStack:
             )
             self.log_func(
                 "Optimized layer order: "
-                + str(self.filter_definition["structure_materials"]))
+                + str(self.filter_definition["structure_materials"])
+            )
             self.log_func("Optimized merit value: " + str(self.optimum_merit))
             self.log_func("Number of function evaluations: " + str(ret.nfev))
 
