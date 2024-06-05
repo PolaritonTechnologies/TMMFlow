@@ -327,11 +327,22 @@
                 <tr>
                     <td colspan="4">
 
-                        <button id="add_layer" type="button" class="btn btn-primary" style="margin-bottom: 1em;">Add
-                            Layer</button>
-                        <button id="add_incoherent_layer" type="button" class="btn btn-secondary"
-                            style="margin-bottom: 1em;">Add Incoherent
-                            Layer</button>
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button id="add_layer_to_top" type="button" class="btn btn-primary"
+                                    style="margin-bottom: 1em;">Add
+                                    Layer to Top</button>
+                                <button id="add_layer_to_bottom" type="button" class="btn btn-info"
+                                    style="margin-bottom: 1em;">Add
+                                    Layer to Bottom</button>
+                                <button id="add_incoherent_layer" type="button" class="btn btn-secondary"
+                                    style="margin-bottom: 1em;">Add Incoherent
+                                    Layer</button>
+                            </div>
+                            <button id="flip_stack" type="button" class="btn btn-success"
+                                style="margin-bottom: 1em;">Flip
+                                Stack</button>
+                        </div>
                         <table id="layers" class="table">
                             <thead>
                                 <tr>
@@ -836,8 +847,11 @@
 
     });
 
-    document.getElementById('add_layer').addEventListener('click', function () {
-        addRow('layers');
+    document.getElementById('add_layer_to_top').addEventListener('click', function () {
+        addRow('layers', 'coherent', null, true);
+    });
+    document.getElementById('add_layer_to_bottom').addEventListener('click', function () {
+        addRow('layers', 'coherent', null, false);
     });
 
     document.getElementById('add_incoherent_layer').addEventListener('click', function () {
@@ -852,14 +866,31 @@
     // general core checkbox)
     let checkboxCounter = (document.querySelectorAll('input[type="checkbox"]').length - 1) / 2;
 
-    function addRow(tableId, type = 'coherent', sourceRow = null) {
+    function addRow(tableId, type = 'coherent', sourceRow = null, top = true) {
         var table = document.getElementById(tableId);
+        var row;
         if (tableId == "target") {
             var row = table.insertRow(-1);
+            row.dataset.rowNumber = table.rows.length - 1;
         } else {
-            var row = table.insertRow(1);
+            if (top) {
+                var row = table.insertRow(1);
+                row.dataset.rowNumber = table.rows.length - 1;
+            }
+            else {
+                var row = table.insertRow(-1);
+                row.dataset.rowNumber = 1;
+                // Update row numbers for all other rows
+                var totalRows = table.tBodies[0].rows.length;
+                Array.from(table.tBodies[0].rows).forEach(function (rowElement, index) {
+                    if (rowElement !== row) {
+                        var rowNumber = totalRows - index;
+                        rowElement.dataset.rowNumber = rowNumber;
+                        rowElement.cells[0].textContent = rowNumber;
+                    }
+                });
+            }
         }
-        row.dataset.rowNumber = table.rows.length - 1;
         row.className = 'draggable';
         var cell1 = row.insertCell(0);
         cell1.textContent = row.dataset.rowNumber;
@@ -1538,5 +1569,45 @@
         });
 
         $('#newDesignModal').modal('hide');
+    });
+</script>
+<script>
+    document.getElementById('flip_stack').addEventListener('click', function () {
+        var table = document.getElementById('layers');
+        var tbody = table.tBodies[0];
+        var rows = Array.from(tbody.rows);
+        var incoherentIndex = rows.findIndex(row => row.querySelector('.incoherent').value === 'true');
+
+        if (incoherentIndex === -1) {
+            console.log('No incoherent layer found');
+            return;
+        }
+
+        // Reverse the entire rows array
+        rows.reverse();
+
+        // Remove tbody from table
+        table.removeChild(tbody);
+
+        // Clear tbody
+        while (tbody.firstChild) {
+            tbody.removeChild(tbody.firstChild);
+        }
+
+        // Add rows to tbody in new order
+        for (var i = 0; i < rows.length; i++) {
+            tbody.appendChild(rows[i]);
+        }
+
+        // Add tbody back to table
+        table.appendChild(tbody);
+
+        // Update row numbers after the flip
+        var totalRows = tbody.rows.length;
+        Array.from(tbody.rows).forEach(function (row, index) {
+            var rowNumber = totalRows - index;
+            row.dataset.rowNumber = rowNumber;
+            row.cells[0].textContent = rowNumber;
+        });
     });
 </script>
