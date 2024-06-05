@@ -429,153 +429,156 @@ class FilterStack:
         num_elements = 1
         index = 1
 
-        for target_idx in range(0, np.size(filter_definition["targets_type"])):
+        if not np.size(filter_definition["targets_type"]) == 0:
+            for target_idx in range(0, np.size(filter_definition["targets_type"])):
 
-            # polar angle treament in case of intervals, each angle is weighted
-            # for evaluation with the merit function.
+                # polar angle treament in case of intervals, each angle is weighted
+                # for evaluation with the merit function.
 
-            if isinstance(filter_definition["targets_polar_angle"][target_idx], list):
+                if isinstance(filter_definition["targets_polar_angle"][target_idx], list):
 
-                polar_angle_entry = np.array(
-                    filter_definition["targets_polar_angle"][target_idx]
-                )
+                    polar_angle_entry = np.array(
+                        filter_definition["targets_polar_angle"][target_idx]
+                    )
 
-                interval_polar = np.arange(
-                    polar_angle_entry[0],
-                    polar_angle_entry[-1] + 1,
-                    filter_definition["polar_angle_steps"][target_idx],
-                )
+                    interval_polar = np.arange(
+                        polar_angle_entry[0],
+                        polar_angle_entry[-1] + 1,
+                        filter_definition["polar_angle_steps"][target_idx],
+                    )
 
-                weight_polar = 1 / np.size(interval_polar)
+                    weight_polar = 1 / np.size(interval_polar)
 
-            else:
+                else:
 
-                interval_polar = [filter_definition["targets_polar_angle"][target_idx]]
-                weight_polar = 1
+                    interval_polar = [filter_definition["targets_polar_angle"][target_idx]]
+                    weight_polar = 1
 
-            # azimuthal angle treament in case of intervals, each angle is weighted
-            # for evaluation with the merit function.
+                # azimuthal angle treament in case of intervals, each angle is weighted
+                # for evaluation with the merit function.
 
-            if isinstance(
-                filter_definition["targets_azimuthal_angle"][target_idx], list
-            ):
+                if isinstance(
+                    filter_definition["targets_azimuthal_angle"][target_idx], list
+                ):
 
-                azimuthal_entry = np.array(
-                    filter_definition["targets_azimuthal_angle"][target_idx]
-                )
+                    azimuthal_entry = np.array(
+                        filter_definition["targets_azimuthal_angle"][target_idx]
+                    )
 
-                interval_azim = np.arange(
-                    azimuthal_entry[0],
-                    azimuthal_entry[-1] + 1,
-                    filter_definition["azimuthal_angle_steps"][target_idx],
-                )
+                    interval_azim = np.arange(
+                        azimuthal_entry[0],
+                        azimuthal_entry[-1] + 1,
+                        filter_definition["azimuthal_angle_steps"][target_idx],
+                    )
 
-                weight_azim = 1 / np.size(interval_azim)
+                    weight_azim = 1 / np.size(interval_azim)
 
-            else:
+                else:
 
-                interval_azim = [
-                    filter_definition["targets_azimuthal_angle"][target_idx]
-                ]
-                weight_azim = 1
+                    interval_azim = [
+                        filter_definition["targets_azimuthal_angle"][target_idx]
+                    ]
+                    weight_azim = 1
 
-            # wavelength treament in case of intervals, each wavelength is weighted
-            # for evaluation with the merit function.
+                # wavelength treament in case of intervals, each wavelength is weighted
+                # for evaluation with the merit function.
 
-            if isinstance(filter_definition["targets_wavelengths"][target_idx], list):
+                if isinstance(filter_definition["targets_wavelengths"][target_idx], list):
 
-                wavelength_entry = np.array(
-                    filter_definition["targets_wavelengths"][target_idx]
-                )
+                    wavelength_entry = np.array(
+                        filter_definition["targets_wavelengths"][target_idx]
+                    )
 
-                interval_wvl = np.arange(
-                    wavelength_entry[0],
-                    wavelength_entry[-1] + 1,
-                    filter_definition["wavelength_steps"][target_idx],
-                )
+                    interval_wvl = np.arange(
+                        wavelength_entry[0],
+                        wavelength_entry[-1] + 1,
+                        filter_definition["wavelength_steps"][target_idx],
+                    )
 
-                weight_wvl = 1 / np.size(interval_wvl)
+                    weight_wvl = 1 / np.size(interval_wvl)
 
-            else:
+                else:
 
-                interval_wvl = [filter_definition["targets_wavelengths"][target_idx]]
-                weight_wvl = 1
+                    interval_wvl = [filter_definition["targets_wavelengths"][target_idx]]
+                    weight_wvl = 1
 
-            old_index.append(num_elements)
-            num_elements += len(interval_polar) * len(interval_azim) * len(interval_wvl)
+                old_index.append(num_elements)
+                num_elements += len(interval_polar) * len(interval_azim) * len(interval_wvl)
 
-            for polar_angle in interval_polar:
+                for polar_angle in interval_polar:
 
-                for azim_angle in interval_azim:
+                    for azim_angle in interval_azim:
 
-                    for wvl in interval_wvl:
+                        for wvl in interval_wvl:
 
-                        target_wavelength = np.append(target_wavelength, wvl)
+                            target_wavelength = np.append(target_wavelength, wvl)
 
-                        target_polar_angle = np.append(target_polar_angle, polar_angle)
+                            target_polar_angle = np.append(target_polar_angle, polar_angle)
 
-                        target_azimuthal_angle = np.append(
-                            target_azimuthal_angle, azim_angle
-                        )
-                        target_weights = np.append(
-                            target_weights, weight_wvl * weight_azim * weight_polar
-                        )
-
-                        target_value = np.append(
-                            target_value,
-                            filter_definition["targets_value"][target_idx],
-                        )
-
-                        target_polarization = np.append(
-                            target_polarization,
-                            filter_definition["targets_polarization"][target_idx],
-                        )
-
-                        target_condition = np.append(
-                            target_condition,
-                            filter_definition["targets_condition"][target_idx],
-                        )
-
-                        target_tolerance = np.append(
-                            target_tolerance,
-                            filter_definition["targets_tolerance"][target_idx],
-                        )
-
-                        target_type = np.append(
-                            target_type,
-                            filter_definition["targets_type"][target_idx],
-                        )
-
-                        if filter_definition["targets_arithmetic"][target_idx] == "":
-                            target_arithmetic = np.append(
-                                target_arithmetic,
-                                filter_definition["targets_arithmetic"][target_idx],
+                            target_azimuthal_angle = np.append(
+                                target_azimuthal_angle, azim_angle
                             )
-                        else:
-                            target_arithmetic = np.append(target_arithmetic, index)
+                            target_weights = np.append(
+                                target_weights, weight_wvl * weight_azim * weight_polar
+                            )
 
-                        index += 1
+                            target_value = np.append(
+                                target_value,
+                                filter_definition["targets_value"][target_idx],
+                            )
 
-        # Now actually fill the target_arithmetic with the contents from the initial array to allow for arithmetics
-        unexpanded_targets_arithmetic = np.empty(
-            np.size(filter_definition["targets_arithmetic"]), dtype="U20"
-        )
+                            target_polarization = np.append(
+                                target_polarization,
+                                filter_definition["targets_polarization"][target_idx],
+                            )
 
-        # Iterate over the list and replace the numbers
-        for i in range(len(unexpanded_targets_arithmetic)):
-            # Split the string into components
-            components = re.split(
-                "([-+/*])", filter_definition["targets_arithmetic"][i]
+                            target_condition = np.append(
+                                target_condition,
+                                filter_definition["targets_condition"][target_idx],
+                            )
+
+                            target_tolerance = np.append(
+                                target_tolerance,
+                                filter_definition["targets_tolerance"][target_idx],
+                            )
+
+                            target_type = np.append(
+                                target_type,
+                                filter_definition["targets_type"][target_idx],
+                            )
+
+                            if filter_definition["targets_arithmetic"][target_idx] == "":
+                                target_arithmetic = np.append(
+                                    target_arithmetic,
+                                    filter_definition["targets_arithmetic"][target_idx],
+                                )
+                            else:
+                                target_arithmetic = np.append(target_arithmetic, index)
+
+                            index += 1
+
+            # Now actually fill the target_arithmetic with the contents from the initial array to allow for arithmetics
+            unexpanded_targets_arithmetic = np.empty(
+                np.size(filter_definition["targets_arithmetic"]), dtype="U20"
             )
-            # Replace the numbers with the corresponding values from old_index
-            new_components = [
-                str(old_index[int(comp) - 1]) if comp.isdigit() else comp
-                for comp in components
-            ]
-            # Join the components back together
-            unexpanded_targets_arithmetic[i] = "".join(new_components)
 
-        target_arithmetic[np.array(old_index) - 1] = unexpanded_targets_arithmetic
+            # Iterate over the list and replace the numbers
+            for i in range(len(unexpanded_targets_arithmetic)):
+                # Split the string into components
+                components = re.split(
+                    "([-+/*])", filter_definition["targets_arithmetic"][i]
+                )
+                # Replace the numbers with the corresponding values from old_index
+                new_components = [
+                    str(old_index[int(comp) - 1]) if comp.isdigit() else comp
+                    for comp in components
+                ]
+                # Join the components back together
+                unexpanded_targets_arithmetic[i] = "".join(new_components)
+
+            target_arithmetic[np.array(old_index) - 1] = unexpanded_targets_arithmetic
+        else:
+            log("No optimization targets were defined in the .json.")
 
         return (
             target_wavelength,

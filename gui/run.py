@@ -563,27 +563,42 @@ def save_json():
     targets = np.array(data[8].get("0").get("values"))
 
     no_columns_targets = 15
-    data_to_json["targets_type"] = targets[0::no_columns_targets].tolist()
-    data_to_json["targets_polarization"] = targets[1::no_columns_targets].tolist()
-    data_to_json["targets_polar_angle"] = [
-        [float(x), float(y)] if y != "" else float(x)
-        for x, y in zip(targets[2::no_columns_targets].tolist(), targets[3::no_columns_targets].tolist())
-    ]
-    data_to_json["polar_angle_steps"] = targets[4::no_columns_targets].astype(float).tolist()
-    data_to_json["targets_azimuthal_angle"] = [
-        [float(x), float(y)] if y != "" else float(x)
-        for x, y in zip(targets[5::no_columns_targets].tolist(), targets[6::no_columns_targets].tolist())
-    ]
-    data_to_json["azimuthal_angle_steps"] = targets[7::no_columns_targets].astype(float).tolist()
-    data_to_json["targets_wavelengths"] = [
-        [float(x), float(y)] if y != "" else float(x)
-        for x, y in zip(targets[8::no_columns_targets].tolist(), targets[9::no_columns_targets].tolist())
-    ]
-    data_to_json["wavelength_steps"] = targets[10::no_columns_targets].astype(float).tolist()
-    data_to_json["targets_condition"] = targets[11::no_columns_targets].tolist()
-    data_to_json["targets_value"] = targets[12::no_columns_targets].astype(float).tolist()
-    data_to_json["targets_tolerance"] = targets[13::no_columns_targets].astype(float).tolist()
-    data_to_json["targets_arithmetic"] = targets[14::no_columns_targets].astype(str).tolist()
+    if np.size(targets) == 1:
+        # In case no targets were defined
+        data_to_json["targets_type"] = []
+        data_to_json["targets_polarization"] = []
+        data_to_json["targets_polar_angle"] = []
+        data_to_json["polar_angle_steps"] = []
+        data_to_json["targets_azimuthal_angle"] = []
+        data_to_json["azimuthal_angle_steps"] = []
+        data_to_json["targets_wavelengths"] = []
+        data_to_json["wavelength_steps"] = []
+        data_to_json["targets_condition"] = []
+        data_to_json["targets_value"] = []
+        data_to_json["targets_tolerance"] = []
+        data_to_json["targets_arithmetic"] = []
+    else:
+        data_to_json["targets_type"] = targets[0::no_columns_targets].tolist()
+        data_to_json["targets_polarization"] = targets[1::no_columns_targets].tolist()
+        data_to_json["targets_polar_angle"] = [
+            [float(x), float(y)] if y != "" else float(x)
+            for x, y in zip(targets[2::no_columns_targets].tolist(), targets[3::no_columns_targets].tolist())
+        ]
+        data_to_json["polar_angle_steps"] = targets[4::no_columns_targets].astype(float).tolist()
+        data_to_json["targets_azimuthal_angle"] = [
+            [float(x), float(y)] if y != "" else float(x)
+            for x, y in zip(targets[5::no_columns_targets].tolist(), targets[6::no_columns_targets].tolist())
+        ]
+        data_to_json["azimuthal_angle_steps"] = targets[7::no_columns_targets].astype(float).tolist()
+        data_to_json["targets_wavelengths"] = [
+            [float(x), float(y)] if y != "" else float(x)
+            for x, y in zip(targets[8::no_columns_targets].tolist(), targets[9::no_columns_targets].tolist())
+        ]
+        data_to_json["wavelength_steps"] = targets[10::no_columns_targets].astype(float).tolist()
+        data_to_json["targets_condition"] = targets[11::no_columns_targets].tolist()
+        data_to_json["targets_value"] = targets[12::no_columns_targets].astype(float).tolist()
+        data_to_json["targets_tolerance"] = targets[13::no_columns_targets].astype(float).tolist()
+        data_to_json["targets_arithmetic"] = targets[14::no_columns_targets].astype(str).tolist()
 
     # If the file is not in the temp folder yet, do not allow for an overwrite
     if selected_file.split("/")[-2] != "temp":
