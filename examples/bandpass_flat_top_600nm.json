@@ -1,6 +1,6 @@
 {
   "calculation_type": "t",
-  "polarization": "s",
+  "polarization": "",
   "wavelengthMin": 500.0,
   "wavelengthMax": 700.0,
   "wavelengthStep": 1.0,
@@ -98,7 +98,7 @@
     false
   ],
   "targets_type": ["t", "t", "t"],
-  "targets_polarization": ["s", "s", "s"],
+  "targets_polarization": ["", "", ""],
   "targets_polar_angle": [0.0, 0.0, 0.0],
   "polar_angle_steps": [5.0, 5.0, 5.0],
   "targets_azimuthal_angle": [0.0, 0.0, 0.0],
