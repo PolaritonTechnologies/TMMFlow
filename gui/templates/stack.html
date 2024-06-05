@@ -27,6 +27,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.2/math.min.js"></script>
 </head>
 
 <body>
@@ -422,12 +423,14 @@
                                             {% endfor %}
                                         </select>
                                     </td>
-                                    <td><input type="text" class="form-control"
-                                            pattern="^\d+(\.\d+)?$|^\[\d+(\.\d+)?(,\s*\d+(\.\d+)?)*\]$"
-                                            title="Only [ ] , . or numbers are allowed."
-                                            value="{{ default_values.structure_thicknesses[i] }}"></td>
                                     <td>
-                                        <div class="custom-control custom-checkbox">
+                                        <input type="text" class="form-control" pattern="^[\d+\-*/.,\[\] ]+$"
+                                            title="Only [ ] , . - + / * or numbers are allowed."
+                                            value="{{ default_values.structure_thicknesses[i] }}"
+                                            onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.value = parseFloat(math.evaluate(this.value)).toFixed(2);}">
+                                    </td>
+                                    <td>
+                                        <div class=" custom-control custom-checkbox">
                                             <input type="checkbox" class="custom-control-input"
                                                 id="checkbox_thickness_opt_{{ i }}" {% if
                                                 default_values.thickness_opt_allowed[i] %}checked{% endif %}>
@@ -882,8 +885,9 @@
                     </select>`;
 
 
+            cell3.innerHTML = ` <input type="text" "pattern="^[\d+\-*/.,\[\] ]+$" title="Only [ ] , . - + / * or numbers are allowed." onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.value = parseFloat(math.evaluate(this.value)).toFixed(2); }" class="form-control">
+`;
 
-            cell3.innerHTML = '<input type="text" class="form-control" pattern="^\\d+(\\.\\d+)?$|^\\[\\d+(\\.\\d+)?(,\\s*\\d+(\\.\\d+)?)*\\]$" title="Only [ ] , . or numbers are allowed." class="form-control">';
             cell4.innerHTML = `
                 <div class="custom-control custom-checkbox">
                     <input type="checkbox" checked class="custom-control-input" id="checkbox_thickness_opt_${checkboxCounter}">
@@ -1078,10 +1082,21 @@
     }
 
     $(document).on('click', '.duplicate-row', function (event) {
+        // Check if the event was triggered by a keyboard event
+        if (event.originalEvent instanceof KeyboardEvent) {
+            return;
+        }
+
         event.preventDefault();
         var sourceRow = $(this).closest('tr')[0];  // Find the row
         addRow('layers', 'coherent', sourceRow);  // Add a new row with the values from sourceRow
-    });    
+    });
+    $(document).on('keydown', 'input', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    });
 </script>
 
 <script>
@@ -1453,7 +1468,10 @@
                 totalThickness += parseFloat(thickness) * layerNumber;
             } else {
                 layerCount += 1;  // Count as 1 layer if there's no leading number
-                totalThickness += parseFloat(thicknessField);
+                // Only count as thickness if layer is not incoherent
+                if ($(this).find('td').eq(7).find('input').val() === 'false') {
+                    totalThickness += parseFloat(thicknessField);
+                }
             }
 
         });
