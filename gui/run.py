@@ -36,25 +36,33 @@ import pandas as pd
 import json
 import ast
 
-from utility import allowed_file, generate_colors, get_available_materials, get_available_templates, is_number
+from utility import (
+    allowed_file,
+    generate_colors,
+    get_available_materials,
+    get_available_templates,
+    is_number,
+)
 from open_filter_converter import import_from_open_filter, export_to_open_filter
 from FilterStack import FilterStack
 
+
 class CustomSecureCookieSessionInterface(SecureCookieSessionInterface):
     def get_cookie_domain(self, app):
-        return app.config.get('SESSION_COOKIE_DOMAIN')
+        return app.config.get("SESSION_COOKIE_DOMAIN")
 
     def get_cookie_path(self, app):
-        return app.config.get('SESSION_COOKIE_PATH')
+        return app.config.get("SESSION_COOKIE_PATH")
 
     def get_cookie_samesite(self, app):
-        return app.config.get('SESSION_COOKIE_SAMESITE')
+        return app.config.get("SESSION_COOKIE_SAMESITE")
+
 
 # Configure flask app
 app = Flask(__name__)
 app.session_interface = CustomSecureCookieSessionInterface()
 app.config.update(
-    SESSION_COOKIE_SAMESITE='Lax',  # or 'Strict' or 'None'
+    SESSION_COOKIE_SAMESITE="Lax",  # or 'Strict' or 'None'
     SESSION_COOKIE_SECURE=True,
 )
 
@@ -115,7 +123,7 @@ def stack():
             num_legend_items,
             unique_materials,
             unique_colors,
-            incoherent
+            incoherent,
         ) = extract_filter_design(my_filter)
 
     # Specify the directory you want to search
@@ -201,7 +209,7 @@ def optimize():
             num_legend_items,
             unique_materials,
             unique_colors,
-            incoherent
+            incoherent,
         ) = upload_file(temp_default_file)
     else:
         (
@@ -211,7 +219,7 @@ def optimize():
             num_legend_items,
             unique_materials,
             unique_colors,
-            incoherent
+            incoherent,
         ) = extract_filter_design(my_filter)
 
     return render_template(
@@ -222,7 +230,7 @@ def optimize():
         num_legend_items=num_legend_items,
         unique_materials=unique_materials,
         legend_colors=unique_colors,
-        incoherent= incoherent,
+        incoherent=incoherent,
     )
 
 
@@ -387,7 +395,7 @@ def upload_file(provided_filename=None):
         if filter_definition_json["incident_medium"] not in available_materials:
             unavailable_materials.append(filter_definition_json["incident_medium"])
         # if filter_definition_json["substrate_material"] not in available_materials:
-            # unavailable_materials.append(filter_definition_json["substrate_material"])
+        # unavailable_materials.append(filter_definition_json["substrate_material"])
 
         # open a modal to inform the user that some materials are not available
         # and break the loading (or better for the future: open a modal that
@@ -411,7 +419,7 @@ def upload_file(provided_filename=None):
         number_unique_materials,
         unique_materials,
         unique_colors,
-        incoherent
+        incoherent,
     ) = extract_filter_design(my_filter)
 
     if provided_filename is not None:
@@ -437,8 +445,6 @@ def upload_file(provided_filename=None):
         # legend_colors=unique_colors,
         # file_label=filename,
         # )
-
-
 
 
 def extract_filter_design(filter):
@@ -469,10 +475,13 @@ def extract_filter_design(filter):
             np.array(filter.filter_definition["structure_materials"])
             == np.unique(filter.filter_definition["structure_materials"])[i]
         ] = unique_colors[i]
-    
-    ordered_thicknesses = np.array([
-        filter.filter_definition["structure_thicknesses"][i] for i in filter.layer_order
-    ])
+
+    ordered_thicknesses = np.array(
+        [
+            filter.filter_definition["structure_thicknesses"][i]
+            for i in filter.layer_order
+        ]
+    )
     # Set the incoherent layer thicknesses to a specific value so that it does
     # not go out of control thick
     ordered_thicknesses[np.array(filter.filter_definition["incoherent"])] = 100
@@ -486,7 +495,7 @@ def extract_filter_design(filter):
         len(unique_materials),
         unique_materials.tolist(),
         unique_colors,
-        incoherent
+        incoherent,
     )
 
 
@@ -536,7 +545,10 @@ def save_json():
     ]
     temp_structure_thicknesses = np.flip(
         np.array(
-            [ast.literal_eval(i) if "," in i else float(i) for i in layers[1::number_of_columns]],
+            [
+                ast.literal_eval(i) if "," in i else float(i)
+                for i in layers[1::number_of_columns]
+            ],
             dtype=object,
         )
     ).tolist()
@@ -549,7 +561,10 @@ def save_json():
     data_to_json["bounds"] = np.flip(
         [
             [float(x), float(y)] if y != "" else float(x)
-            for x, y in zip(layers[3::number_of_columns].tolist(), layers[4::number_of_columns].tolist())
+            for x, y in zip(
+                layers[3::number_of_columns].tolist(),
+                layers[4::number_of_columns].tolist(),
+            )
         ],
         axis=0,
     ).tolist()
@@ -582,23 +597,44 @@ def save_json():
         data_to_json["targets_polarization"] = targets[1::no_columns_targets].tolist()
         data_to_json["targets_polar_angle"] = [
             [float(x), float(y)] if y != "" else float(x)
-            for x, y in zip(targets[2::no_columns_targets].tolist(), targets[3::no_columns_targets].tolist())
+            for x, y in zip(
+                targets[2::no_columns_targets].tolist(),
+                targets[3::no_columns_targets].tolist(),
+            )
         ]
-        data_to_json["polar_angle_steps"] = targets[4::no_columns_targets].astype(float).tolist()
+        data_to_json["polar_angle_steps"] = (
+            targets[4::no_columns_targets].astype(float).tolist()
+        )
         data_to_json["targets_azimuthal_angle"] = [
             [float(x), float(y)] if y != "" else float(x)
-            for x, y in zip(targets[5::no_columns_targets].tolist(), targets[6::no_columns_targets].tolist())
+            for x, y in zip(
+                targets[5::no_columns_targets].tolist(),
+                targets[6::no_columns_targets].tolist(),
+            )
         ]
-        data_to_json["azimuthal_angle_steps"] = targets[7::no_columns_targets].astype(float).tolist()
+        data_to_json["azimuthal_angle_steps"] = (
+            targets[7::no_columns_targets].astype(float).tolist()
+        )
         data_to_json["targets_wavelengths"] = [
             [float(x), float(y)] if y != "" else float(x)
-            for x, y in zip(targets[8::no_columns_targets].tolist(), targets[9::no_columns_targets].tolist())
+            for x, y in zip(
+                targets[8::no_columns_targets].tolist(),
+                targets[9::no_columns_targets].tolist(),
+            )
         ]
-        data_to_json["wavelength_steps"] = targets[10::no_columns_targets].astype(float).tolist()
+        data_to_json["wavelength_steps"] = (
+            targets[10::no_columns_targets].astype(float).tolist()
+        )
         data_to_json["targets_condition"] = targets[11::no_columns_targets].tolist()
-        data_to_json["targets_value"] = targets[12::no_columns_targets].astype(float).tolist()
-        data_to_json["targets_tolerance"] = targets[13::no_columns_targets].astype(float).tolist()
-        data_to_json["targets_arithmetic"] = targets[14::no_columns_targets].astype(str).tolist()
+        data_to_json["targets_value"] = (
+            targets[12::no_columns_targets].astype(float).tolist()
+        )
+        data_to_json["targets_tolerance"] = (
+            targets[13::no_columns_targets].astype(float).tolist()
+        )
+        data_to_json["targets_arithmetic"] = (
+            targets[14::no_columns_targets].astype(str).tolist()
+        )
 
     # If the file is not in the temp folder yet, do not allow for an overwrite
     if selected_file.split("/")[-2] != "temp":
@@ -674,20 +710,21 @@ def reset_filter():
     # Reload page
     return redirect("/")
 
-@app.route('/start_new_design', methods=['POST'])
-def start_new_design():
-    filter_name = request.form.get('filter_name') + ".json"
-    template = request.form.get('template') + ".json"
 
-    new_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filter_name)
+@app.route("/start_new_design", methods=["POST"])
+def start_new_design():
+    filter_name = request.form.get("filter_name") + ".json"
+    template = request.form.get("template") + ".json"
+
+    new_file_path = os.path.join(app.config["UPLOAD_FOLDER"], filter_name)
 
     # Copy the template to the temp folder
-    shutil.copy(os.path.join(app.config['TEMPLATE_FOLDER'], template), new_file_path)
+    shutil.copy(os.path.join(app.config["TEMPLATE_FOLDER"], template), new_file_path)
 
     # Run the upload function with the new file
     upload_file(new_file_path)
 
-    return '', 200
+    return "", 200
 
 
 ##############################################
@@ -932,7 +969,7 @@ def start_optimization(data):
             number_unique_materials,
             unique_materials,
             unique_colors,
-            incoherent
+            incoherent,
         ) = extract_filter_design(my_filter)
 
         # Package the values into a dictionary

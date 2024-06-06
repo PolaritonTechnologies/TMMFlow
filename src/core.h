@@ -1,6 +1,7 @@
 #include <complex>
 #include "Eigen/Dense"
 #include <iostream>
+#include <vector>
 using namespace Eigen;
 //Troparevsky et al. Optics Express Vol. 18, Issue 24, pp. 24715-24721 (2010)
 //Formalism by Al-Ghezi et al. Optics Express 35770 (2020)

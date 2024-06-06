@@ -3,6 +3,7 @@ import json
 import os
 import time
 from datetime import datetime
+from functools import partial
 
 import numpy as np
 import re
@@ -34,20 +35,6 @@ def log(message):
 
 
 class FilterStack:
-    """
-    This class represents an optical filter stack and provides methods for
-    its optimization.
-
-    The FilterStack class is initialized with an optimization order file and
-    optional parameters for message and update queues, as well as logging
-    functions. It translates the optimization order file into a format readable
-    by the C++ code that performs the actual filter design and optimization and
-    interfaces to C++, too.
-
-    The class uses various optimization algorithms from the scipy.optimize
-    module, such as dual_annealing, minimize, differential_evolution,
-    basinhopping, shgo, and brute.
-    """
 
     def __init__(
         self,
@@ -82,17 +69,14 @@ class FilterStack:
 
         # translate json file to a readable format for the C++ code that does
         # not involve abbreviations that we use for filter design
-        self.json_file_path_cpp = self.translate_order_for_cpp(
-            filter_definition_by_user
-        )
+        updated_cpp_order = self.translate_order_for_cpp(filter_definition_by_user)
 
         # Create the filter stack in C++
-        self.my_filter, self.lib = self.create_filter_in_cpp(self.json_file_path_cpp)
+        # self.my_filter, self.lib = self.create_filter_in_cpp(self.json_file_path_cpp)
 
-        # Read in the json file translated for C++ again and restructure a bit
+        # Read in the translated C++ again and restructure a bit
         # for easy handling in python
-        with open(self.json_file_path_cpp) as f:
-            self.filter_definition = json.load(f)
+        self.filter_definition = updated_cpp_order
 
         self.initial_structure_thicknesses = np.copy(
             np.array(self.filter_definition["structure_thicknesses"])
@@ -286,18 +270,9 @@ class FilterStack:
                 updated_optimisation_order["layer_switch_allowed"].append(True)
         """
 
-        # Generate file path relative to this file
-        file_path = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "./temp/temp_cpp_order.json"
-        )
-        # file_path = os.path.join(os.getcwd(), "temp", "temp_cpp_order.json")
+        return updated_optimisation_order
 
-        with open(file_path, "w") as f:
-            json.dump(updated_optimisation_order, f)
-
-        return file_path
-
-    def create_filter_in_cpp(self, json_file_path_cpp):
+    def create_filter_in_cpp(self):
         """
         Creates a filter stack in C++ and returns a pointer to it.
 
@@ -389,7 +364,8 @@ class FilterStack:
         lib.get_material_order.argtypes = [c_string_array]
         lib.get_thicknesses.argtypes = [c_string_array]
 
-        my_filter = lib.createFilterStack(json_file_path_cpp.encode("utf-8"))
+        updated_cpp_order = self.translate_order_for_cpp(self.filter_definition)
+        my_filter = lib.createFilterStack(json.dumps(updated_cpp_order).encode("utf-8"))
 
         return my_filter, lib
 
@@ -435,7 +411,9 @@ class FilterStack:
                 # polar angle treament in case of intervals, each angle is weighted
                 # for evaluation with the merit function.
 
-                if isinstance(filter_definition["targets_polar_angle"][target_idx], list):
+                if isinstance(
+                    filter_definition["targets_polar_angle"][target_idx], list
+                ):
 
                     polar_angle_entry = np.array(
                         filter_definition["targets_polar_angle"][target_idx]
@@ -451,7 +429,9 @@ class FilterStack:
 
                 else:
 
-                    interval_polar = [filter_definition["targets_polar_angle"][target_idx]]
+                    interval_polar = [
+                        filter_definition["targets_polar_angle"][target_idx]
+                    ]
                     weight_polar = 1
 
                 # azimuthal angle treament in case of intervals, each angle is weighted
@@ -483,7 +463,9 @@ class FilterStack:
                 # wavelength treament in case of intervals, each wavelength is weighted
                 # for evaluation with the merit function.
 
-                if isinstance(filter_definition["targets_wavelengths"][target_idx], list):
+                if isinstance(
+                    filter_definition["targets_wavelengths"][target_idx], list
+                ):
 
                     wavelength_entry = np.array(
                         filter_definition["targets_wavelengths"][target_idx]
@@ -499,11 +481,15 @@ class FilterStack:
 
                 else:
 
-                    interval_wvl = [filter_definition["targets_wavelengths"][target_idx]]
+                    interval_wvl = [
+                        filter_definition["targets_wavelengths"][target_idx]
+                    ]
                     weight_wvl = 1
 
                 old_index.append(num_elements)
-                num_elements += len(interval_polar) * len(interval_azim) * len(interval_wvl)
+                num_elements += (
+                    len(interval_polar) * len(interval_azim) * len(interval_wvl)
+                )
 
                 for polar_angle in interval_polar:
 
@@ -513,7 +499,9 @@ class FilterStack:
 
                             target_wavelength = np.append(target_wavelength, wvl)
 
-                            target_polar_angle = np.append(target_polar_angle, polar_angle)
+                            target_polar_angle = np.append(
+                                target_polar_angle, polar_angle
+                            )
 
                             target_azimuthal_angle = np.append(
                                 target_azimuthal_angle, azim_angle
@@ -547,7 +535,10 @@ class FilterStack:
                                 filter_definition["targets_type"][target_idx],
                             )
 
-                            if filter_definition["targets_arithmetic"][target_idx] == "":
+                            if (
+                                filter_definition["targets_arithmetic"][target_idx]
+                                == ""
+                            ):
                                 target_arithmetic = np.append(
                                     target_arithmetic,
                                     filter_definition["targets_arithmetic"][target_idx],
@@ -600,20 +591,24 @@ class FilterStack:
         self.filter_definition["structure_thicknesses"] = (
             self.initial_structure_thicknesses
         )
-        self.lib.change_material_thickness(
-            self.my_filter,
-            self.initial_structure_thicknesses,
-            int(np.size(self.initial_structure_thicknesses)),
-        )
+
+        # self.lib.change_material_thickness(
+        #     self.my_filter,
+        #     self.initial_structure_thicknesses,
+        #     int(np.size(self.initial_structure_thicknesses)),
+        # )
+
         self.layer_order = np.arange(
             0, int(np.size(self.initial_structure_thicknesses)), 1, dtype=np.int32
         )
+
         self.filter_definition["structure_materials"] = [
             self.initial_structure_materials[el] for el in self.layer_order
         ]
-        self.lib.change_material_order(
-            self.my_filter, self.layer_order, int(np.size(self.layer_order))
-        )
+
+        # self.lib.change_material_order(
+        #     self.my_filter, self.layer_order, int(np.size(self.layer_order))
+        # )
 
     def save_current_design_to_json(self, file_name):
         temp_json = self.filter_definition.copy()
@@ -671,14 +666,17 @@ class FilterStack:
         Returns:
         numpy array: The optimized features.
         """
+        log("loading filter stack...")
+
+        my_filter, lib = self.create_filter_in_cpp()
 
         log("running optimisation...")
 
         for optimization_method in opt_methods:
             log("running " + optimization_method + "...")
 
-            self.lib.initialise_optimization(
-                self.my_filter,
+            lib.initialise_optimization(
+                my_filter,
                 self.target_wavelength,
                 int(np.size(self.target_wavelength)),
             )
@@ -749,10 +747,14 @@ class FilterStack:
                         f"Initial value {x} is not within the bounds {bound}"
                     )
 
+            partial_merit_function = partial(
+                self.merit_function, my_filter=my_filter, lib=lib
+            )
+
             # With scipy we cannot do integer optimization
             if optimization_method == "dual_annealing":
                 ret = dual_annealing(
-                    self.merit_function,
+                    partial_merit_function,
                     bounds=bounds,
                     callback=self.scipy_callback,
                     x0=x_initial,
@@ -761,7 +763,7 @@ class FilterStack:
                 )
             elif optimization_method == "differential_evolution":
                 ret = differential_evolution(
-                    self.merit_function,
+                    partial_merit_function,
                     bounds=bounds,
                     x0=x_initial,
                     maxiter=100000,
@@ -774,7 +776,7 @@ class FilterStack:
                 # 2. then a scipy.minimize
                 # 3. accepts of rejects the new optimum value
                 ret = basinhopping(
-                    self.merit_function,
+                    partial_merit_function,
                     x0=x_initial,
                     callback=self.scipy_callback,
                     minimizer_kwargs={
@@ -789,7 +791,7 @@ class FilterStack:
                 # features (e.g., 3). Depending on Ns, the number of points to
                 # try is established  (Ns^(#features) = number of iterations)
                 ret = brute(
-                    self.merit_function,
+                    partial_merit_function,
                     ranges=bounds,
                     Ns=2,
                     # maxiter = 50000,
@@ -797,13 +799,13 @@ class FilterStack:
             elif optimization_method == "shgo":
                 # Doesn't really start
                 ret = shgo(
-                    self.merit_function,
+                    partial_merit_function,
                     bounds=bounds,
                     # maxiter = 50000,
                 )
             elif optimization_method == "LM":
                 ret = gradient_descent(
-                    self.merit_function,
+                    partial_merit_function,
                     x0=x_initial,
                     bounds=bounds,
                     callback=self.scipy_callback,
@@ -811,7 +813,7 @@ class FilterStack:
             elif optimization_method == "TNC":
                 # Truncated newton method
                 ret = minimize(
-                    self.merit_function,
+                    partial_merit_function,
                     x0=x_initial,
                     bounds=bounds,
                     # method="Newton-CG", # 40908 after 45600 iterations (cannot handle bounds)
@@ -827,7 +829,7 @@ class FilterStack:
             elif optimization_method == "Nelder-Mead":
                 # Truncated newton method
                 ret = minimize(
-                    self.merit_function,
+                    partial_merit_function,
                     x0=x_initial,
                     bounds=bounds,
                     method="Nelder-Mead",
@@ -868,18 +870,18 @@ class FilterStack:
 
             # Change the filter stack to the optimized values (in C++ and in python)
             self.filter_definition["structure_thicknesses"] = thicknesses
-            self.lib.change_material_thickness(
-                self.my_filter, thicknesses, int(np.size(thicknesses))
+            lib.change_material_thickness(
+                my_filter, thicknesses, int(np.size(thicknesses))
             )
             self.filter_definition["structure_materials"] = [
                 self.initial_structure_materials[el] for el in self.layer_order
             ]
-            self.lib.change_material_order(
-                self.my_filter, self.layer_order, int(np.size(self.layer_order))
+            lib.change_material_order(
+                my_filter, self.layer_order, int(np.size(self.layer_order))
             )
 
-            self.lib.get_material_order(self.my_filter)
-            self.lib.get_thicknesses(self.my_filter)
+            lib.get_material_order(my_filter)
+            lib.get_thicknesses(my_filter)
 
             # The stop flag is also be used as an "optimization done" indicator
             self.stop_flag = True
@@ -900,7 +902,7 @@ class FilterStack:
 
         return ret.x
 
-    def merit_function(self, features):
+    def merit_function(self, features, my_filter, lib):
         """
         Computes the merit function for the given features. This function takes
         a list of features, extracts the layer thicknesses and positions, and
@@ -926,8 +928,8 @@ class FilterStack:
         # Change material thickness
         if np.any(self.filter_definition["thickness_opt_allowed"]):
             self.filter_definition["structure_thicknesses"] = thicknesses
-            self.lib.change_material_thickness(
-                self.my_filter, thicknesses, int(np.size(thicknesses))
+            lib.change_material_thickness(
+                my_filter, thicknesses, int(np.size(thicknesses))
             )
 
         # Change layer switch allowed
@@ -935,13 +937,13 @@ class FilterStack:
             self.filter_definition["structure_materials"] = [
                 self.initial_structure_materials[el] for el in self.layer_order
             ]
-            self.lib.change_material_order(
-                self.my_filter, self.layer_order, int(np.size(self.layer_order))
+            lib.change_material_order(
+                my_filter, self.layer_order, int(np.size(self.layer_order))
             )
 
         # Calculate merit
-        merit = self.lib.calculate_merit(
-            self.my_filter,
+        merit = lib.calculate_merit(
+            my_filter,
             (ctypes.c_char_p * len(self.target_type.tolist()))(
                 *[s.encode("utf-8") for s in self.target_type.tolist()]
             ),
@@ -1270,12 +1272,14 @@ class FilterStack:
         Function to only get the results for one particular angle given a wavelength range
         """
 
+        my_filter, lib = self.create_filter_in_cpp()
+
         wavelengths = np.arange(
             minimum_wavelength, maximum_wavelength + 1, wavelength_step
         )
 
-        result_string = self.lib.calculate_reflection_transmission_absorption_para(
-            self.my_filter,
+        result_string = lib.calculate_reflection_transmission_absorption_para(
+            my_filter,
             target_type.encode("utf-8"),
             polarization.encode("utf-8"),
             np.ascontiguousarray(wavelengths).astype(np.float64),
@@ -1318,6 +1322,9 @@ class FilterStack:
         Returns:
         The function plots the data to file or display
         """
+
+        my_filter, lib = self.create_filter_in_cpp()
+
         if wavelength is None:
             wavelength = np.arange(
                 self.filter_definition["wavelengthMin"],
@@ -1345,8 +1352,8 @@ class FilterStack:
 
         initial_time = time.time()
 
-        result_string = self.lib.calculate_reflection_transmission_absorption_para(
-            self.my_filter,
+        result_string = lib.calculate_reflection_transmission_absorption_para(
+            my_filter,
             target_type.encode("utf-8"),
             polarization.encode("utf-8"),
             np.ascontiguousarray(wavelength).astype(np.float64),

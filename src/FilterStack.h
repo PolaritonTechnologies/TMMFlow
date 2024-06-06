@@ -52,17 +52,12 @@ public:
 
     void reset_filter();
 
-    // Default constructor
-    FilterStack() = default;
-
     // Constructor
-    FilterStack(const char *filename)
+    FilterStack(const char* json_text)
     {
-        // First convert the filename to an std::string
-        full_path = std::filesystem::current_path() / filename;
-        std::tie(material_splines, general_materials_in_stack) = assemble_materials(filename);
+        std::tie(material_splines, general_materials_in_stack) = assemble_materials(json_text);
         setGeneralMaterialsInStack(general_materials_in_stack);
-        calculation_order = loadCalculationInfo(full_path);
+        calculation_order = loadCalculationInfo(json_text);
         d_list_initial = calculation_order.structure_thicknesses;
         d_list_in_initial_order = d_list_initial;
         incoherent_initial = calculation_order.incoherent;
@@ -81,7 +76,7 @@ public:
 
 private:
     // Private methods
-    std::pair<std::map<std::string, std::vector<tk::spline>>, bool> assemble_materials(std::string full_path);
+    std::pair<std::map<std::string, std::vector<tk::spline>>, bool> assemble_materials(const std::string& json_text);
     std::vector<Matrix3cd> assemble_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength);
     void initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step);
     void initialise_e_list_3x3_optim(std::map<std::string, std::vector<tk::spline>> material_splines, std::vector<double> wavelengths);
@@ -292,9 +287,9 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
 }
 
 // Function to assemble materials from file
-std::pair<std::map<std::string, std::vector<tk::spline>>, bool> FilterStack::assemble_materials(std::string full_path)
+std::pair<std::map<std::string, std::vector<tk::spline>>, bool> FilterStack::assemble_materials(const std::string& json_text)
 {
-    CalculationInfo calculation_order = loadCalculationInfo(full_path);
+    CalculationInfo calculation_order = loadCalculationInfo(json_text);
 
     std::vector<std::string> list_materials = calculation_order.structure_materials;
 

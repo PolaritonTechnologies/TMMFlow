@@ -3,13 +3,14 @@
 #include "FilterStack.h"
 #include <iostream>
 #include <cmath>
+#include "json.hpp"
 
 extern "C"
 {
 
-	FilterStack *createFilterStack(const char *filename)
+	FilterStack *createFilterStack(const char* json_string)
 	{
-		return new FilterStack(filename);
+		return new FilterStack(json_string);
 	}
 
 	void destroyFilterStack(FilterStack *filter_stack)

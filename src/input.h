@@ -279,12 +279,10 @@ struct CalculationInfo
                        exitMediumMaterial(exitMediumMaterial) {}
 };
 
-CalculationInfo loadCalculationInfo(const std::filesystem::path filepath)
+CalculationInfo loadCalculationInfo(const std::string& json_text)
 {
-    std::ifstream file(filepath);
-    json calculation_order;
-    file >> calculation_order;
 
+    json calculation_order = json::parse(json_text);
     std::vector<std::string> structure_materials = calculation_order["structure_materials"];
     std::vector<bool> incoherent = calculation_order["incoherent"];
     std::vector<double> structure_thicknesses = calculation_order["structure_thicknesses"];
