@@ -16,6 +16,15 @@ from flask_cors import CORS
 
 from flask.sessions import SecureCookieSessionInterface
 
+# For logging in users
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    login_user,
+    logout_user,
+    login_required,
+    current_user,
+)
 
 # Plotting graphs
 import plotly.graph_objects as go
@@ -30,7 +39,7 @@ from werkzeug.utils import secure_filename
 import os
 import shutil
 import time
-
+from datetime import timedelta
 import numpy as np
 import pandas as pd
 import json
@@ -65,6 +74,9 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",  # or 'Strict' or 'None'
     SESSION_COOKIE_SECURE=True,
 )
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
 
 # Enable CORS for all routes which has to be done for the socketio to work,
 # however, for the production server, it is important that cors_allowed_origins
@@ -77,6 +89,42 @@ app.secret_key = "your secret key"
 app.config["UPLOAD_FOLDER"] = "../src/temp/"
 app.config["MATERIAL_FOLDER"] = "../materials/"
 app.config["TEMPLATE_FOLDER"] = "../examples/"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=60)
+
+
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User(user_id)
+
+
+@app.context_processor
+def inject_user():
+    return dict(logged_in_user=current_user)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        user_id = request.form.get("user_id")
+        user = User(user_id)
+        login_user(user)
+        print(user)
+        print(user_id)
+        return redirect(url_for("stack"))
+    return render_template("login.html")
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return "You are now logged out."
+
 
 # Global variables necessary for calculation (as data is shared)
 my_filter = None
@@ -99,6 +147,7 @@ temp_default_file = app.config["UPLOAD_FOLDER"] + default_file.split("/")[-1]
 
 
 @app.route("/", methods=["GET", "POST"])
+@login_required
 def stack():
     global my_filter
     global temp_default_file
