@@ -340,10 +340,12 @@
                                     Layer</button>
                             </div>
                             <div class="ml-auto">
+                                <button id="simplify_stack" type="button" class="btn btn-secondary"
+                                    style="margin-bottom: 1em;">Simplify</button>
                                 <button id="flip_stack" type="button" class="btn btn-info"
                                     style="margin-bottom: 1em;">Flip
                                     Stack</button>
-                                <button id="copy_flip_stack" type="button" class="btn btn-secondary"
+                                <button id="copy_flip_stack" type="button" class="btn btn-primary"
                                     style="margin-bottom: 1em;">Copy-Flip
                                     Stack</button>
                             </div>
@@ -1181,19 +1183,10 @@
     function saveData(button) {
         var table = document.getElementById('jsonTable');
         var data = getTableData(table);
-        // Retrieve incoherent information from the hidden variable in the
-        // tables (incoherent rows are marked grey)
-        // var incoherent = $('.incoherent').map(function () {
-        //     return $(this).val() === 'true';
-        // }).get();
-
-        // Add the incoherent information to each row of data
-        // for (var i = 0; i < data.length; i++) {
-        //     data[i]['incoherent'] = incoherent[i];
-        // }
 
         var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/save_json?button=' + button, true);
+        // Include a timestamp in the URL to prevent caching
+        xhr.open('POST', '/save_json?button=' + button + '&t=' + new Date().getTime(), true);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.onload = function () {
             if (this.status == 200) {
@@ -1204,7 +1197,7 @@
                 }
             }
             else if (this.status == 302) {  // Status code for redirect
-                location.reload();  // Reload the page
+                location.reload(true);  // Force a hard reload to bypass cache
             }
         };
         xhr.send(JSON.stringify(data));
@@ -1637,13 +1630,84 @@
         table.appendChild(cloneTbody);
 
         // Update row numbers after the flip
-        var totalRows = table.rows.length;
-        Array.from(table.rows).forEach(function (row, index) {
+        var tbody = table.tBodies[0];
+        var totalRows = tbody.rows.length;
+        Array.from(tbody.rows).forEach(function (row, index) {
             var rowNumber = totalRows - index;
             row.dataset.rowNumber = rowNumber;
             row.cells[0].textContent = rowNumber;
         });
     });
+
+    document.getElementById('simplify_stack').addEventListener('click', function () {
+        var table = document.getElementById('layers');
+        var tbody = table.tBodies[0];
+
+        // Get all rows as an array
+        var rows = Array.from(tbody.rows);
+        var rowsToRemove = [];
+
+        for (var i = 0; i < rows.length - 1; i++) {
+            var currentRow = rows[i];
+            var nextRow = rows[i + 1];
+
+            // While the next row exists and has the same value in the second column, merge the rows
+            while (nextRow && currentRow.cells[1].children[0].value === nextRow.cells[1].children[0].value) {
+                // Parse the values in the third column of both rows as floats
+                var currentValue = parseFloat(currentRow.cells[2].children[0].value);
+                var nextValue = parseFloat(nextRow.cells[2].children[0].value);
+
+                // Check if the values are numbers
+                if (!isNaN(currentValue) && !isNaN(nextValue)) {
+                    // Sum the values
+                    var sum = currentValue + nextValue;
+
+                    // Round the sum to two decimal places
+                    var roundedSum = sum.toFixed(2);
+
+                    // Set this rounded sum as the new value of the third column of the current row
+                    currentRow.cells[2].children[0].value = roundedSum;
+
+                    // Calculate the new value for the second input in column 5
+                    var newValueColumn5 = Math.ceil((roundedSum * 2) / 100) * 100;
+
+                    // Set this new value, rounded to one decimal place
+                    currentRow.cells[4].children[0].children[1].value = newValueColumn5.toFixed(1);
+
+                    // Add the 'highlight' class to the current row
+                    currentRow.classList.add('highlight');
+
+                    // Remove the 'highlight' class after 2 seconds
+                    (function (row) {
+                        setTimeout(function () {
+                            row.classList.remove('highlight');
+                        }, 2000);
+                    })(currentRow);
+
+                    // Add the next row to the array of rows to remove
+                    rowsToRemove.push(nextRow);
+                }
+
+                // Move on to the next row
+                i++;
+                nextRow = rows[i + 1];
+            }
+        }
+
+        // Remove the rows that need to be removed
+        rowsToRemove.forEach(function (row) {
+            tbody.removeChild(row);
+        });
+        // Update row numbers after the simplification
+        var tbody = table.tBodies[0];
+        var totalRows = tbody.rows.length;
+        Array.from(tbody.rows).forEach(function (row, index) {
+            var rowNumber = totalRows - index;
+            row.dataset.rowNumber = rowNumber;
+            row.cells[0].textContent = rowNumber;
+        });
+    });
+
 </script>
 <script>
     document.querySelectorAll('.switchable').forEach(function (input) {
