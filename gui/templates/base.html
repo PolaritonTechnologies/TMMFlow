@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Matrix Method Simulations</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
+
+    <!-- This here is for asynchronous plotting -->
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- Include Bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+
+    <!-- Add jQuery UI CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-theme/0.1.0-beta.10/select2-bootstrap.min.css"
+        rel="stylesheet" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+    <!-- jQuery CDN -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Add jQuery, jQuery UI and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.2/math.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>Ouga - Transfer Matrix Method (TMM) Optimization</h1>
+    </header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">PolaritonTechnologies</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item {{ 'active' if request.endpoint == 'stack' else '' }}">
+                    <a class="nav-link" href="{{ url_for('stack') }}">Stack</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'simulate' else '' }}">
+                    <a class="nav-link" href="{{ url_for('simulate') }}">Simulate</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
+                    <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'materials' else '' }}">
+                    <a class="nav-link" href="{{ url_for('materials') }}">Materials</a>
+                </li>
+            </ul>
+            <div class="ml-auto">
+            <span class="navbar-text">
+                {% if current_user.is_authenticated %}
+                    Logged in as: {{ current_user.id }}
+                {% else %}
+                    Not logged in.
+                {% endif %}
+            </span>
+            </div>
+        </div>
+    </nav>
+
+    {% block content %}
+    <!-- Content overridden by child templates goes here -->
+    {% endblock %}
+
+</body>
+</html>
+<footer>
+    <p>© 2024 Ouga</p>
+</footer>
+
+    {% block scripts %}
+    <!-- Scripts overridden by child templates go here -->
+    {% endblock %}
