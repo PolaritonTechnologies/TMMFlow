@@ -39,30 +39,73 @@ def import_from_open_filter(input_file):
         "targets_wavelengths": [],
         "wavelength_steps": [],
         "targets_tolerance": [],
+        "targets_arithmetic": [],
         "bounds": [],
-        # "substrate_material": None,
-        # "substrate_thickness": None,
         "incident_medium": None,
         "exit_medium": None,
         "core_selection": None,
     }
 
     # Go through the open filter file to populate the dictionary
+    front_layer = True
     for idx, line in enumerate(lines):
-        if line.startswith("FrontLayer:"):
+        #### General ####
+        if line.startswith("FrontMedium:"):
+            parts = line.split(" ")
+            if parts[1] == "void":
+                data["incident_medium"] = "Air"
+            else:
+                data["incident_medium"] = str(parts[1])
+        if line.startswith("BackMedium:"):
+            parts = line.split(" ")
+            if parts[1] == "void":
+                data["exit_medium"] = "Air"
+            else:
+                data["exit_medium"] = str(parts[1])
+        if line.startswith("WavelengthRange:"):
+            parts = line.split(" ")
+            data["wavelengthMin"] = float(parts[1])
+            data["wavelengthMax"] = float(parts[2])
+            data["wavelengthStep"] = float(parts[3])
+
+        #### Materials ####
+        if line.startswith("Substrate:"):
             parts = line.split(" ")
             data["structure_materials"].append(parts[1])
             data["structure_thicknesses"].append(float(parts[2]))
+            data["thickness_opt_allowed"].append(False)
+            data["layer_switch_allowed"].append(False)
+            data["incoherent"].append(True)
+        if line.startswith("FrontLayer:"):
+            front_layer = True
+            parts = line.split(" ")
+            data["structure_materials"].append(parts[1])
+            data["structure_thicknesses"].append(float(parts[2]))
+            data["incoherent"].append(False)
+        if line.startswith("BackLayer:"):
+            front_layer = False
+            parts = line.split(" ")
+            data["structure_materials"].insert(0, parts[1])
+            data["structure_thicknesses"].insert(0, float(parts[2]))
+            data["incoherent"].insert(0, False)
         if line.startswith("RefineThickness:"):
             parts = line.split(" ")
             if parts[1] == "1":
-                data["thickness_opt_allowed"].append(True)
-                # To be changed later according to what is needed
-                data["layer_switch_allowed"].append(False)
+                if front_layer:
+                    data["thickness_opt_allowed"].append(True)
+                    data["layer_switch_allowed"].append(False)
+                else:
+                    data["thickness_opt_allowed"].insert(0, True)
+                    data["layer_switch_allowed"].insert(0, False)
             elif parts[1] == "0":
-                data["thickness_opt_allowed"].append(False)
-                # To be changed later according to what is needed
-                data["layer_switch_allowed"].append(False)
+                if front_layer:
+                    data["thickness_opt_allowed"].append(False)
+                    data["layer_switch_allowed"].append(False)
+                else:
+                    data["thickness_opt_allowed"].insert(0, False)
+                    data["layer_switch_allowed"].insert(0, False)
+
+        #### Targets ####
         if line.startswith("Kind:"):
             parts = line.split(" ")
             if parts[1] == "TransmissionSpectrum":
@@ -120,24 +163,8 @@ def import_from_open_filter(input_file):
         if line.startswith("Tolerance:"):
             parts = line.split(" ")
             data["targets_tolerance"].append(float(parts[1]))
-        # if line.startswith("Substrate:"):
-            # parts = line.split(" ")
-            # data["substrate_material"] = str(parts[1])
-            # data["substrate_thickness"] = float(parts[2])
-        if line.startswith("FrontMedium:"):
-            parts = line.split(" ")
-            if parts[1] == "void":
-                data["incident_medium"] = "Air"
-            else:
-                data["incident_medium"] = str(parts[1])
-        if line.startswith("BackMedium:"):
-            parts = line.split(" ")
-            if parts[1] == "void":
-                data["exit_medium"] = "Air"
-            else:
-                data["exit_medium"] = str(parts[1])
 
-    # Fill other fields by default
+    #### Populate Fields that do not exist in OpenFilters ####
     if data["calculation_type"] == "":
         data["calculation_type"] = "t"
     if data["polarAngleMin"] is None:
@@ -152,30 +179,18 @@ def import_from_open_filter(input_file):
         data["azimAngleMax"] = 0.0
     if data["azimAngleStep"] is None:
         data["azimAngleStep"] = 1.0
-    if data["wavelengthMin"] is None:
-        data["wavelengthMin"] = 400.0
-    if data["wavelengthMax"] is None:
-        data["wavelengthMax"] = 800.0
-    if data["wavelengthStep"] is None:
-        data["wavelengthStep"] = 1.0
     if data["polar_angle_steps"] == []:
         data["polar_angle_steps"] = list(np.ones_like(data["targets_tolerance"]))
     if data["targets_azimuthal_angle"] == []:
         data["targets_azimuthal_angle"] = list(np.zeros_like(data["targets_tolerance"]))
     if data["azimuthal_angle_steps"] == []:
         data["azimuthal_angle_steps"] = list(np.ones_like(data["targets_tolerance"]))
-    if data["incoherent"] == []:
-        data["incoherent"] = list(np.full_like(data["structure_materials"], False, dtype=bool).tolist())
+    if data["targets_arithmetic"] == []:
+        data["targets_arithmetic"] = list(
+            np.arange(1, len(data["targets_tolerance"]) + 1, dtype=int).astype(str)
+        )
     if data["bounds"] == []:
-        data["bounds"] = [[0, 200]] * len(data["structure_materials"])
-    # if data["substrate_material"] is None:
-        # data["substrate_material"] = "FusedSilica"
-    # if data["substrate_thickness"] is None:
-        # data["substrate_thickness"] = 1000000.0
-    if data["incident_medium"] is None:
-        data["incident_medium"] = "Air"
-    if data["exit_medium"] is None:
-        data["exit_medium"] = "Air"
+        data["bounds"] = [[0, 500]] * len(data["structure_materials"])
     if data["core_selection"] is None:
         data["core_selection"] = "fast"
 
@@ -299,18 +314,21 @@ End
 
     return path_to_file
 
+
 def convert_csv_from_open_filter(file_path):
     import pandas as pd
-    temp = pd.read_csv(file_path, skiprows = 1)
+
+    temp = pd.read_csv(file_path, skiprows=1)
     wavelength = temp["wavelength"].unique().reshape(1, -1)
     absorption = temp["absorption"].to_numpy()
 
     absorption_reshaped = np.reshape(absorption, [7, int(len(absorption) / 7)])
     new_columns = np.array(["wavelength", "0", "15", "30", "45", "60", "75", "89"])
-    
-    temp_save_df = pd.DataFrame(np.concatenate((wavelength, absorption_reshaped)).T, columns = new_columns)
-    temp_save_df.to_csv(file_path + "_converted.csv", index = False, sep = "\t")
 
+    temp_save_df = pd.DataFrame(
+        np.concatenate((wavelength, absorption_reshaped)).T, columns=new_columns
+    )
+    temp_save_df.to_csv(file_path + "_converted.csv", index=False, sep="\t")
 
 
 # if True:
