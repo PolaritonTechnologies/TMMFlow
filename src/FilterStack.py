@@ -1048,7 +1048,7 @@ class FilterStack:
         if f < self.optimum_merit or f == 0:
             # self.lib.get_material_order(self.my_filter)
             # self.lib.get_thicknesses(self.my_filter)
-            temp_json = self.save_current_design_to_json("current_struture")
+            temp_json = self.save_current_design_to_json("current_structure")
 
             self.optimum_merit = f
             self.optimum_iteration = self.iteration_no

@@ -89,7 +89,7 @@ app.secret_key = "your secret key"
 app.config["UPLOAD_FOLDER"] = "../src/temp/"
 app.config["MATERIAL_FOLDER"] = "../materials/"
 app.config["TEMPLATE_FOLDER"] = "../examples/"
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=60)
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=60000)
 
 
 class User(UserMixin):
@@ -186,6 +186,7 @@ def stack():
         "num_legend_items": num_legend_items,
         "unique_materials": unique_materials,
         "legend_colors": unique_colors,
+        "incoherent_boxes": incoherent,
         "file_label": selected_file,
         "available_materials": material_list,
         "available_templates": template_list,
@@ -533,10 +534,10 @@ def extract_filter_design(filter):
     )
     # Set the incoherent layer thicknesses to a specific value so that it does
     # not go out of control thick
-    ordered_thicknesses[np.array(filter.filter_definition["incoherent"])] = 100
+    ordered_thicknesses[np.array([filter.filter_definition["incoherent"][i] for i in filter.layer_order])] = 100
 
     heights = np.round(np.array(ordered_thicknesses) / sum(ordered_thicknesses) * 300)
-    incoherent = filter.filter_definition["incoherent"]
+    incoherent = [filter.filter_definition["incoherent"][i] for i in filter.layer_order]
     return (
         num_boxes,
         colors.tolist(),
@@ -965,6 +966,7 @@ def download_data():
 def start_optimization(data):
     """ """
     global my_filter
+    my_filter.stop_flag = False
 
     # my_filter.perform_optimisation(
     # data["optimizationMethod"],

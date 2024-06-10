@@ -100,7 +100,7 @@
                 {% if default_values.num_boxes and default_values.colors is defined %}
                 {% for i in range(default_values.num_boxes)|reverse %}
                 <div class="box"
-                    style="background-color: {{ default_values.colors[i % default_values.colors|length] }}; height: {{ default_values.heights[i % default_values.heights|length] }}px; width: {{ '100%' if default_values.incoherent[i % default_values.heights|length] else '80%' }};">
+                    style="background-color: {{ default_values.colors[i % default_values.colors|length] }}; height: {{ default_values.heights[i % default_values.heights|length] }}px; width: {{ '100%' if default_values.incoherent_boxes[i % default_values.heights|length] else '80%' }};">
                 </div>
                 {% endfor %}
                 {% endif %}
