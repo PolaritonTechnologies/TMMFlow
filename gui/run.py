@@ -987,6 +987,7 @@ def start_optimization(data):
     time.sleep(0.1)
 
     while not my_filter.stop_flag:
+        """
         if my_filter.optimization_method != current_optimization_method:
             # Plot an additional line in the merit graph indicating the switch
             # to a new method
@@ -1002,6 +1003,7 @@ def start_optimization(data):
                     "name": current_optimization_method,
                 }
             )
+        """
 
         # Add the current data to the current trace
         traces[-1]["x"].append(my_filter.optimum_iteration)
