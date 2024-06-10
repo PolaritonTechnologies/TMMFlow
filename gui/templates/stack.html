@@ -1,579 +1,574 @@
 {% extends "base.html" %}
 {% block content %}
 <main class="container-custom">
-	<h2>Upload your Filter Design</h2>
-	<p>Upload a .json or .ofp file containing your filter design.</p>
-	<section class="text-center my-5">
-		<div>
-			<form id="uploadForm" method="post" enctype="multipart/form-data"
-				class="d-flex flex-column align-items-center">
-				<div class="custom-file">
-					<input type="file" class="custom-file-input" id="customFile" name="file">
-					<label class="custom-file-label" for="customFile">{{ default_values.file_label }}</label>
-				</div>
-				<div class="row">
-					<button type="submit" class="btn btn-primary mt-3" value="upload"
-						id="upload_button">Upload</button>
-			</form>
-			<button type="submit" class="btn btn-secondary mt-3" value="rename" id="start_new_design_button"
-				style="margin-left: 1em;">Start New Design</button>
-		</div>
+    <h2>Upload your Filter Design</h2>
+    <p>Upload a .json or .ofp file containing your filter design.</p>
+    <section class="text-center my-5">
+        <div>
+            <form id="uploadForm" method="post" enctype="multipart/form-data"
+                class="d-flex flex-column align-items-center">
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" id="customFile" name="file">
+                    <label class="custom-file-label" for="customFile">{{ default_values.file_label }}</label>
+                </div>
+                <div class="row">
+                    <button type="submit" class="btn btn-primary mt-3" value="upload" id="upload_button">Upload</button>
+            </form>
+            <button type="submit" class="btn btn-secondary mt-3" value="rename" id="start_new_design_button"
+                style="margin-left: 1em;">Start New Design</button>
+        </div>
 
-		<!-- Start New Design Modal -->
-		<div class="modal fade" id="newDesignModal" tabindex="-1" role="dialog"
-			aria-labelledby="newDesignModalLabel" aria-hidden="true">
-			<div class="modal-dialog" role="document">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h5 class="modal-title" id="newDesignModalLabel">Start New Design</h5>
-						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-							<span aria-hidden="true">&times;</span>
-						</button>
-					</div>
-					<div class="modal-body">
-						<form>
-							<div class="form-group">
-								<label for="filterName">Filter Name</label>
-								<input type="text" class="form-control" id="filterName"
-									placeholder="Enter filter name">
-							</div>
-							<div class="form-group">
-								<label for="templateSelect">Select Template</label>
-								<select class="form-control select2" id="templateSelect">
-									{% for template in default_values.available_templates %}
-									<option value="{{ template }}">{{ template }}</option>
-									{% endfor %}
-									<!-- Options will be populated from Flask -->
-								</select>
-							</div>
-						</form>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-						<button type="button" class="btn btn-primary" id="saveNewDesign">Save</button>
-					</div>
-				</div>
-			</div>
-		</div>
+        <!-- Start New Design Modal -->
+        <div class="modal fade" id="newDesignModal" tabindex="-1" role="dialog" aria-labelledby="newDesignModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="newDesignModalLabel">Start New Design</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="form-group">
+                                <label for="filterName">Filter Name</label>
+                                <input type="text" class="form-control" id="filterName" placeholder="Enter filter name">
+                            </div>
+                            <div class="form-group">
+                                <label for="templateSelect">Select Template</label>
+                                <select class="form-control select2" id="templateSelect">
+                                    {% for template in default_values.available_templates %}
+                                    <option value="{{ template }}">{{ template }}</option>
+                                    {% endfor %}
+                                    <!-- Options will be populated from Flask -->
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="saveNewDesign">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-		</div>
-		<div class="modal" tabindex="-1" role="dialog" id="materialLoadModal">
-			<div class="modal-dialog" role="document">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h5 class="modal-title">Materials not found</h5>
-						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-							<span aria-hidden="true">&times;</span>
-						</button>
-					</div>
-					<div class="modal-body">
-						<p> Please choose replacement materials </p>
-						<table class="table">
-							<thead>
-								<tr>
-									<th scope="col">Material</th>
-									<th scope="col">Replace with</th>
-								</tr>
-							</thead>
-							<tbody id="modalTableBody">
-							</tbody>
-						</table>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-primary" id="acceptMaterialChoice">Accept</button>
-						<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-			</div>
-		</div>
-	</section>
-	<section class="row justify-content-center">
-		<div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
-			<div class="container"
-				style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-				<div class="arrow-container"
-					style="position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-					<div class="arrow-line" style="width: 2px; height: 50px; background-color: black;"></div>
-					<div class="arrow"
-						style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 20px solid black; margin-bottom: 10px;">
-					</div>
-				</div>
+        </div>
+        <div class="modal" tabindex="-1" role="dialog" id="materialLoadModal">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Materials not found</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p> Please choose replacement materials </p>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Material</th>
+                                    <th scope="col">Replace with</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="acceptMaterialChoice">Accept</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="row justify-content-center">
+        <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
+            <div class="container"
+                style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div class="arrow-container"
+                    style="position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <div class="arrow-line" style="width: 2px; height: 50px; background-color: black;"></div>
+                    <div class="arrow"
+                        style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 20px solid black; margin-bottom: 10px;">
+                    </div>
+                </div>
 
-				{% if default_values.num_boxes and default_values.colors is defined %}
-				{% for i in range(default_values.num_boxes)|reverse %}
-				<div class="box"
-					style="background-color: {{ default_values.colors[i % default_values.colors|length] }}; height: {{ default_values.heights[i % default_values.heights|length] }}px; width: {{ '100%' if default_values.incoherent[i % default_values.heights|length] else '80%' }};">
-				</div>
-				{% endfor %}
-				{% endif %}
-			</div>
-		</div>
-		<div class="col-lg-2 col-md-4">
-			<div id="legend">
-				{% if default_values.num_legend_items and default_values.legend_colors is defined %}
-				{% for i in range(default_values.num_legend_items) %}
-				<div class="legend-item row d-flex align-items-center justify-content-start my-2">
-					<div class="box"
-						style="background-color: {{ default_values.legend_colors[i] }}; height: 20px; margin-right: 10px; width: 5em;">
-					</div>
-					<span>{{ default_values.unique_materials[i] }}</span>
-				</div>
-				{% endfor %}
-				{% endif %}
-			</div>
-			<form action="{{ url_for('reset_filter') }}" method="post" enctype="multipart/form-data"
-				class="ml-3 d-flex align-items-end" style="margin-top:2em;">
-				<button type="submit" class="btn btn-danger" value="resetFilter">Reset Filter</button>
-			</form>
-		</div>
-		<div class="col-lg-2 col-md-4">
-			<div class="row">
-				<h4 style="margin-bottom: 1em;"> Filter Design Summary </h4>
-			</div>
-			<div class="row">
-				<div class="col-7 text-end"><b>Total no. layers:</b></div>
-				<div class="col-5 text-start"><span id="layerCount"></span></div>
-			</div>
-			<div class="row">
-				<div class="col-7 text-end"><b>Total thickness:</b></div>
-				<div class="col-5 text-start"><span id="totalThickness"></span> nm</div>
-			</div>
-		</div>
+                {% if default_values.num_boxes and default_values.colors is defined %}
+                {% for i in range(default_values.num_boxes)|reverse %}
+                <div class="box"
+                    style="background-color: {{ default_values.colors[i % default_values.colors|length] }}; height: {{ default_values.heights[i % default_values.heights|length] }}px; width: {{ '100%' if default_values.incoherent[i % default_values.heights|length] else '80%' }};">
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <div id="legend">
+                {% if default_values.num_legend_items and default_values.legend_colors is defined %}
+                {% for i in range(default_values.num_legend_items) %}
+                <div class="legend-item row d-flex align-items-center justify-content-start my-2">
+                    <div class="box"
+                        style="background-color: {{ default_values.legend_colors[i] }}; height: 20px; margin-right: 10px; width: 5em;">
+                    </div>
+                    <span>{{ default_values.unique_materials[i] }}</span>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <form action="{{ url_for('reset_filter') }}" method="post" enctype="multipart/form-data"
+                class="ml-3 d-flex align-items-end" style="margin-top:2em;">
+                <button type="submit" class="btn btn-danger" value="resetFilter">Reset Filter</button>
+            </form>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <div class="row">
+                <h4 style="margin-bottom: 1em;"> Filter Design Summary </h4>
+            </div>
+            <div class="row">
+                <div class="col-7 text-end"><b>Total no. layers:</b></div>
+                <div class="col-5 text-start"><span id="layerCount"></span></div>
+            </div>
+            <div class="row">
+                <div class="col-7 text-end"><b>Total thickness:</b></div>
+                <div class="col-5 text-start"><span id="totalThickness"></span> nm</div>
+            </div>
+        </div>
 
-	</section>
+    </section>
 
-	<h2>Filter Definition</h2>
-	<p>Check and change the definition of the filter stack from the .json file. </p>
+    <h2>Filter Definition</h2>
+    <p>Check and change the definition of the filter stack from the .json file. </p>
 
-	<form class="form-horizontal">
-		<table class="table" , id="jsonTable">
-			<tr>
-				<th>Attribute</th>
-				<th>Value/Minimum</th>
-				<th>Maximum</th>
-				<th>Step</th>
-			</tr>
-			<tr>
-				<td><label for="calculation_type">Calculation Type:</label></td>
-				<td>
-					<select id="calculation_type" name="calculation_type" class="form-control">
-						<option value="t" {% if default_values.calculation_type=='t' %}selected{% endif %}>
-							Transmission</option>
-						<option value="r" {% if default_values.calculation_type=='r' %}selected{% endif %}>
-							Reflection</option>
-						<option value="a" {% if default_values.calculation_type=='a' %}selected{% endif %}>
-							Absorption</option>
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td><label for="polarization">Polarization:</label></td>
-				<td>
-					<select id="polarization" name="polarization" class="form-control">
-						<option value="s" {% if default_values.polarization=='s' %}selected{% endif %}>s</option>
-						<option value="p" {% if default_values.polarization=='p' %}selected{% endif %}>p</option>
-						<option value="" {% if default_values.polarization=='' %}selected{% endif %}>None</option>
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td><label for="calculation_wavelength_min">Calculation Wavelength:</label></td>
-				<td><input type="number" min="10" max="10000" step="any" required id="calculation_wavelength_min"
-						name="calculation_wavelength_min" class="form-control"
-						value="{{ default_values.wavelengthMin }}"></td>
-				<td><input type="number" min="10" max="10000" step="any" required id="calculation_wavelength_max"
-						name="calculation_wavelength_max" class="form-control"
-						value="{{ default_values.wavelengthMax }}"></td>
-				<td><input type="number" min="0" max="1000" step="any" required id="calculation_wavelength_step"
-						name="calculation_wavelength_step" class="form-control"
-						value="{{ default_values.wavelengthStep }}"></td>
-			</tr>
-			<tr>
-				<td><label for="polar_angle_min">Polar Angle:</label></td>
-				<td><input type="number" min="0" max="90" step="any" required id="polar_angle_min"
-						name="polar_angle_min" class="form-control" value="{{ default_values.polarAngleMin }}"></td>
-				<td><input type="number" min="0" max="90" step="any" required id="polar_angle_max"
-						name="polar_angle_max" class="form-control" value="{{ default_values.polarAngleMax }}"></td>
-				<td><input type="number" min="0" max="90" step="any" required id="polar_angle_step"
-						name="polar_angle_step" class="form-control" value="{{ default_values.polarAngleStep }}">
-				</td>
-			</tr>
-			<tr>
-				<td><label for="azimuthal_angle_min">Azimuthal Angle:</label></td>
-				<td><input type="number" min="0" max="90" step="any" required id="azimuthal_angle_min"
-						name="azimuthal_angle_min" class="form-control" value="{{ default_values.azimAngleMin }}">
-				</td>
-				<td><input type="number" min="0" max="90" step="any" required id="azimuthal_angle_max"
-						name="azimuthal_angle_max" class="form-control" value="{{ default_values.azimAngleMax }}">
-				</td>
-				<td><input type="number" min="0" max="90" step="any" required id="azimuthal_angle_step"
-						name="azimuthal_angle_step" class="form-control" value="{{ default_values.azimAngleStep }}">
-				</td>
-			</tr>
-			<tr>
-				<td><label for="incident_medium">Incident Medium:</label></td>
-				<td>
-					<select id="incident_medium" name="incident_medium" class="form-control select2">
-						{% for material in default_values.available_materials %}
-						{% if material == default_values.incident_medium %}
-						<option value="{{ material }}" selected>{{ material }}</option>
-						{% else %}
-						<option value="{{ material }}">{{ material }}</option>
-						{% endif %}
-						{% endfor %}
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td><label for="exit_medium">Exit Medium:</label></td>
-				<td>
-					<select id="exit_medium" name="exit_medium" class="form-control select2">
-						{% for material in default_values.available_materials %}
-						{% if material == default_values.exit_medium %}
-						<option value="{{ material }}" selected>{{ material }}</option>
-						{% else %}
-						<option value="{{ material }}">{{ material }}</option>
-						{% endif %}
-						{% endfor %}
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td colspan="4">
+    <form class="form-horizontal">
+        <table class="table" , id="jsonTable">
+            <tr>
+                <th>Attribute</th>
+                <th>Value/Minimum</th>
+                <th>Maximum</th>
+                <th>Step</th>
+            </tr>
+            <tr>
+                <td><label for="calculation_type">Calculation Type:</label></td>
+                <td>
+                    <select id="calculation_type" name="calculation_type" class="form-control">
+                        <option value="t" {% if default_values.calculation_type=='t' %}selected{% endif %}>
+                            Transmission</option>
+                        <option value="r" {% if default_values.calculation_type=='r' %}selected{% endif %}>
+                            Reflection</option>
+                        <option value="a" {% if default_values.calculation_type=='a' %}selected{% endif %}>
+                            Absorption</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="polarization">Polarization:</label></td>
+                <td>
+                    <select id="polarization" name="polarization" class="form-control">
+                        <option value="s" {% if default_values.polarization=='s' %}selected{% endif %}>s</option>
+                        <option value="p" {% if default_values.polarization=='p' %}selected{% endif %}>p</option>
+                        <option value="" {% if default_values.polarization=='' %}selected{% endif %}>None</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="calculation_wavelength_min">Calculation Wavelength:</label></td>
+                <td><input type="number" min="10" max="10000" step="any" required id="calculation_wavelength_min"
+                        name="calculation_wavelength_min" class="form-control"
+                        value="{{ default_values.wavelengthMin }}"></td>
+                <td><input type="number" min="10" max="10000" step="any" required id="calculation_wavelength_max"
+                        name="calculation_wavelength_max" class="form-control"
+                        value="{{ default_values.wavelengthMax }}"></td>
+                <td><input type="number" min="0" max="1000" step="any" required id="calculation_wavelength_step"
+                        name="calculation_wavelength_step" class="form-control"
+                        value="{{ default_values.wavelengthStep }}"></td>
+            </tr>
+            <tr>
+                <td><label for="polar_angle_min">Polar Angle:</label></td>
+                <td><input type="number" min="0" max="90" step="any" required id="polar_angle_min"
+                        name="polar_angle_min" class="form-control" value="{{ default_values.polarAngleMin }}"></td>
+                <td><input type="number" min="0" max="90" step="any" required id="polar_angle_max"
+                        name="polar_angle_max" class="form-control" value="{{ default_values.polarAngleMax }}"></td>
+                <td><input type="number" min="0" max="90" step="any" required id="polar_angle_step"
+                        name="polar_angle_step" class="form-control" value="{{ default_values.polarAngleStep }}">
+                </td>
+            </tr>
+            <tr>
+                <td><label for="azimuthal_angle_min">Azimuthal Angle:</label></td>
+                <td><input type="number" min="0" max="90" step="any" required id="azimuthal_angle_min"
+                        name="azimuthal_angle_min" class="form-control" value="{{ default_values.azimAngleMin }}">
+                </td>
+                <td><input type="number" min="0" max="90" step="any" required id="azimuthal_angle_max"
+                        name="azimuthal_angle_max" class="form-control" value="{{ default_values.azimAngleMax }}">
+                </td>
+                <td><input type="number" min="0" max="90" step="any" required id="azimuthal_angle_step"
+                        name="azimuthal_angle_step" class="form-control" value="{{ default_values.azimAngleStep }}">
+                </td>
+            </tr>
+            <tr>
+                <td><label for="incident_medium">Incident Medium:</label></td>
+                <td>
+                    <select id="incident_medium" name="incident_medium" class="form-control select2">
+                        {% for material in default_values.available_materials %}
+                        {% if material == default_values.incident_medium %}
+                        <option value="{{ material }}" selected>{{ material }}</option>
+                        {% else %}
+                        <option value="{{ material }}">{{ material }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td><label for="exit_medium">Exit Medium:</label></td>
+                <td>
+                    <select id="exit_medium" name="exit_medium" class="form-control select2">
+                        {% for material in default_values.available_materials %}
+                        {% if material == default_values.exit_medium %}
+                        <option value="{{ material }}" selected>{{ material }}</option>
+                        {% else %}
+                        <option value="{{ material }}">{{ material }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4">
 
-					<div class="d-flex justify-content-between">
-						<div>
-							<button id="add_layer_to_top" type="button" class="btn btn-primary"
-								style="margin-bottom: 1em;">Add
-								Layer to Top</button>
-							<button id="add_layer_to_bottom" type="button" class="btn btn-info"
-								style="margin-bottom: 1em;">Add
-								Layer to Bottom</button>
-							<button id="add_incoherent_layer" type="button" class="btn btn-secondary"
-								style="margin-bottom: 1em;">Add Incoherent
-								Layer</button>
-						</div>
-						<div class="ml-auto">
-							<button id="simplify_stack" type="button" class="btn btn-secondary"
-								style="margin-bottom: 1em;">Simplify</button>
-							<button id="flip_stack" type="button" class="btn btn-info"
-								style="margin-bottom: 1em;">Flip
-								Stack</button>
-							<button id="copy_flip_stack" type="button" class="btn btn-primary"
-								style="margin-bottom: 1em;">Copy-Flip
-								Stack</button>
-						</div>
-					</div>
-					<table id="layers" class="table">
-						<thead>
-							<tr>
-								<th>Layer</th>
-								<th>Value</th>
-								<th>Thickness</th>
-								<th>Thickness Opt
-									<button id="toggleThicknessOptCheckboxes" type="button"
-										class="btn btn-primary btn-sm" style="margin-left: 1em;">
-										<i class="fas fa-check-square"></i>
-									</button>
-								</th>
-								<th>Thickness Bounds</th>
-								<th>Position Opt
-									<button id="togglePositionOptCheckboxes" type="button"
-										class="btn btn-primary btn-sm" style="margin-left: 1em;">
-										<i class="fas fa-check-square"></i>
-									</button>
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							{% for i in range(default_values.structure_materials|length)|reverse %}
-							{% if default_values.incoherent[i] %}
-							<tr class="draggable" style="background-color: #D3D3D3;">
-								<td>{{ i+1 }}</td>
-								<td>
-									<select class="form-control select2" autocomplete="off">
-										<!-- Add an option for the selected material -->
-										<option value="{{ default_values.structure_materials[i] }}" selected>{{
-											default_values.structure_materials[i] }}</option>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button id="add_layer_to_top" type="button" class="btn btn-primary"
+                                style="margin-bottom: 1em;">Add
+                                Layer to Top</button>
+                            <button id="add_layer_to_bottom" type="button" class="btn btn-info"
+                                style="margin-bottom: 1em;">Add
+                                Layer to Bottom</button>
+                            <button id="add_incoherent_layer" type="button" class="btn btn-secondary"
+                                style="margin-bottom: 1em;">Add Incoherent
+                                Layer</button>
+                        </div>
+                        <div class="ml-auto">
+                            <button id="simplify_stack" type="button" class="btn btn-secondary"
+                                style="margin-bottom: 1em;">Simplify</button>
+                            <button id="flip_stack" type="button" class="btn btn-info" style="margin-bottom: 1em;">Flip
+                                Stack</button>
+                            <button id="copy_flip_stack" type="button" class="btn btn-primary"
+                                style="margin-bottom: 1em;">Copy-Flip
+                                Stack</button>
+                        </div>
+                    </div>
+                    <table id="layers" class="table">
+                        <thead>
+                            <tr>
+                                <th>Layer</th>
+                                <th>Value</th>
+                                <th>Thickness</th>
+                                <th>Thickness Opt
+                                    <button id="toggleThicknessOptCheckboxes" type="button"
+                                        class="btn btn-primary btn-sm" style="margin-left: 1em;">
+                                        <i class="fas fa-check-square"></i>
+                                    </button>
+                                </th>
+                                <th>Thickness Bounds</th>
+                                <th>Position Opt
+                                    <button id="togglePositionOptCheckboxes" type="button"
+                                        class="btn btn-primary btn-sm" style="margin-left: 1em;">
+                                        <i class="fas fa-check-square"></i>
+                                    </button>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in range(default_values.structure_materials|length)|reverse %}
+                            {% if default_values.incoherent[i] %}
+                            <tr class="draggable" style="background-color: #D3D3D3;">
+                                <td>{{ i+1 }}</td>
+                                <td>
+                                    <select class="form-control select2" autocomplete="off">
+                                        <!-- Add an option for the selected material -->
+                                        <option value="{{ default_values.structure_materials[i] }}" selected>{{
+                                            default_values.structure_materials[i] }}</option>
 
-										{% for material in default_values.available_materials %}
-										<!-- Only add an option for the material if it is not the selected material -->
-										{% if material != default_values.structure_materials[i] %}
-										<option value="{{ material }}">{{ material }}</option>
-										{% endif %}
-										{% endfor %}
-									</select>
-								</td>
-								<td><input type="text" class="form-control"
-										pattern="^\d+(\.\d+)?$|^\[\d+(\.\d+)?(,\s*\d+(\.\d+)?)*\]$"
-										title="Only [ ] , . or numbers are allowed."
-										value="{{ default_values.structure_thicknesses[i] }}">
-								</td>
+                                        {% for material in default_values.available_materials %}
+                                        <!-- Only add an option for the material if it is not the selected material -->
+                                        {% if material != default_values.structure_materials[i] %}
+                                        <option value="{{ material }}">{{ material }}</option>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td><input type="text" class="form-control"
+                                        pattern="^\d+(\.\d+)?$|^\[\d+(\.\d+)?(,\s*\d+(\.\d+)?)*\]$"
+                                        title="Only [ ] , . or numbers are allowed."
+                                        value="{{ default_values.structure_thicknesses[i] }}">
+                                </td>
 
-								<td>
-									<div class="custom-control custom-checkbox" style="display: none;">
-										<input type="checkbox" class="custom-control-input"
-											id="checkbox_thickness_opt_{{ i }}">
-										<label class="custom-control-label"
-											for="checkbox_thickness_opt_{{ i }}"></label>
-									</div>
-								</td>
-								<td>
-									<div class="input-group" style="display: none;">
-										<input type="number" class="form-control" value="0">
-										<input type="number" class="form-control" value="0">
-									</div>
-								</td>
-								<td>
-									<div class="custom-control custom-checkbox" style="display: none;">
-										<input type="checkbox" class="custom-control-input"
-											name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}">
-										<label class="custom-control-label"
-											for="checkbox_layer_switch_{{ i }}"></label>
-									</div>
-								</td>
-								<td> </td>
-								<td>
-									<button class="btn btn-danger delete-row">Delete</button>
-									<input type="hidden" class="incoherent" value="true">
-								</td>
-							</tr>
-							{%else%}
-							<tr class="draggable">
-								<td>{{ i+1 }}</td>
-								<td>
-									<select class="form-control select2" autocomplete="off">
-										<!-- Add an option for the selected material -->
-										<option value="{{ default_values.structure_materials[i] }}" selected>{{
-											default_values.structure_materials[i] }}</option>
+                                <td>
+                                    <div class="custom-control custom-checkbox" style="display: none;">
+                                        <input type="checkbox" class="custom-control-input"
+                                            id="checkbox_thickness_opt_{{ i }}">
+                                        <label class="custom-control-label"
+                                            for="checkbox_thickness_opt_{{ i }}"></label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group" style="display: none;">
+                                        <input type="number" class="form-control" value="0">
+                                        <input type="number" class="form-control" value="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="custom-control custom-checkbox" style="display: none;">
+                                        <input type="checkbox" class="custom-control-input"
+                                            name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}">
+                                        <label class="custom-control-label" for="checkbox_layer_switch_{{ i }}"></label>
+                                    </div>
+                                </td>
+                                <td> </td>
+                                <td>
+                                    <button class="btn btn-danger delete-row">Delete</button>
+                                    <input type="hidden" class="incoherent" value="true">
+                                </td>
+                            </tr>
+                            {%else%}
+                            <tr class="draggable">
+                                <td>{{ i+1 }}</td>
+                                <td>
+                                    <select class="form-control select2" autocomplete="off">
+                                        <!-- Add an option for the selected material -->
+                                        <option value="{{ default_values.structure_materials[i] }}" selected>{{
+                                            default_values.structure_materials[i] }}</option>
 
-										{% for material in default_values.available_materials %}
-										<!-- Only add an option for the material if it is not the selected material -->
-										{% if material != default_values.structure_materials[i] %}
-										<option value="{{ material }}">{{ material }}</option>
-										{% endif %}
-										{% endfor %}
-									</select>
-								</td>
-								<td>
-									<input type="text" class="form-control" pattern="^[\d+\-*/.,\[\] ]+$"
-										title="Only [ ] , . - + / * or numbers are allowed."
-										value="{{ default_values.structure_thicknesses[i] }}"
-										onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.value = parseFloat(math.evaluate(this.value)).toFixed(2);}">
-								</td>
-								<td>
-									<div class=" custom-control custom-checkbox">
-										<input type="checkbox" class="custom-control-input"
-											id="checkbox_thickness_opt_{{ i }}" {% if
-											default_values.thickness_opt_allowed[i] %}checked{% endif %}>
-										<label class="custom-control-label"
-											for="checkbox_thickness_opt_{{ i }}"></label>
-									</div>
-								</td>
-								<td>
-									<div class="input-group">
-										<input type="number" min="0" max="10000" step="any" class="form-control"
-											placeholder="Min" value="{{ default_values.bounds[i][0] }}">
-										<input type="number" min="0" max="10000" step="any" class="form-control"
-											placeholder="Max" value="{{ default_values.bounds[i][1] }}">
-									</div>
-								</td>
-								<td>
-									<div class="custom-control custom-checkbox">
-										<input type="checkbox" class="custom-control-input"
-											name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}"
-											{% if default_values.layer_switch_allowed[i] %}checked{% endif %}>
-										<label class="custom-control-label"
-											for="checkbox_layer_switch_{{ i }}"></label>
-									</div>
-								</td>
-								<td>
-									<button class="btn btn-success duplicate-row">x2</button>
-								</td>
-								<td>
-									<button class="btn btn-danger delete-row">Delete</button>
-									<input type="hidden" class="incoherent" value="false">
-								</td>
-							</tr>
-							{% endif %}
-							{% endfor %}
-						</tbody>
-					</table>
-				</td>
-			</tr>
+                                        {% for material in default_values.available_materials %}
+                                        <!-- Only add an option for the material if it is not the selected material -->
+                                        {% if material != default_values.structure_materials[i] %}
+                                        <option value="{{ material }}">{{ material }}</option>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control" pattern="^[\d+\-*/.,\[\] ]+$"
+                                        title="Only [ ] , . - + / * or numbers are allowed."
+                                        value="{{ default_values.structure_thicknesses[i] }}"
+                                        onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.value = parseFloat(math.evaluate(this.value)).toFixed(2);}">
+                                </td>
+                                <td>
+                                    <div class=" custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input"
+                                            id="checkbox_thickness_opt_{{ i }}" {% if
+                                            default_values.thickness_opt_allowed[i] %}checked{% endif %}>
+                                        <label class="custom-control-label"
+                                            for="checkbox_thickness_opt_{{ i }}"></label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" min="0" max="10000" step="any" class="form-control"
+                                            placeholder="Min" value="{{ default_values.bounds[i][0] }}">
+                                        <input type="number" min="0" max="10000" step="any" class="form-control"
+                                            placeholder="Max" value="{{ default_values.bounds[i][1] }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input"
+                                            name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}" {%
+                                            if default_values.layer_switch_allowed[i] %}checked{% endif %}>
+                                        <label class="custom-control-label" for="checkbox_layer_switch_{{ i }}"></label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-success duplicate-row">x2</button>
+                                </td>
+                                <td>
+                                    <button class="btn btn-danger delete-row">Delete</button>
+                                    <input type="hidden" class="incoherent" value="false">
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
 
-			<tr>
-				<td colspan="10">
-					<table id="target" class="table">
-						<tr>
-							<th>Target</th>
-							<th>Type</th>
-							<th>Polar.</th>
-							<th>Polar Angle</th>
-							<th>Azimuthal Angle</th>
-							<th>Wavelength</th>
-							<th>Cond.</th>
-							<th>Value</th>
-							<th>Tolerance</th>
-							<th>Arithmetics</th>
-						</tr>
-						{% for i in range(default_values.targets_value|length) %}
-						<tr class="draggable">
-							<td>{{ i+1 }}</td>
+            <tr>
+                <td colspan="10">
+                    <table id="target" class="table">
+                        <tr>
+                            <th>Target</th>
+                            <th>Type</th>
+                            <th>Polar.</th>
+                            <th>Polar Angle</th>
+                            <th>Azimuthal Angle</th>
+                            <th>Wavelength</th>
+                            <th>Cond.</th>
+                            <th>Value</th>
+                            <th>Tolerance</th>
+                            <th>Arithmetics</th>
+                        </tr>
+                        {% for i in range(default_values.targets_value|length) %}
+                        <tr class="draggable">
+                            <td>{{ i+1 }}</td>
 
-							<td>
-								<select class="form-control">
-									<option value="t" {% if default_values.targets_type[i]=='t' %}selected{% endif
-										%}>t</option>
-									<option value="r" {% if default_values.targets_type[i]=='r' %}selected{% endif
-										%}>r</option>
-									<option value="a" {% if default_values.targets_type[i]=='a' %}selected{% endif
-										%}>a</option>
-								</select>
-							</td>
-							<td>
-								<select class="form-control">
-									<option value="s" {% if default_values.targets_polarization[i]=='s' %}selected{%
-										endif %}>s</option>
-									<option value="p" {% if default_values.targets_polarization[i]=='p' %}selected{%
-										endif %}>p</option>
-									<option value="" {% if default_values.targets_polarization[i]=='' %}selected{%
-										endif %}>None</option>
-								</select>
-							</td>
+                            <td>
+                                <select class="form-control">
+                                    <option value="t" {% if default_values.targets_type[i]=='t' %}selected{% endif %}>t
+                                    </option>
+                                    <option value="r" {% if default_values.targets_type[i]=='r' %}selected{% endif %}>r
+                                    </option>
+                                    <option value="a" {% if default_values.targets_type[i]=='a' %}selected{% endif %}>a
+                                    </option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-control">
+                                    <option value="s" {% if default_values.targets_polarization[i]=='s' %}selected{%
+                                        endif %}>s</option>
+                                    <option value="p" {% if default_values.targets_polarization[i]=='p' %}selected{%
+                                        endif %}>p</option>
+                                    <option value="" {% if default_values.targets_polarization[i]=='' %}selected{% endif
+                                        %}>None</option>
+                                </select>
+                            </td>
 
-							<td>
-								<div class="input-group">
-									<input type="number" min="0" max="90" step="any" class="form-control"
-										placeholder="Min"
-										value="{{ default_values.targets_polar_angle[i][0] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else default_values.targets_polar_angle[i] }}">
-									<input type="number" min="0" max="90" step="any" class="form-control"
-										placeholder="Max"
-										value="{{ default_values.targets_polar_angle[i][1] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else '' }}">
-									<input type="number" min="0" max="90" step="any" class="form-control"
-										placeholder="Step" value="{{ default_values.polar_angle_steps[i] }}">
-								</div>
-							</td>
-							<td>
-								<div class="input-group">
-									<input type="number" min="0" max="90" step="any" class="form-control"
-										placeholder="Min"
-										value="{{ default_values.targets_azimuthal_angle[i][0] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else default_values.targets_azimuthal_angle[i] }}">
-									<input type="number" min="0" max="90" step="any" class="form-control"
-										placeholder="Max"
-										value="{{ default_values.targets_azimuthal_angle[i][1] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else '' }}">
-									<input type="number" min="0" max="90" step="any" class="form-control"
-										placeholder="Step" value="{{ default_values.azimuthal_angle_steps[i] }}">
-								</div>
-							</td>
-							<td>
-								<div class="input-group">
-									<input type="number" min="10" max="10000" step="any" class="form-control"
-										placeholder="Min"
-										value="{{ default_values.targets_wavelengths[i][0] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else default_values.targets_wavelengths[i] }}">
-									<input type="number" min="10" max="10000" step="any" class="form-control"
-										placeholder="Max"
-										value="{{ default_values.targets_wavelengths[i][1] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else '' }}">
-									<input type="number" min="0" max="10000" step="any" class="form-control"
-										placeholder="Step" value="{{ default_values.wavelength_steps[i] }}">
-								</div>
-							</td>
-							<td>
-								<select class="form-control">
-									<option value="<" {% if default_values.targets_condition[i]=='<' %}selected{%
-										endif %}>
-										< </option>
-									<option value=">" {% if default_values.targets_condition[i]=='>' %}selected{%
-										endif %}>></option>
-									<option value="=" {% if default_values.targets_condition[i]=='=' %}selected{%
-										endif %}>=</option>
-								</select>
-							</td>
-							<td><input type="number" min="0" step="any" class="form-control"
-									value="{{ default_values.targets_value[i] }}"></td>
-							<td><input type="number" min="0" step="any" class="form-control"
-									value="{{ default_values.targets_tolerance[i] }}"></td>
-							<td>
-								<input type="text" class="form-control switchable"
-									value="{{ default_values.targets_arithmetic[i] }}">
-							</td>
+                            <td>
+                                <div class="input-group">
+                                    <input type="number" min="0" max="90" step="any" class="form-control"
+                                        placeholder="Min"
+                                        value="{{ default_values.targets_polar_angle[i][0] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else default_values.targets_polar_angle[i] }}">
+                                    <input type="number" min="0" max="90" step="any" class="form-control"
+                                        placeholder="Max"
+                                        value="{{ default_values.targets_polar_angle[i][1] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else '' }}">
+                                    <input type="number" min="0" max="90" step="any" class="form-control"
+                                        placeholder="Step" value="{{ default_values.polar_angle_steps[i] }}">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="input-group">
+                                    <input type="number" min="0" max="90" step="any" class="form-control"
+                                        placeholder="Min"
+                                        value="{{ default_values.targets_azimuthal_angle[i][0] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else default_values.targets_azimuthal_angle[i] }}">
+                                    <input type="number" min="0" max="90" step="any" class="form-control"
+                                        placeholder="Max"
+                                        value="{{ default_values.targets_azimuthal_angle[i][1] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else '' }}">
+                                    <input type="number" min="0" max="90" step="any" class="form-control"
+                                        placeholder="Step" value="{{ default_values.azimuthal_angle_steps[i] }}">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="input-group">
+                                    <input type="number" min="10" max="10000" step="any" class="form-control"
+                                        placeholder="Min"
+                                        value="{{ default_values.targets_wavelengths[i][0] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else default_values.targets_wavelengths[i] }}">
+                                    <input type="number" min="10" max="10000" step="any" class="form-control"
+                                        placeholder="Max"
+                                        value="{{ default_values.targets_wavelengths[i][1] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else '' }}">
+                                    <input type="number" min="0" max="10000" step="any" class="form-control"
+                                        placeholder="Step" value="{{ default_values.wavelength_steps[i] }}">
+                                </div>
+                            </td>
+                            <td>
+                                <select class="form-control">
+                                    <option value="<" {% if default_values.targets_condition[i]=='<' %}selected{% endif
+                                        %}>
+                                        < </option>
+                                    <option value=">" {% if default_values.targets_condition[i]=='>' %}selected{% endif
+                                        %}>></option>
+                                    <option value="=" {% if default_values.targets_condition[i]=='=' %}selected{% endif
+                                        %}>=</option>
+                                </select>
+                            </td>
+                            <td><input type="number" min="0" step="any" class="form-control"
+                                    value="{{ default_values.targets_value[i] }}"></td>
+                            <td><input type="number" min="0" step="any" class="form-control"
+                                    value="{{ default_values.targets_tolerance[i] }}"></td>
+                            <td>
+                                <input type="text" class="form-control switchable"
+                                    value="{{ default_values.targets_arithmetic[i] }}">
+                            </td>
 
 
-							<td>
-								<button class="btn btn-danger delete-row">Delete</button>
-							</td>
+                            <td>
+                                <button class="btn btn-danger delete-row">Delete</button>
+                            </td>
 
-						</tr>
-						{% endfor %}
-					</table>
-					<button id="add_target" type="button" class="btn btn-primary">Add Target</button>
-				</td>
-			</tr>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    <button id="add_target" type="button" class="btn btn-primary">Add Target</button>
+                </td>
+            </tr>
 
 
-		</table>
-		<section class="text-center my-5">
-			<input type="submit" value="Save" class="btn btn-primary" style="margin-right: 1em; margin-bottom: 5em;"
-				id="saveButton">
-			<!-- Button to Open the Modal -->
-			<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#downloadModal"
-				style="margin-bottom: 5em; margin-left: 1em; margin-right: 1em;">
-				Download
-			</button>
-		</section>
-		<div class="modal" id="downloadModal">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<!-- Modal Header -->
-					<div class="modal-header">
-						<h4 class="modal-title">Download Options</h4>
-						<button type="button" class="close" data-dismiss="modal">&times;</button>
-					</div>
-					<!-- Modal body -->
-					<div class="modal-body">
-						<div class="form-group">
-							<label for="fileType">File Type:</label>
-							<select class="form-control" id="fileType">
-								<option>Initial</option>
-								<option>Optimized</option>
-							</select>
-						</div>
-						<div class="form-group">
-							<label for="fileEnding">File Ending:</label>
-							<select class="form-control" id="fileEnding">
-								<option>.json</option>
-								<option>.ofp</option>
-							</select>
-						</div>
-					</div>
-					<!-- Modal footer -->
-					<div class="modal-footer">
-						<button type="button" class="btn btn-success" id="downloadButton">Download</button>
-						<button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
-					</div>
-				</div>
-			</div>
-		</div>
+        </table>
+        <section class="text-center my-5">
+            <input type="submit" value="Save" class="btn btn-primary" style="margin-right: 1em; margin-bottom: 5em;"
+                id="saveButton">
+            <!-- Button to Open the Modal -->
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#downloadModal"
+                style="margin-bottom: 5em; margin-left: 1em; margin-right: 1em;">
+                Download
+            </button>
+        </section>
+        <div class="modal" id="downloadModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <h4 class="modal-title">Download Options</h4>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <!-- Modal body -->
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="fileType">File Type:</label>
+                            <select class="form-control" id="fileType">
+                                <option>Initial</option>
+                                <option>Optimized</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fileEnding">File Ending:</label>
+                            <select class="form-control" id="fileEnding">
+                                <option>.json</option>
+                                <option>.ofp</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Modal footer -->
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-success" id="downloadButton">Download</button>
+                        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-	</form>
-	<div class="modal" tabindex="-1" role="dialog" id="errorModal">
-		<div class="modal-dialog" role="document">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h5 class="modal-title">Error</h5>
-					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-						<span aria-hidden="true">&times;</span>
-					</button>
-				</div>
-				<div class="modal-body">
-					<p>{{ default_values.error_message }}</p>
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-				</div>
-			</div>
-		</div>
-	</div>
+    </form>
+    <div class="modal" tabindex="-1" role="dialog" id="errorModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Error</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ default_values.error_message }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </main>
 {% endblock %}
 
@@ -681,7 +676,7 @@
             }
         });
     });
-    
+
     document.querySelector('.custom-file-input').addEventListener('change', function (e) {
         var fileName = document.getElementById("customFile").files[0].name;
         var nextSibling = e.target.nextElementSibling
@@ -1415,6 +1410,7 @@
         var incoherentIndex = rows.findIndex(row => row.querySelector('.incoherent').value === 'true');
 
         if (incoherentIndex === -1) {
+            G
             console.log('No incoherent layer found');
             return;
         }
@@ -1543,9 +1539,22 @@
             row.cells[0].textContent = rowNumber;
         });
     });
-    document.querySelectorAll('.switchable').forEach(function (input) {
+    document.querySelectorAll('.switchable').forEach(function (input, index) {
         // Initialize state
-        input.dataset.state = 'text';
+        var value = input.value.trim();
+        if (value === '') {
+            input.type = 'button';
+            input.className = 'btn btn-danger';
+            input.value = '';
+            input.dataset.state = 'button-danger';
+        } else if (!isNaN(value)) {
+            input.type = 'button';
+            input.className = 'btn btn-success';
+            input.value = value;
+            input.dataset.state = 'button-success';
+        } else {
+            input.dataset.state = 'text';
+        }
 
         input.addEventListener('click', function () {
             var value = input.value.trim();
@@ -1564,15 +1573,15 @@
                     input.dataset.state = 'button-success';
                 }
             } else if (input.dataset.state === 'button-danger') {
+                input.type = 'button';
+                input.className = 'btn btn-success';
+                input.value = index + 1; // row number is index + 1
+                input.dataset.state = 'button-success';
+            } else if (input.dataset.state === 'button-success') {
                 input.type = 'text';
                 input.className = 'form-control';
                 input.value = '';
                 input.dataset.state = 'text';
-            } else if (input.dataset.state === 'button-success') {
-                input.type = 'button';
-                input.className = 'btn btn-danger';
-                input.value = '';
-                input.dataset.state = 'button-danger';
             }
         });
     });
