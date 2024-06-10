@@ -708,14 +708,19 @@ class FilterStack:
                     if self.filter_definition["thickness_opt_allowed"][i]:
                         bounds.append(self.bounds[i])
 
-            if np.any(self.filter_definition["layer_switch_allowed"]):
+            # Obtain the index of the layers that are allowed to switch
+            # which are all where the layer_switch_allowed variable was set
+            # to true and are coherent layers.
+            switched_layers = np.where(
+                np.logical_and(
+                    self.filter_definition["layer_switch_allowed"],
+                    ~np.array(self.filter_definition["incoherent"]),
+                )
+            )[0].tolist()
+
+            if len(switched_layers) > 0:
                 # If layer switching is allowed add the additional parameter that
                 # decides the layer positions
-
-                # Obtain the index of the layers that are allowed to switch
-                switched_layers = np.where(
-                    self.filter_definition["layer_switch_allowed"]
-                )[0].tolist()
 
                 # Find the current position of these layers in the stack
                 initial_positions = [
@@ -729,7 +734,7 @@ class FilterStack:
                 # Set the first layer positions to the initial positions
                 self.previous_layer_positions = initial_positions
 
-                for i in range(np.sum(self.filter_definition["layer_switch_allowed"])):
+                for i in range(np.size(switched_layers)):
                     bounds.append(
                         (
                             -0.5,
@@ -933,7 +938,13 @@ class FilterStack:
             )
 
         # Change layer switch allowed
-        if np.any(self.filter_definition["layer_switch_allowed"]):
+
+        if np.any(
+            np.logical_and(
+                self.filter_definition["layer_switch_allowed"],
+                ~np.array(self.filter_definition["incoherent"]),
+            )
+        ):
             self.filter_definition["structure_materials"] = [
                 self.initial_structure_materials[el] for el in self.layer_order
             ]
@@ -1091,9 +1102,13 @@ class FilterStack:
         tuple: A tuple containing two numpy arrays. The first array contains the
         layer thicknesses and the second array contains the layer positions.
         """
+        layer_switch_allowed_without_incoherent = np.logical_and(
+            self.filter_definition["layer_switch_allowed"],
+            ~np.array(self.filter_definition["incoherent"]),
+        )
 
         if np.any(self.filter_definition["thickness_opt_allowed"]) and not np.any(
-            self.filter_definition["layer_switch_allowed"]
+            layer_switch_allowed_without_incoherent
         ):
             # All features are thicknesses
             thicknesses = np.copy(self.initial_structure_thicknesses)
@@ -1103,7 +1118,7 @@ class FilterStack:
             thicknesses = thicknesses.astype(np.float64)
             layer_order = np.arange(0, len(self.initial_structure_thicknesses))
         elif not np.any(self.filter_definition["thickness_opt_allowed"]) and np.any(
-            self.filter_definition["layer_switch_allowed"]
+            layer_switch_allowed_without_incoherent
         ):
             # All features are layer positions
             thicknesses = np.copy(self.initial_structure_thicknesses)
@@ -1115,19 +1130,19 @@ class FilterStack:
             # self.clamp(features[-1], 0, len(self.allowed_permutations) - 1)
             # ].astype(np.int32)
         elif np.any(self.filter_definition["thickness_opt_allowed"]) and np.any(
-            self.filter_definition["layer_switch_allowed"]
+            layer_switch_allowed_without_incoherent
         ):
             # Some features are thicknesses and some are layer positions
             thicknesses = np.copy(self.initial_structure_thicknesses)
             thicknesses[np.where(self.filter_definition["thickness_opt_allowed"])] = (
-                features[: -1 * np.sum(self.filter_definition["layer_switch_allowed"])]
+                features[: -1 * np.sum(layer_switch_allowed_without_incoherent)]
             )
             thicknesses = thicknesses.astype(np.float64)
 
             # The hard part is to find the correct way of generating a sensible
             # structure from the feature numbers
             temp_layer_positions = features[
-                -1 * np.sum(self.filter_definition["layer_switch_allowed"]) :
+                -1 * np.sum(layer_switch_allowed_without_incoherent) :
             ]
 
             # Transform the layer positions to a full stack order
@@ -1170,16 +1185,61 @@ class FilterStack:
 
         # Now ceil or floor values depening on a threshold value (to deal
         # with the integer character of the features)
-        # threshold = 1e-4
-        # temp_layer_positions = np.where(temp_layer_positions - self.previous_layer_positions > threshold, np.ceil(temp_layer_positions), np.where(temp_layer_positions - self.previous_layer_positions < threshold, np.floor(temp_layer_positions), temp_layer_positions))
         temp_layer_positions = np.round(temp_layer_positions, 0)
 
-        # Now clamp the integers to the available number of layers
-        temp_layer_positions = np.clip(
-            temp_layer_positions,
-            0,
-            len(self.initial_structure_thicknesses),
-        ).astype(np.int32)
+        # Now find out if some incoherent layers were set to contain
+        containment_layers = np.where(
+            np.logical_and(
+                self.filter_definition["layer_switch_allowed"],
+                self.filter_definition["incoherent"],
+            )
+        )[0].tolist()
+
+        # Now clamp the integers to either their containment or to the available
+        # number of layers
+        if len(containment_layers) == 0:
+            temp_layer_positions = np.clip(
+                temp_layer_positions,
+                0,
+                len(self.initial_structure_thicknesses),
+            ).astype(np.int32)
+        else:
+            # Find out which of the layers belong to which containment zone
+            # bracketed by the containment layer and the indexes zero and the
+            # maximum index
+            initial_switchable_layer_positions = np.where(
+                np.logical_and(
+                    self.filter_definition["layer_switch_allowed"],
+                    ~np.array(self.filter_definition["incoherent"]),
+                )
+            )[0]
+
+            for i in range(len(containment_layers)):
+                # If above the containment layer, clamp to higher than its position 
+                temp_layer_positions[
+                    np.where(initial_switchable_layer_positions > containment_layers[i])
+                ] = np.clip(
+                    temp_layer_positions[
+                        np.where(initial_switchable_layer_positions > containment_layers[i])
+                    ],
+                    containment_layers[i] + 1,
+                    len(self.initial_structure_thicknesses),
+                ).astype(
+                    np.int32
+                )
+
+                # If below containment layer, clamp to lower than its position
+                temp_layer_positions[
+                    np.where(initial_switchable_layer_positions < containment_layers[i])
+                ] = np.clip(
+                    temp_layer_positions[
+                        np.where(initial_switchable_layer_positions < containment_layers[i])
+                    ],
+                    0,
+                    containment_layers[i] - 1,
+                ).astype(
+                    np.int32
+                )
 
         # If feature 1 has a certain number, the second layer cannot have
         # the same (one position can only be occupied by one layer)
@@ -1194,7 +1254,7 @@ class FilterStack:
         # Iterate over each layer
         j = 0
         for i in range(len(self.filter_definition["layer_switch_allowed"])):
-            if self.filter_definition["layer_switch_allowed"][i]:
+            if self.filter_definition["layer_switch_allowed"][i] and not self.filter_definition["incoherent"][i]:
                 # If the layer is allowed to move, remove it from its current
                 # position and insert it at the new position
                 layer_order.remove(i)
@@ -1219,7 +1279,7 @@ class FilterStack:
         for i in range(1, len(arr)):
             while arr[i] in arr[:i]:
                 arr[i] += 1
-        return arr
+        return arr.astype(np.int32)
 
     #####################################################
     ########## Plotting and calculation area ############

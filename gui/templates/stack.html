@@ -322,10 +322,12 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="custom-control custom-checkbox" style="display: none;">
+                                    <div class="custom-control custom-checkbox">
                                         <input type="checkbox" class="custom-control-input"
-                                            name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}">
-                                        <label class="custom-control-label" for="checkbox_layer_switch_{{ i }}"></label>
+                                            name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}" {%
+                                            if default_values.layer_switch_allowed[i] %}checked{% endif %}>
+                                        <label class="custom-control-label"
+                                            for="checkbox_layer_switch_{{ i }}">Contain</label>
                                     </div>
                                 </td>
                                 <td> </td>
@@ -945,9 +947,9 @@
                 </div>
                 `;
             cell6.innerHTML = `
-                <div class="custom-control custom-checkbox" style="display: none;">
+                <div class="custom-control custom-checkbox">
                     <input type="checkbox" class="custom-control-input" id="checkbox_layer_switch_${checkboxCounter}">
-                    <label class="custom-control-label" for="checkbox_layer_switch_${checkboxCounter}"></label>
+                    <label class="custom-control-label" for="checkbox_layer_switch_${checkboxCounter}">Contain</label>
                 </div> `;
             checkboxCounter++;
             cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button><input type="hidden" class="incoherent" value="true">';
