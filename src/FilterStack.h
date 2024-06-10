@@ -53,7 +53,7 @@ public:
     void reset_filter();
 
     // Constructor
-    FilterStack(const char* json_text)
+    FilterStack(const char *json_text)
     {
         std::tie(material_splines, general_materials_in_stack) = assemble_materials(json_text);
         setGeneralMaterialsInStack(general_materials_in_stack);
@@ -76,7 +76,7 @@ public:
 
 private:
     // Private methods
-    std::pair<std::map<std::string, std::vector<tk::spline>>, bool> assemble_materials(const std::string& json_text);
+    std::pair<std::map<std::string, std::vector<tk::spline>>, bool> assemble_materials(const std::string &json_text);
     std::vector<Matrix3cd> assemble_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength);
     void initialise_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength_min, double wavelength_max, double wavelength_step);
     void initialise_e_list_3x3_optim(std::map<std::string, std::vector<tk::spline>> material_splines, std::vector<double> wavelengths);
@@ -287,7 +287,7 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
 }
 
 // Function to assemble materials from file
-std::pair<std::map<std::string, std::vector<tk::spline>>, bool> FilterStack::assemble_materials(const std::string& json_text)
+std::pair<std::map<std::string, std::vector<tk::spline>>, bool> FilterStack::assemble_materials(const std::string &json_text)
 {
     CalculationInfo calculation_order = loadCalculationInfo(json_text);
 
@@ -400,39 +400,50 @@ void FilterStack::change_material_order(std::vector<int> new_material_order)
     size_t i;
     int wavelength_key;
 
-    for (double wavelength : unique_wavelengths_vector)
+    if (!unique_wavelengths_vector.empty())
     {
-
-        wavelength_key = static_cast<int>(wavelength * 10);
-
-        reordered_e_list_3x3[0] = dict_assembled_e_list_3x3[wavelength_key][0];
-
-        i = 0;
-
-        while (i < size_arrays)
+        for (double wavelength : unique_wavelengths_vector)
         {
 
-            if (first_loop)
+            wavelength_key = static_cast<int>(wavelength * 10);
+
+            reordered_e_list_3x3[0] = dict_assembled_e_list_3x3[wavelength_key][0];
+
+            i = 0;
+
+            while (i < size_arrays)
             {
 
-                reordered_material_list[i] = material_order_initial[new_material_order[i]];
+                if (first_loop)
+                {
 
-                reordered_d_list[i] = d_list_in_initial_order[new_material_order[i]];
-                reordered_incoherent[i] = incoherent_initial[new_material_order[i]];
+                    reordered_material_list[i] = material_order_initial[new_material_order[i]];
+
+                    reordered_d_list[i] = d_list_in_initial_order[new_material_order[i]];
+                    reordered_incoherent[i] = incoherent_initial[new_material_order[i]];
+                }
+
+                reordered_e_list_3x3[i + 1] = dict_assembled_e_list_3x3[wavelength_key][new_material_order[i] + 1];
+
+                i++;
             }
 
-            reordered_e_list_3x3[i + 1] = dict_assembled_e_list_3x3[wavelength_key][new_material_order[i] + 1];
+            first_loop = false;
 
-            i++;
+            reordered_e_list_3x3[size_arrays + 1] = dict_assembled_e_list_3x3[wavelength_key][size_arrays + 1];
+
+            reordered_dict_optim_assembled_e_list_3x3[wavelength_key] = reordered_e_list_3x3;
         }
-
-        first_loop = false;
-
-        reordered_e_list_3x3[size_arrays + 1] = dict_assembled_e_list_3x3[wavelength_key][size_arrays + 1];
-
-        reordered_dict_optim_assembled_e_list_3x3[wavelength_key] = reordered_e_list_3x3;
     }
-
+    else
+    {
+        for (i = 0; i < size_arrays; i++)
+        {
+            reordered_material_list[i] = material_order_initial[new_material_order[i]];
+            reordered_d_list[i] = d_list_in_initial_order[new_material_order[i]];
+            reordered_incoherent[i] = incoherent_initial[new_material_order[i]];
+        }
+    }
     // Replace the old vector with the new one
     calculation_order.structure_materials = reordered_material_list;
     calculation_order.structure_thicknesses = reordered_d_list;

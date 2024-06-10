@@ -2,6 +2,7 @@ import ctypes
 import json
 import os
 import time
+import copy
 from datetime import datetime
 from functools import partial
 
@@ -77,6 +78,7 @@ class FilterStack:
         # Read in the translated C++ again and restructure a bit
         # for easy handling in python
         self.filter_definition = updated_cpp_order
+        self.initial_filter_definition = copy.copy(self.filter_definition)
 
         self.initial_structure_thicknesses = np.copy(
             np.array(self.filter_definition["structure_thicknesses"])
@@ -112,7 +114,7 @@ class FilterStack:
         self.bounds = [tuple(x) for x in self.filter_definition["bounds"]]
 
         self.layer_order = np.arange(
-            0, len(self.filter_definition["structure_thicknesses"]), 1
+            0, len(self.filter_definition["structure_thicknesses"]), 1, dtype=np.int32
         )
 
         (
@@ -364,8 +366,23 @@ class FilterStack:
         lib.get_material_order.argtypes = [c_string_array]
         lib.get_thicknesses.argtypes = [c_string_array]
 
-        updated_cpp_order = self.translate_order_for_cpp(self.filter_definition)
-        my_filter = lib.createFilterStack(json.dumps(updated_cpp_order).encode("utf-8"))
+        # This here is not the most elegant way but currently the only way of
+        # creating a new C++ filter from an existing python filter: First create
+        # it with the previous thicknesses and layer orders and then reorder and
+        # modify thicknesses.
+        translated_order = self.translate_order_for_cpp(self.initial_filter_definition)
+        my_filter = lib.createFilterStack(
+            json.dumps(translated_order).encode("utf-8")
+        )
+
+        lib.change_material_order(
+            my_filter, self.layer_order, int(np.size(self.layer_order))
+        )
+        lib.change_material_thickness(
+            my_filter,
+            self.filter_definition["structure_thicknesses"],
+            int(np.size(self.filter_definition["structure_thicknesses"])),
+        )
 
         return my_filter, lib
 
@@ -1031,7 +1048,7 @@ class FilterStack:
         if f < self.optimum_merit or f == 0:
             # self.lib.get_material_order(self.my_filter)
             # self.lib.get_thicknesses(self.my_filter)
-            self.save_current_design_to_json("current_structure")
+            temp_json = self.save_current_design_to_json("current_struture")
 
             self.optimum_merit = f
             self.optimum_iteration = self.iteration_no
@@ -1215,12 +1232,14 @@ class FilterStack:
             )[0]
 
             for i in range(len(containment_layers)):
-                # If above the containment layer, clamp to higher than its position 
+                # If above the containment layer, clamp to higher than its position
                 temp_layer_positions[
                     np.where(initial_switchable_layer_positions > containment_layers[i])
                 ] = np.clip(
                     temp_layer_positions[
-                        np.where(initial_switchable_layer_positions > containment_layers[i])
+                        np.where(
+                            initial_switchable_layer_positions > containment_layers[i]
+                        )
                     ],
                     containment_layers[i] + 1,
                     len(self.initial_structure_thicknesses),
@@ -1233,7 +1252,9 @@ class FilterStack:
                     np.where(initial_switchable_layer_positions < containment_layers[i])
                 ] = np.clip(
                     temp_layer_positions[
-                        np.where(initial_switchable_layer_positions < containment_layers[i])
+                        np.where(
+                            initial_switchable_layer_positions < containment_layers[i]
+                        )
                     ],
                     0,
                     containment_layers[i] - 1,
@@ -1254,7 +1275,10 @@ class FilterStack:
         # Iterate over each layer
         j = 0
         for i in range(len(self.filter_definition["layer_switch_allowed"])):
-            if self.filter_definition["layer_switch_allowed"][i] and not self.filter_definition["incoherent"][i]:
+            if (
+                self.filter_definition["layer_switch_allowed"][i]
+                and not self.filter_definition["incoherent"][i]
+            ):
                 # If the layer is allowed to move, remove it from its current
                 # position and insert it at the new position
                 layer_order.remove(i)
