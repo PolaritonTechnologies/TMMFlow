@@ -241,15 +241,13 @@
 
                     <div class="d-flex justify-content-between">
                         <div>
-                            <button id="add_layer_to_top" type="button" class="btn btn-primary"
-                                style="margin-bottom: 1em;">Add
-                                Layer to Top</button>
-                            <button id="add_layer_to_bottom" type="button" class="btn btn-info"
-                                style="margin-bottom: 1em;">Add
-                                Layer to Bottom</button>
-                            <button id="add_incoherent_layer" type="button" class="btn btn-secondary"
-                                style="margin-bottom: 1em;">Add Incoherent
-                                Layer</button>
+
+                            <button class="add_layer_to_top btn btn-primary" type="button"
+                                style="margin-bottom: 1em;">Add Layer to Top</button>
+                            <button class="add_layer_to_bottom btn btn-info" type="button"
+                                style="margin-bottom: 1em;">Add Layer to Bottom</button>
+                            <button class="add_incoherent_layer btn btn-secondary" type="button"
+                                style="margin-bottom: 1em;">Add Incoherent Layer</button>
                         </div>
                         <div class="ml-auto">
                             <button id="simplify_stack" type="button" class="btn btn-secondary"
@@ -396,6 +394,16 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button class="add_layer_to_top btn btn-primary" type="button"
+                                style="margin-bottom: 1em;">Add Layer to Top</button>
+                            <button class="add_layer_to_bottom btn btn-info" type="button"
+                                style="margin-bottom: 1em;">Add Layer to Bottom</button>
+                            <button class="add_incoherent_layer btn btn-secondary" type="button"
+                                style="margin-bottom: 1em;">Add Incoherent Layer</button>
+                        </div>
+                    </div>
                 </td>
             </tr>
 
@@ -746,15 +754,22 @@
 
     });
 
-    document.getElementById('add_layer_to_top').addEventListener('click', function () {
-        addRow('layers', 'coherent', null, true);
-    });
-    document.getElementById('add_layer_to_bottom').addEventListener('click', function () {
-        addRow('layers', 'coherent', null, false);
+    Array.from(document.getElementsByClassName('add_layer_to_top')).forEach(function (element) {
+        element.addEventListener('click', function () {
+            addRow('layers', 'coherent', null, true);
+        });
     });
 
-    document.getElementById('add_incoherent_layer').addEventListener('click', function () {
-        addRow('layers', 'incoherent');
+    Array.from(document.getElementsByClassName('add_layer_to_bottom')).forEach(function (element) {
+        element.addEventListener('click', function () {
+            addRow('layers', 'coherent', null, false);
+        });
+    });
+
+    Array.from(document.getElementsByClassName('add_incoherent_layer')).forEach(function (element) {
+        element.addEventListener('click', function () {
+            addRow('layers', 'incoherent');
+        });
     });
 
     document.getElementById('add_target').addEventListener('click', function () {
