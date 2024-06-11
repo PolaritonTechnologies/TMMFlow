@@ -192,6 +192,7 @@ def stack():
         "heights": heights,
         "num_legend_items": num_legend_items,
         "unique_materials": unique_materials,
+        "incoherent_boxes": incoherent,
         "legend_colors": unique_colors,
         "file_label": session.get("my_filter_path"),
         "available_materials": material_list,
