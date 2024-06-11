@@ -858,7 +858,7 @@ def calculate_and_plot(data):
     with open(
         app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb"
     ) as file_pickled:
-        pickle.dump(FilterStack(my_filter=my_filter), file_pickled)
+        pickle.dump(my_filter, file_pickled)
 
     # Emit the figure to the client
     socketio.emit("update_plot", plotting_data)
