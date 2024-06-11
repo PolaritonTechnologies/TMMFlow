@@ -345,10 +345,13 @@ def upload_file():
         None
     """
     if request.method == "POST":
+        full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         # This is the case when the user uploads a file
         if "file" in request.files:
             file = request.files["file"]
             filename = secure_filename(file.filename)
+            full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(full_path)
         # This is the case the user saves a design
         else:
             filename = session.get("selected_file").split("/")[-1]
