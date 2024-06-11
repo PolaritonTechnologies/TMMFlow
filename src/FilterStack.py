@@ -3,6 +3,7 @@ import json
 import os
 import time
 import copy
+import pickle
 from datetime import datetime
 from functools import partial
 
@@ -41,6 +42,7 @@ class FilterStack:
         self,
         my_filter_dict=None,
         my_filter_path=None,
+        current_structure="current_structure",
         message_queue=None,
         update_queue=None,
         log_func=log,
@@ -71,6 +73,7 @@ class FilterStack:
             with open(my_filter_path, "r") as json_file:
                 filter_definition_by_user = json.load(json_file)
 
+        self.current_structure = current_structure
         # translate json file to a readable format for the C++ code that does
         # not involve abbreviations that we use for filter design
         updated_cpp_order = self.translate_order_for_cpp(filter_definition_by_user)
@@ -374,9 +377,7 @@ class FilterStack:
         # it with the previous thicknesses and layer orders and then reorder and
         # modify thicknesses.
         translated_order = self.translate_order_for_cpp(self.initial_filter_definition)
-        my_filter = lib.createFilterStack(
-            json.dumps(translated_order).encode("utf-8")
-        )
+        my_filter = lib.createFilterStack(json.dumps(translated_order).encode("utf-8"))
 
         lib.change_material_order(
             my_filter, self.layer_order, int(np.size(self.layer_order))
@@ -923,8 +924,6 @@ class FilterStack:
             self.log_func("Optimized merit value: " + str(self.optimum_merit))
             self.log_func("Number of function evaluations: " + str(ret.nfev))
 
-        # self.save_current_design_to_json("current_structure")
-
         return ret.x
 
     def merit_function(self, features, my_filter, lib):
@@ -1049,9 +1048,19 @@ class FilterStack:
 
         # Save the current best optimisation values to file
         if f < self.optimum_merit or f == 0:
-            # self.lib.get_material_order(self.my_filter)
-            # self.lib.get_thicknesses(self.my_filter)
-            temp_json = self.save_current_design_to_json("current_structure")
+
+            # in webapp, current_structure will be linked to the session_id
+            self.save_current_design_to_json(self.current_structure.split("/")[-1])
+            if self.current_structure != "current_structure":
+                    temp_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'temp', f"{self.current_structure.split('/')[-1]}.json")                
+                    with open(f"{self.current_structure}.pkl", "wb") as file_pickled:
+                        pickle.dump(
+                        FilterStack(
+                            my_filter_path=temp_path,
+                            current_structure=self.current_structure,
+                        ),
+                        file_pickled
+                        )
 
             self.optimum_merit = f
             self.optimum_iteration = self.iteration_no

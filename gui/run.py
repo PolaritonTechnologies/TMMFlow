@@ -9,8 +9,13 @@ from flask import (
     url_for,
     send_file,
 )
-
 import pickle
+import logging
+
+logging.basicConfig(
+    level=logging.ERROR, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 # For asynchronous updates
 from flask_socketio import SocketIO
@@ -85,7 +90,7 @@ app.secret_key = "your secret key"
 app.config["UPLOAD_FOLDER"] = "../src/temp/"
 app.config["MATERIAL_FOLDER"] = "../materials/"
 app.config["TEMPLATE_FOLDER"] = "../examples/"
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=60)
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=60000000)
 app.config["DEFAULT_FILE"] = "../examples/demo_test.json"
 app.config["SESSION_FILES"] = "../gui/session_folder/"
 socketio = SocketIO(app, manage_session=False, cors_allowed_origins="*")
@@ -455,10 +460,16 @@ def upload_file():
 
     session["my_filter"] = filter_definition_json
     ## update the state of the filter for socketio
-    pickle.dump(
-        FilterStack(my_filter_dict=filter_definition_json),
-        open(app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb"),
-    )
+    with open(
+        app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb"
+    ) as file_pickled:
+        pickle.dump(
+            FilterStack(
+                my_filter_dict=filter_definition_json,
+                current_structure=app.config["SESSION_FILES"] + f"{hex(id(session))}",
+            ),
+            file_pickled,
+        )
 
     (
         num_boxes,
@@ -502,10 +513,7 @@ def extract_filter_design():
         - unique_colors: An array of unique colors corresponding to each material.
     """
 
-    filter = FilterStack(
-        my_filter_dict=session.get("my_filter"),
-        my_filter_path=session.get("my_filter_path"),
-    )
+    filter = load_filter_socket(session)
 
     # Now extract the number of layers to construct the number of boxes
     num_boxes = len(filter.filter_definition["structure_thicknesses"])
@@ -726,7 +734,8 @@ def download_current_optimum_file():
 
     file_ending = request.args.get("fileEnding")
     path_to_json_file = os.path.join(
-        app.config["UPLOAD_FOLDER"], "current_structure.json"
+        app.config["UPLOAD_FOLDER"],
+        f"{hex(id(session))}.json",
     )
 
     if file_ending == ".json":
@@ -784,9 +793,19 @@ def load_filter_socket(session):
 
     # socketio session was forked on connect and does not have the flask context apart
     # from the session_id, so we need to load the session
-    return pickle.load(
-        open(app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "rb")
-    )
+    try:
+        with open(
+            app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "rb"
+        ) as file_pickled:
+            my_filter = pickle.load(file_pickled)
+        if my_filter == None:
+            raise Exception("Error loading filter: filter is None")
+        return my_filter
+    except Exception as e:
+        if e != "Error loading filter: filter is None":
+            e = "Error loading filter: Concurrent Access"
+        logging.error(e)
+        load_filter_socket(session)
 
 
 ##############################################
@@ -836,9 +855,10 @@ def calculate_and_plot(data):
     }
 
     # Update the pickle state
-    pickle.dump(
-        my_filter, open(app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb")
-    )
+    with open(
+        app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb"
+    ) as file_pickled:
+        pickle.dump(FilterStack(my_filter=my_filter), file_pickled)
 
     # Emit the figure to the client
     socketio.emit("update_plot", plotting_data)
@@ -971,40 +991,44 @@ def start_optimization(data):
         # Emit the traces to the client
         socketio.emit("update_merit_graph", traces)
 
-        # Update the stack representation
-        (
-            num_boxes,
-            colors,
-            heights,
-            number_unique_materials,
-            unique_materials,
-            unique_colors,
-            incoherent,
-        ) = extract_filter_design(my_filter)
+        try:
+            # Update the stack representation
+            (
+                num_boxes,
+                colors,
+                heights,
+                number_unique_materials,
+                unique_materials,
+                unique_colors,
+                incoherent,
+            ) = extract_filter_design()
 
-        # Package the values into a dictionary
-        filter_representation = {
-            "num_boxes": int(num_boxes),
-            "colors": colors,
-            "heights": heights,
-            "number_unique_materials": int(number_unique_materials),
-            "unique_materials": unique_materials,
-            "unique_colors": unique_colors,
-            "incoherent": incoherent,
-        }
+            # Package the values into a dictionary
+            filter_representation = {
+                "num_boxes": int(num_boxes),
+                "colors": colors,
+                "heights": heights,
+                "number_unique_materials": int(number_unique_materials),
+                "unique_materials": unique_materials,
+                "unique_colors": unique_colors,
+                "incoherent": incoherent,
+            }
 
-        # Convert the dictionary to a JSON string
-        filter_json = json.dumps(filter_representation)
+            # Convert the dictionary to a JSON string
+            filter_json = json.dumps(filter_representation)
 
-        # Emit the JSON string
-        socketio.emit(
-            "update_filter_representation",
-            {
-                "filter_json": filter_json,
-                "iterations": int(my_filter.iteration_no),
-                "merit": int(np.round(my_filter.last_merit, 1)),
-            },
-        )
+            # Emit the JSON string
+            socketio.emit(
+                "update_filter_representation",
+                {
+                    "filter_json": filter_json,
+                    "iterations": int(my_filter.iteration_no),
+                    "merit": int(np.round(my_filter.last_merit, 1)),
+                },
+            )
+
+        except Exception as e:
+            logging.error(e)
 
         time.sleep(0.5)
 
