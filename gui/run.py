@@ -10,6 +10,7 @@ from flask import (
     send_file,
 )
 import pickle
+import ctypes
 import logging
 
 logging.basicConfig(
@@ -947,12 +948,19 @@ def download_data():
 
 @socketio.on("start_optimization")
 def start_optimization(data):
+    global threads
     """ """
     my_filter = load_filter_socket(session)
+
     thread = threading.Thread(
         target=my_filter.perform_optimisation, args=(data["optimizationMethod"],)
     )
     thread.start()
+
+    # Since the socket session is unaware of the flask session
+    # we store the event in a dictionary of threads
+    threads = {}
+    threads[hex(id(session))] = thread
 
     # Some helper variables for plotting
     i = 0
@@ -965,7 +973,7 @@ def start_optimization(data):
 
     time.sleep(0.1)
 
-    while not my_filter.stop_flag:
+    while thread.is_alive():
         """
         if my_filter.optimization_method != current_optimization_method:
             # Plot an additional line in the merit graph indicating the switch
@@ -1033,11 +1041,23 @@ def start_optimization(data):
         time.sleep(0.5)
 
 
+def terminate_thread(thread):
+    if not thread.is_alive():
+        return
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+        ctypes.c_long(thread.ident), ctypes.py_object(SystemExit)
+    )
+    if res > 1:
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(thread.ident, 0)
+        logging.error("Exception raise failure")
+
+
 @socketio.on("stop_optimization")
 def stop_optimization():
     """ """
-    my_filter = load_filter_socket(session)
-    my_filter.stop_flag = True
+    global threads
+    thread = threads[hex(id(session))]
+    terminate_thread(thread)
 
 
 ##############################################
