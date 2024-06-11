@@ -39,7 +39,8 @@ class FilterStack:
 
     def __init__(
         self,
-        json_file_path,
+        my_filter_dict=None,
+        my_filter_path=None,
         message_queue=None,
         update_queue=None,
         log_func=log,
@@ -57,16 +58,18 @@ class FilterStack:
         GUI.
 
         Attributes:
-        json_file_path (str): The path to the file containing the optimization order.
+        json_or_file_path (str): The path to the JSON file that defines the filter stack or the json stack.
         message_queue (Queue, optional): A queue for inter-thread communication to send messages to the GUI.
         update_queue (Queue, optional): A queue for inter-thread communication to send updates to the GUI.
         log_func (function, optional): A function for logging general messages. Defaults to the print function.
         log_design_func (function, optional): A function for logging design-specific
         messages. Defaults to an ignore function that does nothing.
         """
-
-        with open(json_file_path, "r") as json_file_path:
-            filter_definition_by_user = json.load(json_file_path)
+        if my_filter_dict is not None:
+            filter_definition_by_user = json.loads(json.dumps(my_filter_dict))
+        else:
+            with open(my_filter_path, "r") as json_file:
+                filter_definition_by_user = json.load(json_file)
 
         # translate json file to a readable format for the C++ code that does
         # not involve abbreviations that we use for filter design

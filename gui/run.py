@@ -2,13 +2,15 @@ from flask import (
     Flask,
     request,
     redirect,
-    session,
     render_template,
     flash,
+    session,
     jsonify,
     url_for,
     send_file,
 )
+
+import pickle
 
 # For asynchronous updates
 from flask_socketio import SocketIO
@@ -54,6 +56,7 @@ from utility import (
 )
 from open_filter_converter import import_from_open_filter, export_to_open_filter
 from FilterStack import FilterStack
+from flask.sessions import SecureCookieSessionInterface
 
 
 class CustomSecureCookieSessionInterface(SecureCookieSessionInterface):
@@ -77,19 +80,15 @@ app.config.update(
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
-
-# Enable CORS for all routes which has to be done for the socketio to work,
-# however, for the production server, it is important that cors_allowed_origins
-# is only set to the server domain
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
-
 # replace with your secret key
 app.secret_key = "your secret key"
 app.config["UPLOAD_FOLDER"] = "../src/temp/"
 app.config["MATERIAL_FOLDER"] = "../materials/"
 app.config["TEMPLATE_FOLDER"] = "../examples/"
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=60000)
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=60)
+app.config["DEFAULT_FILE"] = "../examples/demo_test.json"
+app.config["SESSION_FILES"] = "../gui/session_folder/"
+socketio = SocketIO(app, manage_session=False, cors_allowed_origins="*")
 
 
 class User(UserMixin):
@@ -102,6 +101,14 @@ def load_user(user_id):
     return User(user_id)
 
 
+@app.before_request
+def clear_session():
+    # The following line will remove this handler, making it
+    # only run on the first request
+    app.before_request_funcs[None].remove(clear_session)
+    session.clear()
+
+
 @app.context_processor
 def inject_user():
     return dict(logged_in_user=current_user)
@@ -112,9 +119,11 @@ def login():
     if request.method == "POST":
         user_id = request.form.get("user_id")
         user = User(user_id)
+        session["user_id"] = user_id
+        session["my_filter_path"] = None
+        session["my_filter"] = None
+        session["selected_file"] = None
         login_user(user)
-        print(user)
-        print(user_id)
         return redirect(url_for("stack"))
     return render_template("login.html")
 
@@ -123,23 +132,15 @@ def login():
 @login_required
 def logout():
     logout_user()
+    session.clear()  # This removes all items from the session
     return "You are now logged out."
 
 
-# Global variables necessary for calculation (as data is shared)
-my_filter = None
-selected_file = None
-default_file = "../examples/demo_test.json"
-
 # Copy default file to temp folder and then use the copied file
-shutil.copy(default_file, app.config["UPLOAD_FOLDER"] + default_file.split("/")[-1])
-temp_default_file = app.config["UPLOAD_FOLDER"] + default_file.split("/")[-1]
-
-# num_boxes = None
-# colors = None
-# heights = None
-# unique_materials = None
-
+shutil.copy(
+    app.config["DEFAULT_FILE"],
+    app.config["UPLOAD_FOLDER"] + app.config["DEFAULT_FILE"].split("/")[-1],
+)
 
 ##############################################
 ################## Routing ###################
@@ -149,12 +150,12 @@ temp_default_file = app.config["UPLOAD_FOLDER"] + default_file.split("/")[-1]
 @app.route("/", methods=["GET", "POST"])
 @login_required
 def stack():
-    global my_filter
-    global temp_default_file
 
     # If filter has not yet been selected, load the default filter and display
     # its structure, else
-    if my_filter is None:
+
+    if session.get("my_filter") is None and session.get("my_filter_path") is None:
+        session["my_filter_path"] = app.config["DEFAULT_FILE"]
         (
             num_boxes,
             colors,
@@ -163,7 +164,7 @@ def stack():
             unique_materials,
             unique_colors,
             incoherent,
-        ) = upload_file(temp_default_file)
+        ) = upload_file()
     else:
         (
             num_boxes,
@@ -173,12 +174,18 @@ def stack():
             unique_materials,
             unique_colors,
             incoherent,
-        ) = extract_filter_design(my_filter)
+        ) = extract_filter_design()
+
+    my_filter = FilterStack(
+        my_filter_dict=session.get("my_filter"),
+        my_filter_path=session.get("my_filter_path"),
+    )
 
     # Specify the directory you want to search
     material_list = get_available_materials(app.config["MATERIAL_FOLDER"])
     template_list = get_available_templates(app.config["TEMPLATE_FOLDER"])
 
+    session["selected_file"] = session.get("my_filter_path")
     default_values = {
         "num_boxes": num_boxes,
         "colors": colors,
@@ -186,8 +193,7 @@ def stack():
         "num_legend_items": num_legend_items,
         "unique_materials": unique_materials,
         "legend_colors": unique_colors,
-        "incoherent_boxes": incoherent,
-        "file_label": selected_file,
+        "file_label": session.get("my_filter_path"),
         "available_materials": material_list,
         "available_templates": template_list,
     }
@@ -219,7 +225,10 @@ def stack():
 
 @app.route("/simulate")
 def simulate():
-    global my_filter
+    my_filter = FilterStack(
+        my_filter_dict=session.get("my_filter"),
+        my_filter_path=session.get("my_filter_path"),
+    )
 
     if np.all(my_filter.stored_data == None):
         dataPresent = False
@@ -248,8 +257,10 @@ def simulate():
 
 @app.route("/optimize", methods=["GET", "POST"])
 def optimize():
-    global my_filter
-    global temp_default_file
+    my_filter = FilterStack(
+        my_filter_dict=session.get("my_filter"),
+        my_filter_path=session.get("my_filter_path"),
+    )
 
     if my_filter is None:
         (
@@ -260,7 +271,7 @@ def optimize():
             unique_materials,
             unique_colors,
             incoherent,
-        ) = upload_file(temp_default_file)
+        ) = upload_file()
     else:
         (
             num_boxes,
@@ -270,7 +281,7 @@ def optimize():
             unique_materials,
             unique_colors,
             incoherent,
-        ) = extract_filter_design(my_filter)
+        ) = extract_filter_design()
 
     return render_template(
         "optimize.html",
@@ -306,7 +317,7 @@ def identify_repeating_sequences(layers):
 
 
 @app.route("/upload_file", methods=["POST"])
-def upload_file(provided_filename=None):
+def upload_file():
     """
     Uploads a file to the server and processes it to generate filter stack
     representation.
@@ -326,41 +337,27 @@ def upload_file(provided_filename=None):
     Raises:
         None
     """
-
-    global selected_file
-    global my_filter
-
-    # Let the user upload a file to the server, if no file was chosen to be
-    # uploaded, use the default file instead.
-    if provided_filename == None:
-        if "file" not in request.files:
-            flash("No file part")
-            return redirect(request.url)
-        file = request.files["file"]
-        if file.filename == "":
-            flash("No selected file")
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
+    if request.method == "POST":
+        # This is the case when the user uploads a file
+        if "file" in request.files:
+            file = request.files["file"]
             filename = secure_filename(file.filename)
+        # This is the case the user saves a design
+        else:
+            filename = session.get("selected_file").split("/")[-1]
+        if allowed_file(filename):
             full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(full_path)
-
             if filename.split(".")[-1] == "json":
                 # Standard .json format
-                selected_file = full_path
+                session["my_filter_path"] = full_path
             elif filename.split(".")[-1] == "ofp":
                 # Open filter format (has to be translated to json first)
                 json_path = import_from_open_filter(full_path)
-                selected_file = json_path
-
-    else:
-
-        # If provided_filename is not none, use it as the selected file
-        selected_file = provided_filename
+                session["my_filter_path"] = json_path
 
     # Now check if the selected file is valid
     ###
-    with open(selected_file, "r") as json_file_path:
+    with open(session.get("my_filter_path"), "r") as json_file_path:
         filter_definition_json = json.load(json_file_path)
 
     # Check that all materials in filter definition are available from the
@@ -391,11 +388,6 @@ def upload_file(provided_filename=None):
     if "replacements" in request.form:
         replacements = np.array(request.form["replacements"].split('"'))[1::4]
 
-        # We need to reverse engineer, which of the following ones are not
-        # available.
-        # if filter_definition_json["substrate_material"] not in available_materials:
-        # filter_definition_json["substrate_material"] = replacements[-1]
-        # replacements = np.delete(replacements, -1)
         if filter_definition_json["incident_medium"] not in available_materials:
             filter_definition_json["incident_medium"] = replacements[-1]
             replacements = np.delete(replacements, -1)
@@ -421,7 +413,7 @@ def upload_file(provided_filename=None):
                 )
 
             # Now save again to file
-            with open(selected_file, "w") as f:
+            with open(session.get("my_filter_path"), "w") as f:
                 json.dump(filter_definition_json, f)
 
             material_available = True
@@ -460,8 +452,13 @@ def upload_file(provided_filename=None):
 
     ###
 
-    # Create the filter and construct the filter stack representation
-    my_filter = FilterStack(selected_file)
+    session["my_filter"] = filter_definition_json
+    ## update the state of the filter for socketio
+    pickle.dump(
+        FilterStack(my_filter_dict=filter_definition_json),
+        open(app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb"),
+    )
+
     (
         num_boxes,
         colors,
@@ -470,9 +467,9 @@ def upload_file(provided_filename=None):
         unique_materials,
         unique_colors,
         incoherent,
-    ) = extract_filter_design(my_filter)
+    ) = extract_filter_design()
 
-    if provided_filename is not None:
+    if request.method == "GET":
         return (
             num_boxes,
             colors,
@@ -485,24 +482,14 @@ def upload_file(provided_filename=None):
 
     else:
         return jsonify({"redirect": url_for("stack")})
-        # return render_template(
-        # "stack.html",
-        # num_boxes=num_boxes,
-        # colors=colors,
-        # heights=heights,
-        # num_legend_items=number_unique_materials,
-        # unique_materials=unique_materials,
-        # legend_colors=unique_colors,
-        # file_label=filename,
-        # )
 
 
-def extract_filter_design(filter):
+def extract_filter_design():
     """
     Extracts the filter design information.
 
     Args:
-        filter: The filter object containing the filter definition.
+        filter_json: the json or path to the json.
 
     Returns:
         A tuple containing the following information:
@@ -513,6 +500,11 @@ def extract_filter_design(filter):
         - unique_materials: An array of unique materials in the filter.
         - unique_colors: An array of unique colors corresponding to each material.
     """
+
+    filter = FilterStack(
+        my_filter_dict=session.get("my_filter"),
+        my_filter_path=session.get("my_filter_path"),
+    )
 
     # Now extract the number of layers to construct the number of boxes
     num_boxes = len(filter.filter_definition["structure_thicknesses"])
@@ -534,7 +526,11 @@ def extract_filter_design(filter):
     )
     # Set the incoherent layer thicknesses to a specific value so that it does
     # not go out of control thick
-    ordered_thicknesses[np.array([filter.filter_definition["incoherent"][i] for i in filter.layer_order])] = 100
+    ordered_thicknesses[
+        np.array(
+            [filter.filter_definition["incoherent"][i] for i in filter.layer_order]
+        )
+    ] = 100
 
     heights = np.round(np.array(ordered_thicknesses) / sum(ordered_thicknesses) * 300)
     incoherent = [filter.filter_definition["incoherent"][i] for i in filter.layer_order]
@@ -551,7 +547,6 @@ def extract_filter_design(filter):
 
 @app.route("/save_json", methods=["POST"])
 def save_json():
-    global selected_file
 
     data = request.get_json()
     button = request.args.get("button")
@@ -571,8 +566,6 @@ def save_json():
     data_to_json["azimAngleMin"] = float(data[4].get("1").get("values")[0])
     data_to_json["azimAngleMax"] = float(data[4].get("2").get("values")[0])
     data_to_json["azimAngleStep"] = float(data[4].get("3").get("values")[0])
-    # data_to_json["substrate_material"] = data[5].get("1").get("values")[0]
-    # data_to_json["substrate_thickness"] = float(data[6].get("1").get("values")[0])
     data_to_json["incident_medium"] = data[5].get("1").get("values")[0]
     data_to_json["exit_medium"] = data[6].get("1").get("values")[0]
 
@@ -687,30 +680,25 @@ def save_json():
         )
 
     # If the file is not in the temp folder yet, do not allow for an overwrite
-    if selected_file.split("/")[-2] != "temp":
+    if session.get("selected_file").split("/")[-2] != "temp":
         return jsonify({"error_message": "Cannot overwrite the default file."}), 200
     else:
-        with open(selected_file, "w") as f:
+        with open(session.get("selected_file"), "w") as f:
             json.dump(data_to_json, f)
 
         # Reload filter for new data (the file path is still selected_file)
-        upload_file(selected_file)
+        upload_file()
         return "", 302
-
-        # if button == "download":
-        #     # This is not working at the moment
-        #     return send_file(selected_file, as_attachment=True)
-        # else:
 
 
 @app.route("/download")
 def download_file():
-    global my_filter
 
+    my_filter = session.get("my_filter")
     file_ending = request.args.get("fileEnding")
     if file_ending == ".json":
         # Handle .json file ending
-        path_to_file = selected_file
+        path_to_file = session.get("selected_file")
         return send_file(path_to_file, as_attachment=True)
     elif file_ending == ".ofp":
         # Handle .ofp file ending
@@ -721,7 +709,8 @@ def download_file():
             input_dic = json.load(input_file)
 
         path_to_file = export_to_open_filter(
-            input_dic, selected_file.split("/")[-1].split(".")[0] + "_converted"
+            input_dic,
+            session.get("selected_file").split("/")[-1].split(".")[0] + "_converted",
         )
 
         return send_file(path_to_file, as_attachment=True)
@@ -729,7 +718,11 @@ def download_file():
 
 @app.route("/download_current_optimum_file")
 def download_current_optimum_file():
-    global my_filter
+    my_filter = FilterStack(
+        my_filter_dict=session.get("my_filter"),
+        my_filter_path=session.get("my_filter_path"),
+    )
+
     file_ending = request.args.get("fileEnding")
     path_to_json_file = os.path.join(
         app.config["UPLOAD_FOLDER"], "current_structure.json"
@@ -752,7 +745,11 @@ def download_current_optimum_file():
 
 @app.route("/reset_filter", methods=["POST"])
 def reset_filter():
-    global my_filter
+
+    my_filter = FilterStack(
+        my_filter_dict=session.get("my_filter"),
+        my_filter_path=session.get("my_filter_path"),
+    )
 
     # Reset filter
     my_filter.reset()
@@ -777,6 +774,20 @@ def start_new_design():
     return "", 200
 
 
+#############################################
+######## SocketIo Load Current Filter #######
+#############################################
+
+
+def load_filter_socket(session):
+
+    # socketio session was forked on connect and does not have the flask context apart
+    # from the session_id, so we need to load the session
+    return pickle.load(
+        open(app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "rb")
+    )
+
+
 ##############################################
 ############# Calculate and Plot #############
 ##############################################
@@ -787,7 +798,7 @@ def calculate_and_plot(data):
     """
     Calculate AR data and plot
     """
-    global my_filter
+    my_filter = load_filter_socket(session)
     wavelengths = np.arange(
         float(data["startWavelength"]),
         float(data["endWavelength"]) + float(data["stepWavelength"]),
@@ -798,11 +809,7 @@ def calculate_and_plot(data):
         float(data["endAngle"]) + float(data["stepAngle"]),
         float(data["stepAngle"]),
     )
-    # azimuthal_angles = np.arange(
-    #     float(data["startAzimuthalAngle"]),
-    #     float(data["endAzimuthalAngle"]) + float(data["stepAzimuthalAngle"]),
-    #     float(data["stepAzimuthalAngle"]),
-    # )
+
     target_type = data["mode"]
     polarization = "" if data["polarization"] == "None" else data["polarization"]
 
@@ -827,6 +834,11 @@ def calculate_and_plot(data):
         "z": color_values.tolist(),
     }
 
+    # Update the pickle state
+    pickle.dump(
+        my_filter, open(app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb")
+    )
+
     # Emit the figure to the client
     socketio.emit("update_plot", plotting_data)
 
@@ -847,70 +859,17 @@ def calculate_and_plot(data):
     socketio.emit("update_plot", fig_json)
     """
 
-    # calculated_data_df = pd.DataFrame()
-    # for theta in polar_angles:
-    #     calculated_data_df[theta] = my_filter.calculate_one_angle(
-    #         float(data["startWavelength"]),
-    #         float(data["endWavelength"]),
-    #         float(data["stepWavelength"]),
-    #         data["mode"],
-    #         data["polarization"],
-    #         theta,
-    #         float(data["azimuthalAngle"]),
-    #         True if data["generalCore"] == "on" else False,
-    #     )
-
-    #     # Create a Plotly figure using the calculated data
-    #     angles = calculated_data_df.columns.to_numpy()
-    #     wavelengths = calculated_data_df.index.to_numpy()
-    #     color_values = calculated_data_df.to_numpy()
-
-    #     # The layout is stored in simulate.html
-    #     heatmap = go.Heatmap(
-    #         x=angles,
-    #         y=wavelengths,
-    #         z=color_values,
-    #         colorscale="Viridis",
-    #     )
-
-    #     fig = go.Figure(data=heatmap)
-
-    #     # Convert the figure to JSON format
-    #     fig_json = pio.to_json(fig)
-
-    #     # Emit the figure in JSON format
-    #     socketio.emit("update_plot", fig_json)
-
-    # my_filter.stored_data = calculated_data_df
-
 
 @socketio.on("plot")
 def plot():
     """ """
-    global my_filter
-
+    my_filter = load_filter_socket(session)
     calculated_data_df = my_filter.stored_data[0]
 
     # Create a Plotly figure using the calculated data
     angles = calculated_data_df.columns.to_numpy()
     wavelengths = calculated_data_df.index.to_numpy()
     color_values = calculated_data_df.to_numpy()
-
-    # # The layout is stored in simulate.html
-    # heatmap = go.Heatmap(
-    #     x=angles,
-    #     y=wavelengths,
-    #     z=color_values,
-    #     colorscale="Viridis",
-    # )
-
-    # fig = go.Figure(data=heatmap)
-
-    # # Convert the figure to JSON format
-    # fig_json = pio.to_json(fig)
-
-    # # Emit the figure in JSON format
-    # socketio.emit("update_plot", fig_json)
 
     # The layout is stored in simulate.html
     plotting_data = {
@@ -925,7 +884,9 @@ def plot():
 
 @socketio.on("plot_xy")
 def handle_plot_xy(data):
-    global my_filter
+
+    my_filter = load_filter_socket(session)
+
     x = my_filter.stored_data[0].index.to_list()
 
     # Get the y data corresponding to the x data
@@ -948,7 +909,8 @@ def handle_plot_xy(data):
 
 @app.route("/download_data")
 def download_data():
-    global my_filter
+
+    my_filter = load_filter_socket(session)
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], "simulated_data.csv")
 
     x = my_filter.stored_data[0]
@@ -965,13 +927,7 @@ def download_data():
 @socketio.on("start_optimization")
 def start_optimization(data):
     """ """
-    global my_filter
-    my_filter.stop_flag = False
-
-    # my_filter.perform_optimisation(
-    # data["optimizationMethod"],
-    # save_optimized_to_file=True,
-    # )
+    my_filter = load_filter_socket(session)
     thread = threading.Thread(
         target=my_filter.perform_optimisation, args=(data["optimizationMethod"],)
     )
@@ -1055,8 +1011,7 @@ def start_optimization(data):
 @socketio.on("stop_optimization")
 def stop_optimization():
     """ """
-    global my_filter
-
+    my_filter = load_filter_socket(session)
     my_filter.stop_flag = True
 
 
