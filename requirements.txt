@@ -6,6 +6,7 @@ cycler==0.12.1
 Flask==3.0.2
 Flask-Cors==4.0.0
 Flask-SocketIO==5.3.6
+flask-login==0.6.3
 fonttools==4.50.0
 h11==0.14.0
 itsdangerous==2.1.2

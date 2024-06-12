@@ -345,7 +345,7 @@ def upload_file():
         None
     """
     if request.method == "POST":
-        full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        # full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         # This is the case when the user uploads a file
         if "file" in request.files:
             file = request.files["file"]

@@ -38,14 +38,14 @@ Upload the TMM folder to the instance
 
 %%%%
 
-```
+````
 
 Compile C++ code once more to be on the save side
 
 ```console
 sudo apt install g++
 g++ -shared -o run_filter_stack.so run_filter_stack.cpp -fPIC -fopenmp
-```
+````
 
 Install python3.10
 
@@ -62,8 +62,7 @@ sudo apt install python3.10-venv
 Create virtual environment using venv called venv
 
 ```console
-
-
+python3 -m venv venv
 ```
 
 Activate virtual environment
@@ -79,4 +78,3 @@ pip install -r requirements.txt
 ```
 
 ## Optimization
-
