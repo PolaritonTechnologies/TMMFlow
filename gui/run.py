@@ -324,7 +324,7 @@ def identify_repeating_sequences(layers):
 
 
 @app.route("/upload_file", methods=["POST"])
-def upload_file():
+def upload_file(filename = None):
     """
     Uploads a file to the server and processes it to generate filter stack
     representation.
@@ -347,23 +347,27 @@ def upload_file():
     if request.method == "POST":
         # full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         # This is the case when the user uploads a file
-        if "file" in request.files:
-            file = request.files["file"]
-            filename = secure_filename(file.filename)
-            full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(full_path)
-        # This is the case the user saves a design
+        if filename is None:
+            if "file" in request.files:
+                file = request.files["file"]
+                filename = secure_filename(file.filename)
+                full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                file.save(full_path)
+            # This is the case the user saves a design
+            else:
+                filename = session.get("selected_file").split("/")[-1]
+            if allowed_file(filename):
+                full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                if filename.split(".")[-1] == "json":
+                    # Standard .json format
+                    session["my_filter_path"] = full_path
+                elif filename.split(".")[-1] == "ofp":
+                    # Open filter format (has to be translated to json first)
+                    json_path = import_from_open_filter(full_path)
+                    session["my_filter_path"] = json_path
         else:
-            filename = session.get("selected_file").split("/")[-1]
-        if allowed_file(filename):
-            full_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            if filename.split(".")[-1] == "json":
-                # Standard .json format
-                session["my_filter_path"] = full_path
-            elif filename.split(".")[-1] == "ofp":
-                # Open filter format (has to be translated to json first)
-                json_path = import_from_open_filter(full_path)
-                session["my_filter_path"] = json_path
+            full_path = os.path.join(app.config["TEMPLATE_FOLDER"], filename)
+            session["my_filter_path"] = full_path
 
     # Now check if the selected file is valid
     ###
