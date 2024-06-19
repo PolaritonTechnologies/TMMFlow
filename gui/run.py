@@ -273,6 +273,7 @@ def stack():
 
 
 @app.route("/simulate")
+@login_required
 def simulate():
     my_filter = FilterStack(
         my_filter_dict=session.get("my_filter"),
@@ -305,6 +306,7 @@ def simulate():
 
 
 @app.route("/optimize", methods=["GET", "POST"])
+@login_required
 def optimize():
     my_filter = FilterStack(
         my_filter_dict=session.get("my_filter"),
@@ -345,6 +347,7 @@ def optimize():
 
 
 @app.route("/materials")
+@login_required
 def materials():
     # Get a list of all .csv files in the directory
     material_list = get_available_materials(app.config["MATERIAL_FOLDER"])
