@@ -665,7 +665,7 @@ class FilterStack:
     ############# Filter Optimization Area ##############
     #####################################################
 
-    def perform_optimisation(self, opt_methods, save_optimized_to_file=True):
+    def perform_optimisation(self, opt_methods, job_id=0, save_optimized_to_file=True):
         """
         Performs the optimization process based on the specified optimization
         type. This function sets up the initial conditions and bounds for the
@@ -690,6 +690,7 @@ class FilterStack:
         log("loading filter stack...")
 
         my_filter, lib = self.create_filter_in_cpp()
+        self.job_id = job_id
 
         log("running optimisation...")
 
@@ -1052,15 +1053,20 @@ class FilterStack:
             # in webapp, current_structure will be linked to the session_id
             self.save_current_design_to_json(self.current_structure.split("/")[-1])
             if self.current_structure != "current_structure":
-                    temp_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'temp', f"{self.current_structure.split('/')[-1]}.json")                
-                    with open(f"{self.current_structure}.pkl", "wb") as file_pickled:
-                        pickle.dump(
+                temp_path = os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "temp",
+                    f"{self.current_structure.split('/')[-1]}.json",
+                )
+                with open(f"{self.current_structure}.pkl", "wb") as file_pickled:
+                    data_to_pickle = (
                         FilterStack(
                             my_filter_path=temp_path,
                             current_structure=self.current_structure,
                         ),
-                        file_pickled
-                        )
+                        self.job_id,
+                    )
+                    pickle.dump(data_to_pickle, file_pickled)
 
             self.optimum_merit = f
             self.optimum_iteration = self.iteration_no

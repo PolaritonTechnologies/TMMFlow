@@ -9,14 +9,15 @@ from flask import (
     url_for,
     send_file,
 )
+from flask_sqlalchemy import SQLAlchemy
 import pickle
 import ctypes
 import logging
+import utility as uti
 
 logging.basicConfig(
     level=logging.ERROR, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
 
 # For asynchronous updates
 from flask_socketio import SocketIO
@@ -43,6 +44,7 @@ import threading
 
 # import subprocess
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 import shutil
@@ -96,21 +98,54 @@ app.config["DEFAULT_FILE"] = "../examples/demo_test.json"
 app.config["SESSION_FILES"] = "../gui/session_folder/"
 socketio = SocketIO(app, manage_session=False, cors_allowed_origins="*")
 
+# Configure the SQLAlchemy part of the app instance
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+# Create an SQLAlchemy object named `db` and bind it to your app
+db = SQLAlchemy(app)
 
-class User(UserMixin):
-    def __init__(self, id):
-        self.id = id
+# Define the database models
+
+
+class User(db.Model, UserMixin):
+    __tablename__ = "users"  # Explicitly set the table name to 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(128))
+
+    # Check the password
+    def check_password(self, password):
+        return password == self.password
+
+
+class Job(db.Model):
+    __tablename__ = "jobs"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    username = db.Column(db.String, nullable=False)
+    initial_json = db.Column(db.Text, nullable=True)
+    optimisations = db.Column(
+        db.Text, nullable=True
+    )  # Updated to match the new table structure
+    current_json = db.Column(db.Text, nullable=True)
+    steps = db.Column(db.Integer, nullable=True)  # New field
+    initial_merit = db.Column(
+        db.Float, nullable=True
+    )  # New field, using Float to represent REAL
+    current_merit = db.Column(
+        db.Float, nullable=True
+    )  # New field, using Float to represent REAL
 
 
 @login_manager.user_loader
-def load_user(user_id):
-    return User(user_id)
+def load_user(username):
+    return User.query.get(username)
 
 
 @app.before_request
 def clear_session():
     # The following line will remove this handler, making it
     # only run on the first request
+    db.create_all()
     app.before_request_funcs[None].remove(clear_session)
     session.clear()
 
@@ -120,26 +155,33 @@ def inject_user():
     return dict(logged_in_user=current_user)
 
 
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        user_id = request.form.get("user_id")
-        user = User(user_id)
-        session["user_id"] = user_id
-        session["my_filter_path"] = None
-        session["my_filter"] = None
-        session["selected_file"] = None
-        login_user(user)
-        return redirect(url_for("stack"))
-    return render_template("login.html")
-
-
 @app.route("/logout")
 @login_required
 def logout():
     logout_user()
-    session.clear()  # This removes all items from the session
-    return "You are now logged out."
+    session.clear()
+    return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        user = User.query.filter_by(username=username).first()
+
+        if user is not None and user.check_password(password):
+            session["user_id"] = username
+            session["my_filter_path"] = None
+            session["my_filter"] = None
+            session["selected_file"] = None
+            login_user(user)
+            flash("Logged in successfully.")
+            return redirect(url_for("stack"))
+        else:
+            flash("Invalid username or password.")
+
+    return render_template("login.html")
 
 
 # Copy default file to temp folder and then use the copied file
@@ -324,7 +366,7 @@ def identify_repeating_sequences(layers):
 
 
 @app.route("/upload_file", methods=["POST"])
-def upload_file(filename = None):
+def upload_file(filename=None):
     """
     Uploads a file to the server and processes it to generate filter stack
     representation.
@@ -467,17 +509,32 @@ def upload_file(filename = None):
     ###
 
     session["my_filter"] = filter_definition_json
+
+    # the new job will overwrite previous jobs that were currently used
+    new_job = Job(
+        username=session["user_id"],
+        initial_json=json.dumps(filter_definition_json),
+        current_json=json.dumps(filter_definition_json),
+        steps=0,
+    )
+    db.session.add(new_job)
+    db.session.commit()
+
+    # store the job_id inside the session
+    session["job_id"] = new_job.id
+
     ## update the state of the filter for socketio
     with open(
         app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb"
     ) as file_pickled:
-        pickle.dump(
+        data_to_pickle = (
             FilterStack(
                 my_filter_dict=filter_definition_json,
                 current_structure=app.config["SESSION_FILES"] + f"{hex(id(session))}",
             ),
-            file_pickled,
+            session.get("job_id"),
         )
+        pickle.dump(data_to_pickle, file_pickled)
 
     (
         num_boxes,
@@ -520,9 +577,7 @@ def extract_filter_design():
         - unique_materials: An array of unique materials in the filter.
         - unique_colors: An array of unique colors corresponding to each material.
     """
-
-    filter = load_filter_socket(session)
-
+    filter, job_id = load_filter_socket(session)
     # Now extract the number of layers to construct the number of boxes
     num_boxes = len(filter.filter_definition["structure_thicknesses"])
     unique_materials = np.unique(filter.filter_definition["structure_materials"])
@@ -805,14 +860,14 @@ def load_filter_socket(session):
         with open(
             app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "rb"
         ) as file_pickled:
-            my_filter = pickle.load(file_pickled)
+            my_filter, job_id = pickle.load(file_pickled)
         if my_filter == None:
             raise Exception("Error loading filter: filter is None")
-        return my_filter
+        if job_id == None:
+            raise Exception("Error loading filter: job_id is None")
+        return my_filter, job_id
     except Exception as e:
-        if e != "Error loading filter: filter is None":
-            e = "Error loading filter: Concurrent Access"
-        logging.error(e)
+        logging.error(str(e)[:200])
         load_filter_socket(session)
 
 
@@ -826,7 +881,7 @@ def calculate_and_plot(data):
     """
     Calculate AR data and plot
     """
-    my_filter = load_filter_socket(session)
+    my_filter, job_id = load_filter_socket(session)
     wavelengths = np.arange(
         float(data["startWavelength"]),
         float(data["endWavelength"]) + float(data["stepWavelength"]),
@@ -866,7 +921,11 @@ def calculate_and_plot(data):
     with open(
         app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb"
     ) as file_pickled:
-        pickle.dump(my_filter, file_pickled)
+        data_to_pickle = (
+            my_filter,
+            job_id,
+        )
+        pickle.dump(data_to_pickle, file_pickled)
 
     # Emit the figure to the client
     socketio.emit("update_plot", plotting_data)
@@ -892,7 +951,7 @@ def calculate_and_plot(data):
 @socketio.on("plot")
 def plot():
     """ """
-    my_filter = load_filter_socket(session)
+    my_filter, job_id = load_filter_socket(session)
     calculated_data_df = my_filter.stored_data[0]
 
     # Create a Plotly figure using the calculated data
@@ -914,7 +973,7 @@ def plot():
 @socketio.on("plot_xy")
 def handle_plot_xy(data):
 
-    my_filter = load_filter_socket(session)
+    my_filter, job_id = load_filter_socket(session)
 
     x = my_filter.stored_data[0].index.to_list()
 
@@ -939,7 +998,7 @@ def handle_plot_xy(data):
 @app.route("/download_data")
 def download_data():
 
-    my_filter = load_filter_socket(session)
+    my_filter, job_id = load_filter_socket(session)
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], "simulated_data.csv")
 
     x = my_filter.stored_data[0]
@@ -957,10 +1016,15 @@ def download_data():
 def start_optimization(data):
     global threads
     """ """
-    my_filter = load_filter_socket(session)
+    my_filter, job_id = load_filter_socket(session)
+
+    # retrieve the current job with session["job_id"] and update the current_json, the optimization methods
+    job = Job.query.get(job_id)
+    job.optimization_methods = json.dumps(data["optimizationMethod"])
+    db.session.commit()
 
     thread = threading.Thread(
-        target=my_filter.perform_optimisation, args=(data["optimizationMethod"],)
+        target=my_filter.perform_optimisation, args=(data["optimizationMethod"], job_id)
     )
     thread.start()
 
@@ -977,7 +1041,6 @@ def start_optimization(data):
     traces.append(
         {"x": [], "y": [], "color": colors[i], "name": current_optimization_method}
     )
-
     time.sleep(0.1)
 
     while thread.is_alive():
@@ -1031,6 +1094,25 @@ def start_optimization(data):
 
             # Convert the dictionary to a JSON string
             filter_json = json.dumps(filter_representation)
+
+            filter, job_id = load_filter_socket(session)
+
+            job = Job.query.filter_by(id=job_id).first()
+            # During the optimisation, saving to the database is done here to avoid disturbing
+            # the optimisation thread
+            # If this is the first pass through the while loop, save into initial_merit
+            if (
+                job.initial_merit is None
+                and int(np.round(my_filter.last_merit, 1)) != 0
+            ):
+                job.initial_merit = int(np.round(my_filter.last_merit, 1))
+            job.current_merit = int(np.round(my_filter.last_merit, 1))
+            # Save the updated status in the DB here, not directly in main.py to avoid webapp/direct run conflicts
+            job.current_json = json.dumps(
+                uti.convert_numpy_to_list(my_filter.filter_definition)
+            )
+            job.steps = int(my_filter.iteration_no)
+            db.session.commit()
 
             # Emit the JSON string
             socketio.emit(
