@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append("../src")
+
 from flask import (
     Flask,
     request,
@@ -13,7 +17,6 @@ from flask_sqlalchemy import SQLAlchemy
 import pickle
 import ctypes
 import logging
-import utility as uti
 
 logging.basicConfig(
     level=logging.ERROR, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -55,15 +58,16 @@ import pandas as pd
 import json
 import ast
 
+from FilterStack import FilterStack
 from utility import (
     allowed_file,
     generate_colors,
     get_available_materials,
     get_available_templates,
     is_number,
+    convert_numpy_to_list,
 )
 from open_filter_converter import import_from_open_filter, export_to_open_filter
-from FilterStack import FilterStack
 from flask.sessions import SecureCookieSessionInterface
 
 
@@ -1112,7 +1116,7 @@ def start_optimization(data):
             job.current_merit = int(np.round(my_filter.last_merit, 1))
             # Save the updated status in the DB here, not directly in main.py to avoid webapp/direct run conflicts
             job.current_json = json.dumps(
-                uti.convert_numpy_to_list(my_filter.filter_definition)
+                convert_numpy_to_list(my_filter.filter_definition)
             )
             job.steps = int(my_filter.iteration_no)
             db.session.commit()
