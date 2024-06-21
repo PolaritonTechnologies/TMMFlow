@@ -86,19 +86,14 @@ class CustomSecureCookieSessionInterface(SecureCookieSessionInterface):
 # Configure flask app
 app = Flask(__name__)
 app.session_interface = CustomSecureCookieSessionInterface()
-app.config.update(
-    SESSION_COOKIE_SAMESITE="Lax",  # or 'Strict' or 'None'
-    SESSION_COOKIE_SECURE=True,
-)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 # replace with your secret key
-app.secret_key = base64_encode(os.urandom(32)).decode("utf-8")
+app.secret_key = "Released"
 app.config["UPLOAD_FOLDER"] = "../src/temp/"
 app.config["MATERIAL_FOLDER"] = "../materials/"
 app.config["TEMPLATE_FOLDER"] = "../examples/"
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=60000000)
 app.config["DEFAULT_FILE"] = "../examples/demo_test.json"
 app.config["SESSION_FILES"] = "../gui/session_folder/"
 socketio = SocketIO(app, manage_session=False, cors_allowed_origins="*")
@@ -572,7 +567,7 @@ def upload_file(filename=None):
         return jsonify({"redirect": url_for("stack")})
 
 
-def extract_filter_design():
+def extract_filter_design(username=None):
     """
     Extracts the filter design information.
 
@@ -588,7 +583,7 @@ def extract_filter_design():
         - unique_materials: An array of unique materials in the filter.
         - unique_colors: An array of unique colors corresponding to each material.
     """
-    filter, job_id = load_filter_socket(session)
+    filter, job_id = load_filter_socket(session=session, username=username)
     # Now extract the number of layers to construct the number of boxes
     num_boxes = len(filter.filter_definition["structure_thicknesses"])
     unique_materials = np.unique(filter.filter_definition["structure_materials"])
@@ -858,14 +853,8 @@ def start_new_design():
     return "", 200
 
 
-#############################################
-######## Initial Username Storage ###########
-#############################################
-
-
 @socketio.on("user_login")
 def handle_send_username(json):
-    print("Received username:", json["username"])
     # store the username in the socket session
     session["user_id"] = json["username"]
     # send an acknowledgement back to the client
@@ -877,14 +866,12 @@ def handle_send_username(json):
 #############################################
 
 
-def load_filter_socket(session):
-
-    # socketio session was forked on connect and does not have the flask context apart
-    # from the session_id, so we need to load the session
+def load_filter_socket(session=None, username=None):
+    if username is None:
+        username = session.get("user_id")
     try:
         with open(
-            app.config["SESSION_FILES"]
-            + f"{hex(id(session))}-{session.get('user_id')}.pkl",
+            app.config["SESSION_FILES"] + f"{hex(id(session))}-{username}.pkl",
             "rb",
         ) as file_pickled:
             my_filter, job_id = pickle.load(file_pickled)
@@ -895,7 +882,7 @@ def load_filter_socket(session):
         return my_filter, job_id
     except Exception as e:
         logging.error(str(e)[:200])
-        load_filter_socket(session)
+        load_filter_socket(session=session, username=username)
 
 
 ##############################################
@@ -908,7 +895,7 @@ def calculate_and_plot(data):
     """
     Calculate AR data and plot
     """
-    my_filter, job_id = load_filter_socket(session)
+    my_filter, job_id = load_filter_socket(session, username=data["username"])
     wavelengths = np.arange(
         float(data["startWavelength"]),
         float(data["endWavelength"]) + float(data["stepWavelength"]),
@@ -946,8 +933,7 @@ def calculate_and_plot(data):
 
     # Update the pickle state
     with open(
-        app.config["SESSION_FILES"]
-        + f"{hex(id(session))}-{session.get('user_id')}.pkl",
+        app.config["SESSION_FILES"] + f"{hex(id(session))}-{data['username']}.pkl",
         "wb",
     ) as file_pickled:
         data_to_pickle = (
@@ -978,9 +964,9 @@ def calculate_and_plot(data):
 
 
 @socketio.on("plot")
-def plot():
+def plot(username):
     """ """
-    my_filter, job_id = load_filter_socket(session)
+    my_filter, job_id = load_filter_socket(session, username=username)
     calculated_data_df = my_filter.stored_data[0]
 
     # Create a Plotly figure using the calculated data
@@ -1002,7 +988,7 @@ def plot():
 @socketio.on("plot_xy")
 def handle_plot_xy(data):
 
-    my_filter, job_id = load_filter_socket(session)
+    my_filter, job_id = load_filter_socket(session, username=data["username"])
 
     x = my_filter.stored_data[0].index.to_list()
 
@@ -1025,7 +1011,7 @@ def handle_plot_xy(data):
 
 
 @app.route("/download_data")
-def download_data():
+def download_data(data):
 
     my_filter, job_id = load_filter_socket(session)
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], "simulated_data.csv")
@@ -1045,7 +1031,7 @@ def download_data():
 def start_optimization(data):
     global threads
     """ """
-    my_filter, job_id = load_filter_socket(session)
+    my_filter, job_id = load_filter_socket(session, username=data["username"])
 
     # retrieve the current job with session["job_id"] and update the current_json, the optimization methods
     job = Job.query.get(job_id)
@@ -1060,7 +1046,7 @@ def start_optimization(data):
     # Since the socket session is unaware of the flask session
     # we store the event in a dictionary of threads
     threads = {}
-    threads[f"{hex(id(session))}-{session.get('user_id')}"] = thread
+    threads[f"{hex(id(session))}-{data['username']}"] = thread
 
     # Some helper variables for plotting
     i = 0
@@ -1108,7 +1094,7 @@ def start_optimization(data):
                 unique_materials,
                 unique_colors,
                 incoherent,
-            ) = extract_filter_design()
+            ) = extract_filter_design(username=data["username"])
 
             # Package the values into a dictionary
             filter_representation = {
@@ -1124,7 +1110,7 @@ def start_optimization(data):
             # Convert the dictionary to a JSON string
             filter_json = json.dumps(filter_representation)
 
-            filter, job_id = load_filter_socket(session)
+            filter, job_id = load_filter_socket(session, username=data["username"])
 
             job = Job.query.filter_by(id=job_id).first()
             # During the optimisation, saving to the database is done here to avoid disturbing
@@ -1171,10 +1157,11 @@ def terminate_thread(thread):
 
 
 @socketio.on("stop_optimization")
-def stop_optimization():
+def stop_optimization(data):
     """ """
     global threads
-    thread = threads[f"{hex(id(session))}-{session.get('user_id')}"]
+    print(f"{hex(id(session))}-{data['username']}")
+    thread = threads[f"{hex(id(session))}-{data['username']}"]
     terminate_thread(thread)
 
 

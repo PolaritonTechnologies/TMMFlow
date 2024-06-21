@@ -1,19 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transfer Matrix Method Simulations</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
-
     <!-- This here is for asynchronous plotting -->
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-
     <!-- Include Bootstrap -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-
     <!-- Add jQuery UI CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
@@ -80,6 +76,39 @@
 <footer>
     <p>© 2024 Ouga</p>
 </footer>
+<!-- Feeds context to the socket -->
+<script>
+var socket = io.connect("localhost:5000");
+    function sendUsername() {
+        // Extract the username from the navbar-text span
+        const navbarText = document.querySelector('.navbar-text').textContent;
+        // Assuming the format is "Logged in as: username - Logout"
+        const usernamePrefix = "Logged in as: ";
+        const usernameSuffix = " - Logout";
+        let username = navbarText.includes(usernamePrefix) ? navbarText.split(usernamePrefix)[1].split(usernameSuffix)[0] : null;
+    
+        if (!username) {
+            console.error('No username found or user not logged in.');
+            return;
+        }  
+        var socket = io.connect("localhost:5000"); //for testing
+        // var socket = io.connect('http://134.95.47.151/'); // Adjust the URL as necessary    
+        socket.emit('user_login', {username: username});
+    } 
+    document.addEventListener('DOMContentLoaded', function() {
+    const buttons = document.querySelectorAll('button'); // Selects all button elements
+    buttons.forEach(button => {
+        button.addEventListener('click', sendUsername);
+    });
+    });
+    function retrieveUsername() {
+        const navbarText = document.querySelector('.navbar-text').textContent;
+        const usernamePrefix = "Logged in as: ";
+        const usernameSuffix = " - Logout";
+        let username = navbarText.includes(usernamePrefix) ? navbarText.split(usernamePrefix)[1].split(usernameSuffix)[0] : null;
+        return username;
+    }
+</script>
 {% block scripts %}
 <!-- Scripts overridden by child templates go here -->
 {% endblock %}

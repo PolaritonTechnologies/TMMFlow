@@ -67,9 +67,6 @@
                             </div>
                             {% endfor %}
                             {% endif %}
-                            <!-- <div class="substrate_box" -->
-                            <!-- style="background-color:#A9A9A9; height: 50px; display: flex; justify-content: center; align-items: center;"> -->
-                            <!-- </div> -->
                         </div>
                     </div>
                     <div class="col-lg-6 col-md-6">
@@ -102,7 +99,6 @@
 
 {% block scripts%}
 <script>
-    var socket = io.connect('http://localhost:5000');
 
     // Create a dummy graph
     var trace = {
@@ -159,7 +155,8 @@
             console.log(optimizationMethod);
 
             // Emit a custom event with the selected optimization method
-            socket.emit('start_optimization', { optimizationMethod: optimizationMethod });
+            var username = retrieveUsername();
+            socket.emit('start_optimization', { optimizationMethod: optimizationMethod, username: username});
             document.getElementById("stopOptimization").disabled = false;
         } else {
             console.log("No methods selected");
@@ -169,10 +166,9 @@
     document.getElementById('stopOptimization').addEventListener('click', function (e) {
         // Prevent form submission and page reload
         e.preventDefault();
-
         // Remove the spinner 
         // document.getElementById('loadingOpt').style.display = 'none';
-        socket.emit('stop_optimization');
+        socket.emit('stop_optimization', {username:username});
     });
 
     socket.on('update_merit_graph', function (traces) {

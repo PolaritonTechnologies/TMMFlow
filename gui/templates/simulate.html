@@ -136,8 +136,6 @@
     
 {% block scripts %}
 <script>
-    var socket = io.connect("http://localhost:5000");
-
     function plotHeatmap(fig_json, layout, config) {
         var data = {
             x: fig_json.x,
@@ -158,10 +156,10 @@
             // information retrieved from the according fields
             var mode = document.getElementById("mode").value;
             var polarization = document.getElementById("polarization").value;
-
+            var username = retrieveUsername();
             // console.log('You clicked on point (' + x + ', ' + y + ')');
             // Trigger the plotting of another plot here
-            socket.emit('plot_xy', { x: x, mode: mode, polarization: polarization });
+            socket.emit('plot_xy', { x: x, mode: mode, polarization: polarization, username: username });
         });
     }
 
@@ -224,7 +222,8 @@
 
     console.log("Data present: ", dataPresent);
     if (dataPresent) {
-        socket.emit('plot');
+        username = retrieveUsername();
+        socket.emit('plot', username);
         socket.on('update_plot', function (data) {
             plotHeatmap(fig_json, layout, config)
             // var data = {
@@ -255,22 +254,22 @@
         var startWavelength = document.getElementById("startWavelength").value;
         var endWavelength = document.getElementById("endWavelength").value;
         var stepWavelength = document.getElementById("stepWavelength").value;
+        var username = retrieveUsername();
 
         socket.emit("calculate_and_plot", {
             mode: mode,
             polarization: polarization,
             azimuthalAngle: azimuthalAngle,
-            // generalCore: generalCore,
             startAngle: startAngle,
             endAngle: endAngle,
             stepAngle: stepAngle,
             startWavelength: startWavelength,
             endWavelength: endWavelength,
             stepWavelength: stepWavelength,
+            username: username
         });
 
         document.getElementById("downloadModalButton").disabled = false;
-
 
     });
 
