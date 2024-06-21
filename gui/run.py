@@ -532,12 +532,12 @@ def upload_file(filename=None):
 
     ## update the state of the filter for socketio
     with open(
-        app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb"
+        app.config["SESSION_FILES"] + f"{hex(id(session))}-{session.get('user_id')}.pkl", "wb"
     ) as file_pickled:
         data_to_pickle = (
             FilterStack(
                 my_filter_dict=filter_definition_json,
-                current_structure=app.config["SESSION_FILES"] + f"{hex(id(session))}",
+                current_structure=app.config["SESSION_FILES"] + f"{hex(id(session))}-{session.get('user_id')}",
             ),
             session.get("job_id"),
         )
@@ -805,7 +805,7 @@ def download_current_optimum_file():
     file_ending = request.args.get("fileEnding")
     path_to_json_file = os.path.join(
         app.config["UPLOAD_FOLDER"],
-        f"{hex(id(session))}.json",
+        f"{hex(id(session))}-{session.get('user_id')}.json",
     )
 
     if file_ending == ".json":
@@ -855,6 +855,20 @@ def start_new_design():
 
 
 #############################################
+######## Initial Username Storage ###########
+#############################################
+
+
+@socketio.on("user_login")
+def handle_send_username(json):
+    print("Received username:", json["username"])
+    # store the username in the socket session
+    session["user_id"] = json["username"]
+    # send an acknowledgement back to the client
+    return "received"
+
+
+#############################################
 ######## SocketIo Load Current Filter #######
 #############################################
 
@@ -865,7 +879,7 @@ def load_filter_socket(session):
     # from the session_id, so we need to load the session
     try:
         with open(
-            app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "rb"
+            app.config["SESSION_FILES"] + f"{hex(id(session))}-{session.get('user_id')}.pkl", "rb"
         ) as file_pickled:
             my_filter, job_id = pickle.load(file_pickled)
         if my_filter == None:
@@ -926,7 +940,7 @@ def calculate_and_plot(data):
 
     # Update the pickle state
     with open(
-        app.config["SESSION_FILES"] + f"{hex(id(session))}.pkl", "wb"
+        app.config["SESSION_FILES"] + f"{hex(id(session))}-{session.get('user_id')}.pkl", "wb"
     ) as file_pickled:
         data_to_pickle = (
             my_filter,
@@ -1038,7 +1052,7 @@ def start_optimization(data):
     # Since the socket session is unaware of the flask session
     # we store the event in a dictionary of threads
     threads = {}
-    threads[hex(id(session))] = thread
+    threads[f"{hex(id(session))}-{session.get('user_id')}"] = thread
 
     # Some helper variables for plotting
     i = 0
@@ -1152,7 +1166,7 @@ def terminate_thread(thread):
 def stop_optimization():
     """ """
     global threads
-    thread = threads[hex(id(session))]
+    thread = threads[f"{hex(id(session))}-{session.get('user_id')}"]
     terminate_thread(thread)
 
 
@@ -1232,4 +1246,4 @@ def reject_file():
 
 
 if __name__ == "__main__":
-    socketio.run(app)
+    socketio.run(app, debug=True, port=5000)

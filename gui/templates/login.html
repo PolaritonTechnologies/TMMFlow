@@ -15,3 +15,32 @@
         </form>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevent the default form submission
+
+        // Initialize Socket.IO client
+        var socket = io.connect('http://localhost:5000'); // Adjust the URL as necessary
+
+        // Extract the username from the form
+        const username = document.getElementById('username').value;
+
+        // Send the username to the server
+        socket.emit('user_login', {username: username}, function(acknowledgement){
+            if(acknowledgement === 'received') {
+                // Manually submit the form after the server acknowledges the socket emission
+                form.submit();
+            } else {
+                // Handle the case where the server does not acknowledge the socket emission
+                console.error('Socket emission was not acknowledged by the server.');
+                // Optionally, re-enable the submit button or notify the user
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
