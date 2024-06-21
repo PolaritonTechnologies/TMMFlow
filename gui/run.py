@@ -17,6 +17,7 @@ from flask_sqlalchemy import SQLAlchemy
 import pickle
 import ctypes
 import logging
+from itsdangerous import base64_encode
 
 logging.basicConfig(
     level=logging.ERROR, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -93,7 +94,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 # replace with your secret key
-app.secret_key = "your secret key"
+app.secret_key = base64_encode(os.urandom(32)).decode("utf-8")
 app.config["UPLOAD_FOLDER"] = "../src/temp/"
 app.config["MATERIAL_FOLDER"] = "../materials/"
 app.config["TEMPLATE_FOLDER"] = "../examples/"
@@ -532,12 +533,15 @@ def upload_file(filename=None):
 
     ## update the state of the filter for socketio
     with open(
-        app.config["SESSION_FILES"] + f"{hex(id(session))}-{session.get('user_id')}.pkl", "wb"
+        app.config["SESSION_FILES"]
+        + f"{hex(id(session))}-{session.get('user_id')}.pkl",
+        "wb",
     ) as file_pickled:
         data_to_pickle = (
             FilterStack(
                 my_filter_dict=filter_definition_json,
-                current_structure=app.config["SESSION_FILES"] + f"{hex(id(session))}-{session.get('user_id')}",
+                current_structure=app.config["SESSION_FILES"]
+                + f"{hex(id(session))}-{session.get('user_id')}",
             ),
             session.get("job_id"),
         )
@@ -879,7 +883,9 @@ def load_filter_socket(session):
     # from the session_id, so we need to load the session
     try:
         with open(
-            app.config["SESSION_FILES"] + f"{hex(id(session))}-{session.get('user_id')}.pkl", "rb"
+            app.config["SESSION_FILES"]
+            + f"{hex(id(session))}-{session.get('user_id')}.pkl",
+            "rb",
         ) as file_pickled:
             my_filter, job_id = pickle.load(file_pickled)
         if my_filter == None:
@@ -940,7 +946,9 @@ def calculate_and_plot(data):
 
     # Update the pickle state
     with open(
-        app.config["SESSION_FILES"] + f"{hex(id(session))}-{session.get('user_id')}.pkl", "wb"
+        app.config["SESSION_FILES"]
+        + f"{hex(id(session))}-{session.get('user_id')}.pkl",
+        "wb",
     ) as file_pickled:
         data_to_pickle = (
             my_filter,
