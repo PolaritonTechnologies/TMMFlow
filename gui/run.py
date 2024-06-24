@@ -773,6 +773,7 @@ def save_json():
 def download_file():
 
     my_filter = session.get("my_filter")
+    fs = FilterStack(my_filter_dict=my_filter)
     file_ending = request.args.get("fileEnding")
     if file_ending == ".json":
         # Handle .json file ending
@@ -781,13 +782,9 @@ def download_file():
     elif file_ending == ".ofp":
         # Handle .ofp file ending
         # First convert the cpp .json file to .ofp
-        path_to_file = my_filter.json_file_path_cpp
-
-        with open(path_to_file, "r") as input_file:
-            input_dic = json.load(input_file)
 
         path_to_file = export_to_open_filter(
-            input_dic,
+            fs.translate_order_for_cpp(my_filter),
             session.get("selected_file").split("/")[-1].split(".")[0] + "_converted",
         )
 
@@ -1081,10 +1078,8 @@ def start_optimization(data):
         traces[-1]["x"].append(my_filter.optimum_iteration)
         traces[-1]["y"].append(my_filter.optimum_merit)
 
-        # Emit the traces to the client
-        socketio.emit("update_merit_graph", traces)
-
         try:
+            socketio.emit("update_merit_plot", {"traces": traces})
             # Update the stack representation
             (
                 num_boxes,
@@ -1140,7 +1135,7 @@ def start_optimization(data):
             )
 
         except Exception as e:
-            logging.error(e)
+            logging.error("Error in Loop Block", e)
 
         time.sleep(0.5)
 
