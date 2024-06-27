@@ -1079,7 +1079,7 @@ def start_optimization(data):
         traces[-1]["y"].append(my_filter.optimum_merit)
 
         try:
-            socketio.emit("update_merit_plot", {"traces": traces})
+            socketio.emit("update_merit_graph", {"traces": traces})
             # Update the stack representation
             (
                 num_boxes,
