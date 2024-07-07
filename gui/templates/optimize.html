@@ -171,23 +171,54 @@
         socket.emit('stop_optimization', {username:username});
     });
 
-    socket.on('update_merit_graph', function (traces) {
-        var data = traces.map(function (trace) {
-            return {
-                x: trace.x,
-                y: trace.y,
-                mode: 'lines',
-                line: {
-                    color: trace.color
-                },
-                name: trace.name
-            };
-        });
+    socket.on('update_merit_graph', function (data) {
+    // Access the traces array correctly from the data object
+    var traces = data.traces;
+    var username = data.username;
 
-        Plotly.newPlot('merit_graph', data, layout);
+    // Only perform operation if the username matches the current username on the page
+    if (username !== retrieveUsername()) {
+        return;
+    }
+
+    // Attempt to parse the traces if it's a string
+    if (typeof traces === 'string') {
+        try {
+            traces = JSON.parse(traces);
+        } catch (error) {
+            console.error('Error parsing traces:', error);
+            return; // Exit the function if parsing fails
+        }
+    }
+
+    // Check if traces is now an array
+    if (!Array.isArray(traces)) {
+        console.error('Expected traces to be an array, but got:', traces);
+        return; // Exit the function if traces is not an array
+    }
+
+    var data = traces.map(function (trace) {
+        return {
+            x: trace.x,
+            y: trace.y,
+            mode: 'lines',
+            line: {
+                color: trace.color
+            },
+            name: trace.name
+        };
+    });
+
+    Plotly.newPlot('merit_graph', data, layout);
     });
 
     socket.on('update_filter_representation', function (data) {
+        var username = data.username;
+        // Only perform operation if the username matches the current username on the page
+        if (username !== retrieveUsername()) {
+            return;
+        }
+
         var filter_representation = JSON.parse(data.filter_json);
 
         // Access the values

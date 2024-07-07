@@ -1,3 +1,7 @@
+import eventlet
+
+eventlet.monkey_patch()
+
 import sys
 
 sys.path.append("../src")
@@ -134,6 +138,9 @@ class Job(db.Model):
     current_merit = db.Column(
         db.Float, nullable=True
     )  # New field, using Float to represent REAL
+
+
+tasks_status = {}
 
 
 @login_manager.user_loader
@@ -1024,27 +1031,39 @@ def download_data(data):
 ##############################################
 
 
+def optimisation_wrapper(optimization_method, my_filter, job_id, username):
+    global tasks_status
+    task_key = f"{username}-{job_id}"
+    try:
+        my_filter.perform_optimisation(optimization_method, job_id)
+        # Task completed successfully
+        # Remove the task
+        tasks_status.pop(task_key)
+    except Exception as e:
+        # Handle exceptions, mark task as failed
+        tasks_status[task_key] = "failed"
+        # Log or handle the exception as needed
+
+
 @socketio.on("start_optimization")
 def start_optimization(data):
-    global threads
+    global tasks_status
     """ """
     my_filter, job_id = load_filter_socket(session, username=data["username"])
-
     # retrieve the current job with session["job_id"] and update the current_json, the optimization methods
     job = Job.query.get(job_id)
     job.optimization_methods = json.dumps(data["optimizationMethod"])
     db.session.commit()
-
-    thread = threading.Thread(
-        target=my_filter.perform_optimisation, args=(data["optimizationMethod"], job_id)
+    task_key = f"{data['username']}-{job_id}"
+    tasks_status[task_key] = "running"
+    # Correctly pass arguments to the background task
+    socketio.start_background_task(
+        target=optimisation_wrapper,
+        optimization_method=data["optimizationMethod"],
+        my_filter=my_filter,
+        job_id=job_id,
+        username=data["username"],
     )
-    thread.start()
-
-    # Since the socket session is unaware of the flask session
-    # we store the event in a dictionary of threads
-    threads = {}
-    threads[f"{hex(id(session))}-{data['username']}"] = thread
-
     # Some helper variables for plotting
     i = 0
     current_optimization_method = data["optimizationMethod"][i]
@@ -1053,91 +1072,91 @@ def start_optimization(data):
     traces.append(
         {"x": [], "y": [], "color": colors[i], "name": current_optimization_method}
     )
-    time.sleep(0.1)
+    eventlet.sleep(0.1)
+    task_key = f"{data['username']}-{job_id}"
+    while tasks_status.get(task_key, "not found") == "running":
+        try:
+            if my_filter.optimization_method != current_optimization_method:
+                # Plot an additional line in the merit graph indicating the switch
+                # to a new method
+                i += 1
+                current_optimization_method = data["optimizationMethod"][i]
 
-    while thread.is_alive():
-        """
-        if my_filter.optimization_method != current_optimization_method:
-            # Plot an additional line in the merit graph indicating the switch
-            # to a new method
-            i += 1
-            current_optimization_method = data["optimizationMethod"][i]
+                # Start a new trace
+                traces.append(
+                    {
+                        "x": [],
+                        "y": [],
+                        "color": colors[i],
+                        "name": current_optimization_method,
+                    }
+                )
 
-            # Start a new trace
-            traces.append(
-                {
-                    "x": [],
-                    "y": [],
-                    "color": colors[i],
-                    "name": current_optimization_method,
-                }
-            )
-        """
+        except:
+            # print("My filter has currently no optimization method associated with it")
+            pass
+
+        # Update the stack representation
+        (
+            num_boxes,
+            colors,
+            heights,
+            number_unique_materials,
+            unique_materials,
+            unique_colors,
+            incoherent,
+        ) = extract_filter_design(username=data["username"])
+
+        # Package the values into a dictionary
+        filter_representation = {
+            "num_boxes": int(num_boxes),
+            "colors": colors,
+            "heights": heights,
+            "number_unique_materials": int(number_unique_materials),
+            "unique_materials": unique_materials,
+            "unique_colors": unique_colors,
+            "incoherent": incoherent,
+        }
+
+        # Convert the dictionary to a JSON string
+        filter_json = json.dumps(filter_representation)
+
+        my_filter, job_id = load_filter_socket(session, username=data["username"])
 
         # Add the current data to the current trace
-        traces[-1]["x"].append(my_filter.optimum_iteration)
-        traces[-1]["y"].append(my_filter.optimum_merit)
+        if my_filter.optimum_iteration != None and my_filter.optimum_merit != None:
+            traces[-1]["x"].append(my_filter.optimum_iteration)
+            traces[-1]["y"].append(my_filter.optimum_merit)
 
-        try:
-            socketio.emit("update_merit_graph", {"traces": traces})
-            # Update the stack representation
-            (
-                num_boxes,
-                colors,
-                heights,
-                number_unique_materials,
-                unique_materials,
-                unique_colors,
-                incoherent,
-            ) = extract_filter_design(username=data["username"])
+        socketio.emit(
+            "update_merit_graph", {"traces": traces, "username": data["username"]}
+        )
+        job = Job.query.filter_by(id=job_id).first()
+        # During the optimisation, saving to the database is done here to avoid disturbing
+        # the optimisation thread
+        # If this is the first pass through the while loop, save into initial_merit
+        if job.initial_merit is None and int(np.round(my_filter.last_merit, 1)) != 0:
+            job.initial_merit = int(np.round(my_filter.last_merit, 1))
+        job.current_merit = int(np.round(my_filter.last_merit, 1))
+        # Save the updated status in the DB here, not directly in main.py to avoid webapp/direct run conflicts
+        job.current_json = json.dumps(
+            convert_numpy_to_list(my_filter.filter_definition)
+        )
+        job.steps = int(my_filter.iteration_no)
+        db.session.commit()
 
-            # Package the values into a dictionary
-            filter_representation = {
-                "num_boxes": int(num_boxes),
-                "colors": colors,
-                "heights": heights,
-                "number_unique_materials": int(number_unique_materials),
-                "unique_materials": unique_materials,
-                "unique_colors": unique_colors,
-                "incoherent": incoherent,
-            }
+        # Emit the JSON string
+        socketio.emit(
+            "update_filter_representation",
+            {
+                "filter_json": filter_json,
+                "iterations": int(my_filter.iteration_no),
+                "merit": int(np.round(my_filter.last_merit, 1)),
+                "username": data["username"],
+            },
+        )
 
-            # Convert the dictionary to a JSON string
-            filter_json = json.dumps(filter_representation)
-
-            filter, job_id = load_filter_socket(session, username=data["username"])
-
-            job = Job.query.filter_by(id=job_id).first()
-            # During the optimisation, saving to the database is done here to avoid disturbing
-            # the optimisation thread
-            # If this is the first pass through the while loop, save into initial_merit
-            if (
-                job.initial_merit is None
-                and int(np.round(my_filter.last_merit, 1)) != 0
-            ):
-                job.initial_merit = int(np.round(my_filter.last_merit, 1))
-            job.current_merit = int(np.round(my_filter.last_merit, 1))
-            # Save the updated status in the DB here, not directly in main.py to avoid webapp/direct run conflicts
-            job.current_json = json.dumps(
-                convert_numpy_to_list(my_filter.filter_definition)
-            )
-            job.steps = int(my_filter.iteration_no)
-            db.session.commit()
-
-            # Emit the JSON string
-            socketio.emit(
-                "update_filter_representation",
-                {
-                    "filter_json": filter_json,
-                    "iterations": int(my_filter.iteration_no),
-                    "merit": int(np.round(my_filter.last_merit, 1)),
-                },
-            )
-
-        except Exception as e:
-            logging.error("Error in Loop Block", e)
-
-        time.sleep(0.5)
+        eventlet.sleep(0.5)
 
 
 def terminate_thread(thread):
@@ -1154,10 +1173,10 @@ def terminate_thread(thread):
 @socketio.on("stop_optimization")
 def stop_optimization(data):
     """ """
-    global threads
-    print(f"{hex(id(session))}-{data['username']}")
-    thread = threads[f"{hex(id(session))}-{data['username']}"]
-    terminate_thread(thread)
+    global tasks_status
+    task_key = f"{data['username']}-{data['job_id']}"
+    print("Under Construction")
+    # terminate_thread(thread)
 
 
 ##############################################

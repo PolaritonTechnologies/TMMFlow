@@ -1,12 +1,17 @@
+import eventlet
+
+eventlet.monkey_patch()
+
 import ctypes
 import json
 import os
 import time
 import copy
 import pickle
+import multiprocessing
 from datetime import datetime
 from functools import partial
-
+from multiprocessing import Process
 import numpy as np
 import re
 import pandas as pd
@@ -778,118 +783,120 @@ class FilterStack:
                 self.merit_function, my_filter=my_filter, lib=lib
             )
 
-            # With scipy we cannot do integer optimization
-            if optimization_method == "dual_annealing":
-                ret = dual_annealing(
-                    partial_merit_function,
-                    bounds=bounds,
-                    callback=self.scipy_callback,
-                    x0=x_initial,
-                    maxiter=10000,
-                    minimizer_kwargs={"callback": self.scipy_callback},
-                )
-            elif optimization_method == "differential_evolution":
-                ret = differential_evolution(
-                    partial_merit_function,
-                    bounds=bounds,
-                    x0=x_initial,
-                    maxiter=100000,
-                    callback=self.scipy_callback,
-                    # callback = self.callback_func_advanced
-                )
-            elif optimization_method == "basinhopping":
-                # This algorithm does
-                # 1. a random perturbation of the features
-                # 2. then a scipy.minimize
-                # 3. accepts of rejects the new optimum value
-                ret = basinhopping(
-                    partial_merit_function,
-                    x0=x_initial,
-                    callback=self.scipy_callback,
-                    minimizer_kwargs={
-                        "method": "Nelder-Mead",
-                        "bounds": bounds,
-                        "callback": self.scipy_callback,
-                    },
-                )
+            self.ret = None
 
-            elif optimization_method == "brute":
-                # Brute force optimization: only sensible for a low number of
-                # features (e.g., 3). Depending on Ns, the number of points to
-                # try is established  (Ns^(#features) = number of iterations)
-                ret = brute(
-                    partial_merit_function,
-                    ranges=bounds,
-                    Ns=2,
-                    # maxiter = 50000,
-                )
-            elif optimization_method == "shgo":
-                # Doesn't really start
-                ret = shgo(
-                    partial_merit_function,
-                    bounds=bounds,
-                    # maxiter = 50000,
-                )
-            elif optimization_method == "LM":
-                ret = gradient_descent(
-                    partial_merit_function,
-                    x0=x_initial,
-                    bounds=bounds,
-                    callback=self.scipy_callback,
-                )
-            elif optimization_method == "TNC":
-                # Truncated newton method
-                ret = minimize(
-                    partial_merit_function,
-                    x0=x_initial,
-                    bounds=bounds,
-                    # method="Newton-CG", # 40908 after 45600 iterations (cannot handle bounds)
-                    method="TNC",  # 41570 after 10000 iterations
-                    # method="trust-ncg", # no bounds, 40255 after 58000 iterations (no bounds)
-                    # method = "trust-krylov", # 40051 after 42000 iterations (no bounds)
-                    # method = "trust-exact", #  41464 after 60000 iterations interrupted manually (no bounds)
-                    jac=lambda x: gradient(self.merit_function, x),
-                    # hess=lambda x: hessian(self.merit_function, x),
-                    callback=self.scipy_callback,
-                    # tol = 1e-2,
-                )
-            elif optimization_method == "Nelder-Mead":
-                # Truncated newton method
-                ret = minimize(
-                    partial_merit_function,
-                    x0=x_initial,
-                    bounds=bounds,
-                    method="Nelder-Mead",
-                    # method="Newton-CG", # 40908 after 45600 iterations
-                    # method="TNC", # 41570 after 10000 iterations
-                    # method="trust-ncg", # no bounds, 40255 after 58000 iterations (no bounds)
-                    # method = "trust-krylov", # 40051 after 42000 iterations (no bounds)
-                    # method = "trust-exact", #  41464 after 60000 iterations interrupted manually (no bounds)
-                    # jac=lambda x: gradient(self.merit_function, x),
-                    # hess=lambda x: hessian(self.merit_function, x),
-                    callback=self.scipy_callback,
-                    # tol = 1e-2,
-                )
-
-                """
-                # Rerun multiple times (10 for now)
-                for i in range(9):
-                    ret = minimize(
-                        self.merit_function,
-                        x0=ret.x,
+            def optimize_in_process(
+                optimization_method, partial_merit_function, x_initial, bounds, callback
+            ):
+                # With scipy we cannot do integer optimization
+                if optimization_method == "dual_annealing":
+                    ret = dual_annealing(
+                        partial_merit_function,
                         bounds=bounds,
-                        method="Nelder-Mead",
-                        # the below values for xatol and fatol were found to prevent the function
-                        # from overoptimising
-                        # options={"xatol": 1e-1, "fatol": 1e-1},
+                        callback=self.scipy_callback,
+                        x0=x_initial,
+                        maxiter=10000,
+                        minimizer_kwargs={"callback": self.scipy_callback},
+                    )
+                elif optimization_method == "differential_evolution":
+                    ret = differential_evolution(
+                        partial_merit_function,
+                        bounds=bounds,
+                        x0=x_initial,
+                        maxiter=100000,
                         callback=self.scipy_callback,
                     )
-                """
+                elif optimization_method == "basinhopping":
+                    # This algorithm does
+                    # 1. a random perturbation of the features
+                    # 2. then a scipy.minimize
+                    # 3. accepts of rejects the new optimum value
+                    ret = basinhopping(
+                        partial_merit_function,
+                        x0=x_initial,
+                        callback=self.scipy_callback,
+                        minimizer_kwargs={
+                            "method": "Nelder-Mead",
+                            "bounds": bounds,
+                            "callback": self.scipy_callback,
+                        },
+                    )
+
+                elif optimization_method == "brute":
+                    # Brute force optimization: only sensible for a low number of
+                    # features (e.g., 3). Depending on Ns, the number of points to
+                    # try is established  (Ns^(#features) = number of iterations)
+                    ret = brute(
+                        partial_merit_function,
+                        ranges=bounds,
+                        Ns=2,
+                        # maxiter = 50000,
+                    )
+                elif optimization_method == "shgo":
+                    # Doesn't really start
+                    ret = shgo(
+                        partial_merit_function,
+                        bounds=bounds,
+                        # maxiter = 50000,
+                    )
+                elif optimization_method == "LM":
+                    ret = gradient_descent(
+                        partial_merit_function,
+                        x0=x_initial,
+                        bounds=bounds,
+                        callback=self.scipy_callback,
+                    )
+                elif optimization_method == "TNC":
+                    # Truncated newton method
+                    ret = minimize(
+                        partial_merit_function,
+                        x0=x_initial,
+                        bounds=bounds,
+                        method="TNC",  # 41570 after 10000 iterations
+                        jac=lambda x: gradient(self.merit_function, x),
+                        callback=self.scipy_callback,
+                    )
+                elif optimization_method == "Nelder-Mead":
+                    # Nelder-Mead method
+                    self.ret = minimize(
+                        partial_merit_function,
+                        x0=x_initial,
+                        bounds=bounds,
+                        method="Nelder-Mead",
+                        callback=callback,
+                    )
+
+            # Wrap the arguments to pass them to the Process
+            def worker(
+                optimization_method, partial_merit_function, x_initial, bounds, callback
+            ):
+                optimize_in_process(
+                    optimization_method,
+                    partial_merit_function,
+                    x_initial,
+                    bounds,
+                    callback,
+                )
+
+            # Create and start a separate process for the optimization task
+            p = Process(
+                target=worker,
+                args=(
+                    optimization_method,
+                    partial_merit_function,
+                    x_initial,
+                    bounds,
+                    self.scipy_callback,
+                ),
+            )
+            p.start()
+            p.join()  # Wait for the optimization to complete if necessary
+
             # The result from the optimization is not necessarily the global
             # result (as e.g. gradients are also calculated that could have a
             # lower merit)
-            ret.x = self.optimum_x
-            ret.fun_best = self.optimum_merit
+            self.ret.x = self.optimum_x
+            self.ret.fun_best = self.optimum_merit
 
             thicknesses, self.layer_order = (
                 self.extract_thickness_and_position_from_features(self.optimum_x)
@@ -925,7 +932,7 @@ class FilterStack:
             self.log_func("Optimized merit value: " + str(self.optimum_merit))
             self.log_func("Number of function evaluations: " + str(ret.nfev))
 
-        return ret.x
+        return self.ret.x
 
     def merit_function(self, features, my_filter, lib):
         """
@@ -1060,10 +1067,7 @@ class FilterStack:
                 )
                 with open(f"{self.current_structure}.pkl", "wb") as file_pickled:
                     data_to_pickle = (
-                        FilterStack(
-                            my_filter_path=temp_path,
-                            current_structure=self.current_structure,
-                        ),
+                        self,
                         self.job_id,
                     )
                     pickle.dump(data_to_pickle, file_pickled)
