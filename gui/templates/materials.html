@@ -1,107 +1,112 @@
 {% extends "base.html" %}
 {% block content %}
-    <main class="container-custom">
-        <div class="row align-items-center ">
-            <div class="col-2 d-flex flex-column justify-content-center">
-                <p> Select a material</p>
-                <div style="margin-bottom: 2em;">
-                    <select name="materials" id="materials" class="form-control">
-                        {% for material in available_materials %}
-                        <option value="{{ material }}">{{ material }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div style="margin-bottom: 2em;">
-                    <button class="btn btn-primary form-control" id="downloadButton">Download</button>
-                </div>
-                <p> Upload new material</p>
-                <input type="file" id="fileUpload" style="display: none;" />
-                <button class="btn btn-primary" id="uploadButton">Upload</button>
-                <div class="row d-flex justify-content-center align-items-center">
-                    <button class="btn btn-success" id="acceptButton"
-                        style="display: none; margin-top: 1em; margin-right: 1em;">Accept</button>
-                    <button class="btn btn-danger" id="rejectButton"
-                        style="display: none; margin-top: 1em; margin-left: 1em;">Reject</button>
-                </div>
+<main class="container-custom">
+    <div class="row align-items-center ">
+        <div class="col-2 d-flex flex-column justify-content-center">
+            <p> Select a material</p>
+            <div style="margin-bottom: 2em;">
+                <select name="materials" id="materials" class="form-control">
+                    {% for material in available_materials %}
+                    <option value="{{ material }}">{{ material }}</option>
+                    {% endfor %}
+                </select>
             </div>
-            <div class="col-8" id="plotDiv"></div>
+            <div style="margin-bottom: 2em;">
+                <button class="btn btn-primary form-control" id="downloadButton">Download</button>
+            </div>
+            <p> Upload new material</p>
+            <input type="file" id="fileUpload" style="display: none;" />
+            <button class="btn btn-primary" id="uploadButton">Upload</button>
+            <div class="row d-flex justify-content-center align-items-center">
+                <button class="btn btn-success" id="acceptButton"
+                    style="display: none; margin-top: 1em; margin-right: 1em;">Accept</button>
+                <button class="btn btn-danger" id="rejectButton"
+                    style="display: none; margin-top: 1em; margin-left: 1em;">Reject</button>
+            </div>
         </div>
-    </main>
+        <div class="col-8" id="plotDiv"></div>
+    </div>
+</main>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    var socket = io.connect("http://localhost:5000");
     var selectedMaterial;
-
     var materialsSelect = document.getElementById('materials');
 
     materialsSelect.addEventListener('change', function () {
         selectedMaterial = this.value;
-        socket.emit('get_material_data', { material: selectedMaterial });
+        fetch('/get_material_data_ajax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ material: selectedMaterial }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                var traces = data.y.map(function (y, index) {
+                    return {
+                        x: data.x,
+                        y: y,
+                        mode: 'lines',
+                        name: data.name[index]
+                    };
+                });
+
+                var layout = {
+                    title: {
+                        text: selectedMaterial,
+                        font: {
+                            size: 18
+                        }
+                    },
+                    xaxis: {
+                        title: {
+                            text: 'Wavelength (nm)',
+                            font: {
+                                size: 18
+                            }
+                        }
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'n, k',
+                            font: {
+                                size: 18
+                            }
+                        }
+                    },
+                    height: window.innerHeight * 0.7 // Set the height to 80% of the viewport height
+                };
+                var config = {
+                    modeBarButtonsToAdd: [{
+                        name: 'Log Scale',
+                        title: 'log',
+                        click: function (gd) {
+                            var update = { 'yaxis.type': 'log' };
+                            Plotly.relayout(gd, update);
+                        }
+                    }, {
+                        name: 'Linear Scale',
+                        title: 'lin',
+                        click: function (gd) {
+                            var update = { 'yaxis.type': 'linear' };
+                            Plotly.relayout(gd, update);
+                        }
+                    }]
+                };
+
+                Plotly.newPlot('plotDiv', traces, layout, config);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
     });
 
     // Trigger the 'change' event manually
     var event = new Event('change');
     materialsSelect.dispatchEvent(event);
-
-    socket.on('material_data', function (data) {
-        var traces = data.y.map(function (y, index) {
-            return {
-                x: data.x,
-                y: y,
-                mode: 'lines',
-                name: data.name[index]
-            };
-        });
-
-        var layout = {
-            title: {
-                text: selectedMaterial,
-                font: {
-                    size: 18
-                }
-            },
-            xaxis: {
-                title: {
-                    text: 'Wavelength (nm)',
-                    font: {
-                        size: 18
-                    }
-                }
-            },
-            yaxis: {
-                title: {
-                    text: 'n, k',
-                    font: {
-                        size: 18
-                    }
-                }
-            },
-            height: window.innerHeight * 0.7 // Set the height to 80% of the viewport height
-        };
-        var config = {
-            modeBarButtonsToAdd: [{
-                name: 'Log Scale',
-                title: 'log',
-                click: function (gd) {
-                    var update = { 'yaxis.type': 'log' };
-                    Plotly.relayout(gd, update);
-                }
-            }, {
-                name: 'Linear Scale',
-                title: 'lin',
-                click: function (gd) {
-                    var update = { 'yaxis.type': 'linear' };
-                    Plotly.relayout(gd, update);
-                }
-            }]
-        };
-
-        Plotly.ne
-
-        Plotly.newPlot('plotDiv', traces, layout, config);
-    });
 
     document.getElementById("downloadButton").addEventListener("click", function (e) {
         e.preventDefault();

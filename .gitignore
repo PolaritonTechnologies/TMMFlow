@@ -163,3 +163,4 @@ cython_debug/
 *.mat
 /src/temp/
 /gui/session_folder/
+/gui/flask_session/

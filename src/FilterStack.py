@@ -1,21 +1,19 @@
-import eventlet
+# import eventlet
 
-eventlet.monkey_patch()
-
+# eventlet.monkey_patch()
 import ctypes
 import json
 import os
 import time
 import copy
-import pickle
-import multiprocessing
 from datetime import datetime
 from functools import partial
-from multiprocessing import Process
 import numpy as np
 import re
 import pandas as pd
 import matplotlib.pyplot as plt
+
+from redis import Redis
 
 from scipy.optimize import (
     #  dual_annealing,
@@ -26,7 +24,7 @@ from scipy.optimize import (
     brute,
 )
 
-from optimization import dual_annealing, gradient_descent, gradient, hessian
+from optimization import dual_annealing, gradient_descent, gradient
 
 
 def ignore(msg=None):
@@ -41,6 +39,25 @@ def log(message):
         log_file.write(f"{message_with_timestamp}\n")
 
 
+def convert_numpy_to_list(data):
+    if isinstance(data, dict):
+        return {key: convert_numpy_to_list(value) for key, value in data.items()}
+    elif isinstance(data, np.ndarray):
+        return data.tolist()
+    elif isinstance(data, list):
+        return [convert_numpy_to_list(item) for item in data]
+    else:
+        return data
+
+
+def optimization_function(optimization_method, latest_design, redis_key):
+    my_filter = FilterStack(latest_design)
+    # database_entry = select_latest_optimization(job_id)
+    ret = my_filter.perform_optimisation(optimization_method, redis_key)
+    return ret
+    # db.session.commit()  # Commit changes at the end of the operation
+
+
 class FilterStack:
 
     def __init__(
@@ -48,8 +65,6 @@ class FilterStack:
         my_filter_dict=None,
         my_filter_path=None,
         current_structure="current_structure",
-        message_queue=None,
-        update_queue=None,
         log_func=log,
         log_design_func=ignore,
     ):
@@ -78,13 +93,9 @@ class FilterStack:
             with open(my_filter_path, "r") as json_file:
                 filter_definition_by_user = json.load(json_file)
 
+        # Initial structure
         self.current_structure = current_structure
-        # translate json file to a readable format for the C++ code that does
-        # not involve abbreviations that we use for filter design
         updated_cpp_order = self.translate_order_for_cpp(filter_definition_by_user)
-
-        # Create the filter stack in C++
-        # self.my_filter, self.lib = self.create_filter_in_cpp(self.json_file_path_cpp)
 
         # Read in the translated C++ again and restructure a bit
         # for easy handling in python
@@ -98,26 +109,9 @@ class FilterStack:
             np.array(self.filter_definition["incoherent"])
         )
 
-        # This is for displaying in the GUI only as the display for the user is
-        # slightly different to the converted version for C++
         self.initial_structure_materials = np.copy(
             np.array(self.filter_definition["structure_materials"])
         )
-        self.structure_materials_by_user = filter_definition_by_user[
-            "structure_materials"
-        ]
-        self.structure_thicknesses_by_user = filter_definition_by_user[
-            "structure_thicknesses"
-        ]
-        self.thickness_opt_allowed_by_user = filter_definition_by_user[
-            "thickness_opt_allowed"
-        ]
-        self.layer_switch_allowed_by_user = filter_definition_by_user[
-            "layer_switch_allowed"
-        ]
-        self.incoherent_by_user = filter_definition_by_user["incoherent"]
-        self.bounds_by_user = filter_definition_by_user["bounds"]
-        # ---
 
         self.filter_definition["structure_thicknesses"] = np.array(
             self.filter_definition["structure_thicknesses"]
@@ -166,8 +160,6 @@ class FilterStack:
         # Logging and queue variables needed for web-based GUI
         self.log_func = log_func
         self.log_design_func = log_design_func
-        self.message_queue = message_queue
-        self.update_queue = update_queue
 
     #####################################################
     ######### Initialization and C++ Interfacing ########
@@ -636,7 +628,7 @@ class FilterStack:
         #     self.my_filter, self.layer_order, int(np.size(self.layer_order))
         # )
 
-    def save_current_design_to_json(self, file_name):
+    def return_current_design_as_json(self):
         temp_json = self.filter_definition.copy()
 
         # Convert to a python list
@@ -659,18 +651,51 @@ class FilterStack:
             self.filter_definition["incoherent"][el] for el in self.layer_order
         ]
 
-        temp_path = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "temp", f"{file_name}.json"
-        )
-
-        with open(temp_path, "w") as file:
-            json.dump(temp_json, file)
+        return temp_json
 
     #####################################################
     ############# Filter Optimization Area ##############
     #####################################################
 
-    def perform_optimisation(self, opt_methods, job_id=0, save_optimized_to_file=True):
+    def calculate_initial_merit(self):
+        """
+        Function to only calculate the current merit that is accessible from
+        outside
+        """
+        my_filter, lib = self.create_filter_in_cpp()
+
+        lib.initialise_optimization(
+            my_filter,
+            self.target_wavelength,
+            int(np.size(self.target_wavelength)),
+        )
+        merit = lib.calculate_merit(
+            my_filter,
+            (ctypes.c_char_p * len(self.target_type.tolist()))(
+                *[s.encode("utf-8") for s in self.target_type.tolist()]
+            ),
+            (ctypes.c_char_p * len(self.target_polarization.tolist()))(
+                *[s.encode("utf-8") for s in self.target_polarization.tolist()]
+            ),
+            self.target_value,
+            self.target_wavelength,
+            self.target_polar_angle,
+            self.target_azimuthal_angle,
+            self.target_weights,
+            (ctypes.c_char_p * len(self.target_condition.tolist()))(
+                *[s.encode("utf-8") for s in self.target_condition.tolist()]
+            ),
+            self.target_tolerance,
+            (ctypes.c_char_p * len(self.target_arithmetic.tolist()))(
+                *[s.encode("utf-8") for s in self.target_arithmetic.tolist()]
+            ),
+            int(np.size(self.target_value)),
+            # self.filter_definition["core_selection"],
+        )
+
+        return merit
+
+    def perform_optimisation(self, opt_methods, redis_key=None):
         """
         Performs the optimization process based on the specified optimization
         type. This function sets up the initial conditions and bounds for the
@@ -692,10 +717,16 @@ class FilterStack:
         Returns:
         numpy array: The optimized features.
         """
+        self.redis_key = redis_key
+
+        if self.redis_key != None:
+            # Setup Redis connection
+            self.redis_conn = Redis()
+
         log("loading filter stack...")
 
         my_filter, lib = self.create_filter_in_cpp()
-        self.job_id = job_id
+        # self.job_id = job_id
 
         log("running optimisation...")
 
@@ -783,89 +814,85 @@ class FilterStack:
                 self.merit_function, my_filter=my_filter, lib=lib
             )
 
-            self.ret = None
+            # With scipy we cannot do integer optimization
+            if optimization_method == "dual_annealing":
+                ret = dual_annealing(
+                    partial_merit_function,
+                    bounds=bounds,
+                    callback=self.scipy_callback,
+                    x0=x_initial,
+                    maxiter=10000,
+                    minimizer_kwargs={"callback": self.scipy_callback},
+                )
+            elif optimization_method == "differential_evolution":
+                ret = differential_evolution(
+                    partial_merit_function,
+                    bounds=bounds,
+                    x0=x_initial,
+                    maxiter=100000,
+                    callback=self.scipy_callback,
+                )
+            elif optimization_method == "basinhopping":
+                # This algorithm does
+                # 1. a random perturbation of the features
+                # 2. then a scipy.minimize
+                # 3. accepts of rejects the new optimum value
+                ret = basinhopping(
+                    partial_merit_function,
+                    x0=x_initial,
+                    callback=self.scipy_callback,
+                    minimizer_kwargs={
+                        "method": "Nelder-Mead",
+                        "bounds": bounds,
+                        "callback": self.scipy_callback,
+                    },
+                )
 
-            def optimize_in_process(
-                optimization_method, partial_merit_function, x_initial, bounds, callback
-            ):
-                # With scipy we cannot do integer optimization
-                if optimization_method == "dual_annealing":
-                    ret = dual_annealing(
-                        partial_merit_function,
-                        bounds=bounds,
-                        callback=self.scipy_callback,
-                        x0=x_initial,
-                        maxiter=10000,
-                        minimizer_kwargs={"callback": self.scipy_callback},
-                    )
-                elif optimization_method == "differential_evolution":
-                    ret = differential_evolution(
-                        partial_merit_function,
-                        bounds=bounds,
-                        x0=x_initial,
-                        maxiter=100000,
-                        callback=self.scipy_callback,
-                    )
-                elif optimization_method == "basinhopping":
-                    # This algorithm does
-                    # 1. a random perturbation of the features
-                    # 2. then a scipy.minimize
-                    # 3. accepts of rejects the new optimum value
-                    ret = basinhopping(
-                        partial_merit_function,
-                        x0=x_initial,
-                        callback=self.scipy_callback,
-                        minimizer_kwargs={
-                            "method": "Nelder-Mead",
-                            "bounds": bounds,
-                            "callback": self.scipy_callback,
-                        },
-                    )
+            elif optimization_method == "brute":
+                # Brute force optimization: only sensible for a low number of
+                # features (e.g., 3). Depending on Ns, the number of points to
+                # try is established  (Ns^(#features) = number of iterations)
+                ret = brute(
+                    partial_merit_function,
+                    ranges=bounds,
+                    Ns=2,
+                    # maxiter = 50000,
+                )
+            elif optimization_method == "shgo":
+                # Doesn't really start
+                ret = shgo(
+                    partial_merit_function,
+                    bounds=bounds,
+                    # maxiter = 50000,
+                )
+            elif optimization_method == "LM":
+                ret = gradient_descent(
+                    partial_merit_function,
+                    x0=x_initial,
+                    bounds=bounds,
+                    callback=self.scipy_callback,
+                )
+            elif optimization_method == "TNC":
+                # Truncated newton method
+                ret = minimize(
+                    partial_merit_function,
+                    x0=x_initial,
+                    bounds=bounds,
+                    method="TNC",  # 41570 after 10000 iterations
+                    jac=lambda x: gradient(self.merit_function, x),
+                    callback=self.scipy_callback,
+                )
+            elif optimization_method == "Nelder-Mead":
+                # Nelder-Mead method
+                ret = minimize(
+                    partial_merit_function,
+                    x0=x_initial,
+                    bounds=bounds,
+                    method="Nelder-Mead",
+                    callback=self.scipy_callback,
+                )
 
-                elif optimization_method == "brute":
-                    # Brute force optimization: only sensible for a low number of
-                    # features (e.g., 3). Depending on Ns, the number of points to
-                    # try is established  (Ns^(#features) = number of iterations)
-                    ret = brute(
-                        partial_merit_function,
-                        ranges=bounds,
-                        Ns=2,
-                        # maxiter = 50000,
-                    )
-                elif optimization_method == "shgo":
-                    # Doesn't really start
-                    ret = shgo(
-                        partial_merit_function,
-                        bounds=bounds,
-                        # maxiter = 50000,
-                    )
-                elif optimization_method == "LM":
-                    ret = gradient_descent(
-                        partial_merit_function,
-                        x0=x_initial,
-                        bounds=bounds,
-                        callback=self.scipy_callback,
-                    )
-                elif optimization_method == "TNC":
-                    # Truncated newton method
-                    ret = minimize(
-                        partial_merit_function,
-                        x0=x_initial,
-                        bounds=bounds,
-                        method="TNC",  # 41570 after 10000 iterations
-                        jac=lambda x: gradient(self.merit_function, x),
-                        callback=self.scipy_callback,
-                    )
-                elif optimization_method == "Nelder-Mead":
-                    # Nelder-Mead method
-                    self.ret = minimize(
-                        partial_merit_function,
-                        x0=x_initial,
-                        bounds=bounds,
-                        method="Nelder-Mead",
-                        callback=callback,
-                    )
-
+            """
             # Wrap the arguments to pass them to the Process
             def worker(
                 optimization_method, partial_merit_function, x_initial, bounds, callback
@@ -891,12 +918,13 @@ class FilterStack:
             )
             p.start()
             p.join()  # Wait for the optimization to complete if necessary
+            """
 
             # The result from the optimization is not necessarily the global
             # result (as e.g. gradients are also calculated that could have a
             # lower merit)
-            self.ret.x = self.optimum_x
-            self.ret.fun_best = self.optimum_merit
+            ret.x = self.optimum_x
+            ret.fun_best = self.optimum_merit
 
             thicknesses, self.layer_order = (
                 self.extract_thickness_and_position_from_features(self.optimum_x)
@@ -932,7 +960,13 @@ class FilterStack:
             self.log_func("Optimized merit value: " + str(self.optimum_merit))
             self.log_func("Number of function evaluations: " + str(ret.nfev))
 
-        return self.ret.x
+        """
+        if key != None:
+            # Close the Redis connection explicitly
+            self.redis_conn.close()
+        """
+
+        return ret.x
 
     def merit_function(self, features, my_filter, lib):
         """
@@ -1053,12 +1087,51 @@ class FilterStack:
         Returns:
         bool: True if the optimization should be stopped, False otherwise.
         """
+        intermediate_result = {
+            "step": self.iteration_no,
+            "merit": f,
+        }
+        self.redis_conn.set(
+            f"current:{self.redis_key}",
+            json.dumps(intermediate_result),
+        )
 
         # Save the current best optimisation values to file
         if f < self.optimum_merit or f == 0:
 
             # in webapp, current_structure will be linked to the session_id
-            self.save_current_design_to_json(self.current_structure.split("/")[-1])
+            if self.redis_key != None:
+                intermediate_result = {
+                    "step": self.iteration_no,
+                    "merit": f,
+                    "current_structure": self.return_current_design_as_json(),
+                }
+                self.redis_conn.set(
+                    f"current_best:{self.redis_key}",
+                    json.dumps(intermediate_result),
+                )
+            else:
+                file_name = self.current_structure.split("/")[-1]
+                temp_json = self.return_current_design_as_json()
+
+                temp_path = os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "temp",
+                    f"{file_name}.json",
+                )
+
+                with open(temp_path, "w") as file:
+                    json.dump(temp_json, file)
+            """
+            if database_entry is not None:
+                # Assuming database_entry is a single SQLAlchemy model instance
+                database_entry.current_structure = self.current_structure
+                database_entry.current_merit = f
+                database_entry.current_iteration = self.iteration_no
+
+                db.session.commit()  # Commit the changes to the database
+            """
+            """
             if self.current_structure != "current_structure":
                 temp_path = os.path.join(
                     os.path.dirname(os.path.realpath(__file__)),
@@ -1071,6 +1144,7 @@ class FilterStack:
                         self.job_id,
                     )
                     pickle.dump(data_to_pickle, file_pickled)
+            """
 
             self.optimum_merit = f
             self.optimum_iteration = self.iteration_no
@@ -1094,6 +1168,18 @@ class FilterStack:
                 )
                 self.log_design_func()
                 self.last_optimum_number = self.optimum_number
+
+        # Implement cancelation depending on the job_cancel_flag in the redis database
+        if self.redis_key != None:
+            cancel_flag = self.redis_conn.get(f"job_cancel_flag:{self.redis_key}")
+
+            if (
+                cancel_flag is not None
+                and cancel_flag.decode("utf-8").lower() == "true"
+            ):
+                # Perform any necessary cleanup here
+                self.stop_flag = True
+                print("CANCELED!")
 
         # If the merit function is close to zero (within the tolerance) or the
         # stop flag is true, stop the optimization.

@@ -1,12 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
 <main>
-    <div class="row align-items-center ">
-        <div class="col-6">
-            <div id="loading" class="spinner-border text-primary" role="status"
-                style="position: absolute; display: none;">
+    <!-- Overlay -->
+    <div id="loading"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999;">
+        <!-- Centered Spinner -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+            <div class="spinner-border text-primary" role="status">
                 <span class="sr-only">Loading...</span>
             </div>
+        </div>
+    </div>
+    <div class="row align-items-center ">
+        <div class="col-6">
+            <!-- <div id="loading" class="spinner-border text-primary" role="status"
+                style="position: absolute; display: none;">
+                <span class="sr-only">Loading...</span>
+            </div> -->
             <div class="row d-flex align-items-center justify-content-center">
                 <div id="heatmap" style="margin-bottom: 5em;"></div>
             </div>
@@ -15,8 +25,7 @@
         <div class="col-6">
             <div style="position: relative;">
                 <div id="DatavsWavelengthPlot"></div>
-                <button id="resetPlot" class="btn btn-primary"
-                    style="position: absolute; top: 40px; right: 0;">Reset
+                <button id="resetPlot" class="btn btn-primary" style="position: absolute; top: 40px; right: 0;">Reset
                     Plot</button>
             </div>
             <div class="row d-flex align-items-center justify-content-center">
@@ -133,7 +142,7 @@
 
 </main>
 {% endblock %}
-    
+
 {% block scripts %}
 <script>
     function plotHeatmap(fig_json, layout, config) {
@@ -158,8 +167,25 @@
             var polarization = document.getElementById("polarization").value;
             var username = retrieveUsername();
             // console.log('You clicked on point (' + x + ', ' + y + ')');
+
             // Trigger the plotting of another plot here
-            socket.emit('plot_xy', { x: x, mode: mode, polarization: polarization, username: username });
+            // Replace socket.emit with an AJAX request
+            fetch('/plot_xy_ajax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ x: x, mode: mode, polarization: polarization, username: username }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Plot XY:', data);
+                    // Handle the response data to plot the new plot
+                    plotXY(data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
         });
     }
 
@@ -223,19 +249,37 @@
     console.log("Data present: ", dataPresent);
     if (dataPresent) {
         username = retrieveUsername();
-        socket.emit('plot', username);
-        socket.on('update_plot', function (data) {
-            plotHeatmap(fig_json, layout, config)
-            // var data = {
-            // x: data.x,
-            // y: data.y,
-            // z: data.z,
-            // colorscale: 'Viridis',
-            // type: 'heatmap',
-            // }
-            // Plotly.newPlot("heatmap", [data], layout, config);
-        });
-    } else {
+        // Define the URL for the Flask endpoint
+        const url = '/plot_data';
+
+        // Prepare the request options for the fetch call
+        const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username })
+        };
+
+        // Make the AJAX request to the Flask endpoint
+        fetch(url, requestOptions)
+            .then(response => response.json()) // Parse the JSON response
+            .then(data => {
+                // Use the received data to plot the heatmap
+                plotHeatmap(data, layout, config);
+                // If you need to use the commented-out Plotly code:
+                // var plotData = {
+                //     x: data.x,
+                //     y: data.y,
+                //     z: data.z,
+                //     colorscale: 'Viridis',
+                //     type: 'heatmap',
+                // };
+                // Plotly.newPlot("heatmap", [plotData], data.layout, data.config);
+            })
+            .catch(error => {
+                console.error('Error fetching plot data:', error);
+            });
+    }
+    else {
         Plotly.newPlot('heatmap', [dummyData], layout, config);
     }
     };
@@ -247,7 +291,6 @@
         var mode = document.getElementById("mode").value;
         var polarization = document.getElementById("polarization").value;
         var azimuthalAngle = document.getElementById("azimuthalAngle").value;
-        // var generalCore = document.getElementById("generalCore").checked;
         var startAngle = document.getElementById("startAngle").value;
         var endAngle = document.getElementById("endAngle").value;
         var stepAngle = document.getElementById("stepAngle").value;
@@ -256,31 +299,48 @@
         var stepWavelength = document.getElementById("stepWavelength").value;
         var username = retrieveUsername();
 
-        socket.emit("calculate_and_plot", {
-            mode: mode,
-            polarization: polarization,
-            azimuthalAngle: azimuthalAngle,
-            startAngle: startAngle,
-            endAngle: endAngle,
-            stepAngle: stepAngle,
-            startWavelength: startWavelength,
-            endWavelength: endWavelength,
-            stepWavelength: stepWavelength,
-            username: username
-        });
-
-        document.getElementById("downloadModalButton").disabled = false;
-
+        fetch('/calculate_and_plot_ajax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                mode: mode,
+                polarization: polarization,
+                azimuthalAngle: azimuthalAngle,
+                startAngle: startAngle,
+                endAngle: endAngle,
+                stepAngle: stepAngle,
+                startWavelength: startWavelength,
+                endWavelength: endWavelength,
+                stepWavelength: stepWavelength,
+                username: username
+            }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Calculation Complete:', data);
+                // Hide the spinner
+                document.getElementById('loading').style.display = 'none';
+                // Update the plot with the new data
+                plotHeatmap(data, layout, config);
+                // Enable the download button
+                document.getElementById("downloadModalButton").disabled = false;
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                // Hide the spinner
+                document.getElementById('loading').style.display = 'none';
+            });
     });
 
 
-
-    socket.on("update_plot", function (fig_json) {
-        plotHeatmap(fig_json, layout, config);
-        // Hide the spinner
-        document.getElementById('loading').style.display = 'none';
-
-    });
+    // socket.on("update_plot", function (fig_json) {
+    // plotHeatmap(fig_json, layout, config);
+    // Hide the spinner
+    // document.getElementById('loading').style.display = 'none';
+    // 
+    // });
 
     var trace1 = {
         x: [],  // x data
@@ -325,7 +385,7 @@
 
     var plottedAngles = {};
 
-    socket.on('update_xy_plot', function (data) {
+    function plotXY(data) {
         // Check if this angle has already been plotted
         if (plottedAngles[data.name]) {
             return;
@@ -343,7 +403,7 @@
 
         // Mark this angle as plotted
         plottedAngles[data.name] = true;
-    });
+    };
 
     document.getElementById('resetPlot').addEventListener('click', function () {
         Plotly.newPlot('DatavsWavelengthPlot', [], layout_xy);

@@ -77,4 +77,67 @@ Install python requirements using
 pip install -r requirements.txt
 ```
 
+## Database
+
+### Initialize DB
+
+Execute from TMM top folder
+
+```console
+export PYTHONPATH=$PYTHONPATH:./src
+flask --app gui init-db
+```
+
+### Structure
+
+database.db
+
+users table
+
+| id  | user    | pw  |
+| --- | ------- | --- |
+| 1   | julian  | xx  |
+| 2   | florian | xx  |
+
+jobs table
+
+| opt_id | job_id | time_stamp                | username | filter_name    | optimization_method | initial_json | current_data | steps | initial_merit | current_merit |
+| ------ | ------ | ------------------------- | -------- | -------------- | ------------------- | ------------ | ------------ | ----- | ------------- | ------------- |
+| 1      | 1      | 2024-07-09 09:28:19.12327 | julian   | test           | None                | {dict}       |              |       |               |               |
+| 2      | 1      | 2024-07-09 09:30:10.12327 | julian   | bandpass_660nm | Nelder-Mead         | {dict}       | {dict}       | 13240 | 13000         | 500           |
+
+- The job_id is the 1:n connector between the user table and the jobs table.
+
+## Task Scheduling
+
+We're using a redis server that is started on systems with systemctl
+automatically after installation (sudo apt-get install redis-server).
+
+On WSL, however, we have to manually start it using "redis-server" and confirm
+that it is running using redis-cli ping which should result in the response
+"PONG".
+
+In addition to redis server we are using the rq queuing system that is more
+lightweight than Celery and easier to use for task scheduling, queuing etc.
+
+Start an rq worker to actually execute the task within the "src" folder while
+having venv activated:
+
+```console
+rq worker
+```
+
+Also I think it has to be reloaded when the code is changed similarly to the
+flask application itself to work.
+
+### Job Management
+
+Rq jobs can be managed via the console or in the webbased interface: https://python-rq.org/docs/monitoring/
+
+It would be great if we had implement this monitor in a separate tab at least for admins.
+
+### GUI - Main Interaction
+
+The following is how the GUI interacts with the
+
 ## Optimization

@@ -12,20 +12,38 @@
 using namespace Eigen;
 using json = nlohmann::json;
 
+std::filesystem::path getBasePath()
+{
+    auto currentPath = std::filesystem::current_path();
+    // Check if current execution is from /TMM/src
+    if (currentPath.filename() == "src")
+    {
+        return currentPath.parent_path(); // Move up to /TMM
+    }
+    // Otherwise, assume execution from /TMM or handle other cases as needed
+    return currentPath;
+}
+
+std::filesystem::path getMaterialsPath(const std::string &filename)
+{
+    auto basePath = getBasePath();
+    return basePath / "materials" / (filename + ".csv");
+}
+
 class CSVParser
 {
 public:
-
-    std::vector<tk::spline> permittivityFromIndex(const tk::spline& real_index_spline, const tk::spline& imag_index_spline, const std::vector<double>& wavelength)
+    std::vector<tk::spline> permittivityFromIndex(const tk::spline &real_index_spline, const tk::spline &imag_index_spline, const std::vector<double> &wavelength)
     {
         std::vector<double> real_values, imag_values;
 
-        for (double w : wavelength) {
+        for (double w : wavelength)
+        {
             double n = real_index_spline(w);
             double k = imag_index_spline(w);
 
-            real_values.push_back(n*n - k*k);
-            imag_values.push_back(2*n*k);
+            real_values.push_back(n * n - k * k);
+            imag_values.push_back(2 * n * k);
         }
 
         // Create the new splines
@@ -36,12 +54,13 @@ public:
         return permittivity_splines;
     }
 
-    std::pair<std::vector<tk::spline>,bool> importIndexFromFile(const std::string &filename)
+    std::pair<std::vector<tk::spline>, bool> importIndexFromFile(const std::string &filename)
     {
         bool general_material;
 
-        std::string fullfilename = filename + ".csv";
-        std::filesystem::path fullpath = std::filesystem::current_path().parent_path() / "materials" / fullfilename;
+        // std::string fullfilename = filename + ".csv";
+        // std::filesystem::path fullpath = std::filesystem::current_path().parent_path() / "materials" / fullfilename;
+        std::filesystem::path fullpath = getMaterialsPath(filename);
         std::ifstream file(fullpath);
 
         std::vector<double> wavelength;
@@ -112,15 +131,15 @@ public:
             tk::spline real_y_spline = permittivities_y_spline[0];
             tk::spline imag_y_spline = permittivities_y_spline[1];
 
-            std::vector<tk::spline> permittivities_z_spline = permittivityFromIndex(nz_spline, kz_spline, wavelength);          
+            std::vector<tk::spline> permittivities_z_spline = permittivityFromIndex(nz_spline, kz_spline, wavelength);
             tk::spline real_z_spline = permittivities_z_spline[0];
             tk::spline imag_z_spline = permittivities_z_spline[1];
 
             std::vector<tk::spline> permittivity_splines = {real_x_spline, imag_x_spline, real_y_spline, imag_y_spline, real_z_spline, imag_z_spline};
 
-            //returns the permittivity tensors and not the refractive indices
-            
-            return std::make_pair(permittivity_splines,general_material);
+            // returns the permittivity tensors and not the refractive indices
+
+            return std::make_pair(permittivity_splines, general_material);
         }
 
         if (columnCount == 5)
@@ -140,7 +159,6 @@ public:
                 nz.push_back(std::stod(field));
                 std::getline(ss, field, '\t');
                 kz.push_back(std::stod(field));
-     
             }
 
             tk::spline nx_spline(wavelength, nx); // ordinary extraordinary only
@@ -158,15 +176,15 @@ public:
             tk::spline real_x_spline = permittivities_x_spline[0];
             tk::spline imag_x_spline = permittivities_x_spline[1];
 
-            std::vector<tk::spline> permittivities_z_spline = permittivityFromIndex(nz_spline, kz_spline, wavelength);          
+            std::vector<tk::spline> permittivities_z_spline = permittivityFromIndex(nz_spline, kz_spline, wavelength);
             tk::spline real_z_spline = permittivities_z_spline[0];
             tk::spline imag_z_spline = permittivities_z_spline[1];
 
             std::vector<tk::spline> permittivity_splines = {real_x_spline, imag_x_spline, real_x_spline, imag_x_spline, real_z_spline, imag_z_spline};
 
-            //returns the permittivity tensors and not the refractive indices
-            
-            return std::make_pair(permittivity_splines,general_material);
+            // returns the permittivity tensors and not the refractive indices
+
+            return std::make_pair(permittivity_splines, general_material);
         }
 
         if (columnCount == 3)
@@ -204,22 +222,21 @@ public:
 
             tk::spline real_y_spline = permittivities_x_spline[0];
             tk::spline imag_y_spline = permittivities_x_spline[1];
-          
+
             tk::spline real_z_spline = permittivities_x_spline[0];
             tk::spline imag_z_spline = permittivities_x_spline[1];
 
             std::vector<tk::spline> permittivity_splines = {real_x_spline, imag_x_spline, real_y_spline, imag_y_spline, real_z_spline, imag_z_spline};
 
-            //returns the permittivity tensors and not the refractive indices
-            
-            return std::make_pair(permittivity_splines,general_material);
+            // returns the permittivity tensors and not the refractive indices
+
+            return std::make_pair(permittivity_splines, general_material);
         }
 
-        tk::spline default_spline({0},{0});
-        std::vector<tk::spline> default_splines(1,default_spline);
-        return std::make_pair(default_splines,false);       
+        tk::spline default_spline({0}, {0});
+        std::vector<tk::spline> default_splines(1, default_spline);
+        return std::make_pair(default_splines, false);
     }
-        
 };
 
 struct CalculationInfo
@@ -262,24 +279,24 @@ struct CalculationInfo
         std::vector<double> structure_thicknesses,
         std::string incidentMediumMaterial,
         std::string exitMediumMaterial) : calculation_type(calculation_type),
-                       polarAngleMin(polarAngleMin),
-                       polarAngleMax(polarAngleMax),
-                       polarAngleStep(polarAngleStep),
-                       azimAngleMin(azimAngleMin),
-                       azimAngleMax(azimAngleMax),
-                       azimAngleStep(azimAngleStep),
-                       wavelengthMin(wavelengthMin),
-                       wavelengthMax(wavelengthMax),
-                       wavelengthStep(wavelengthStep),
-                       polarization(polarization),
-                       structure_materials(structure_materials),
-                       incoherent(incoherent),
-                       structure_thicknesses(structure_thicknesses),
-                       incidentMediumMaterial(incidentMediumMaterial),
-                       exitMediumMaterial(exitMediumMaterial) {}
+                                          polarAngleMin(polarAngleMin),
+                                          polarAngleMax(polarAngleMax),
+                                          polarAngleStep(polarAngleStep),
+                                          azimAngleMin(azimAngleMin),
+                                          azimAngleMax(azimAngleMax),
+                                          azimAngleStep(azimAngleStep),
+                                          wavelengthMin(wavelengthMin),
+                                          wavelengthMax(wavelengthMax),
+                                          wavelengthStep(wavelengthStep),
+                                          polarization(polarization),
+                                          structure_materials(structure_materials),
+                                          incoherent(incoherent),
+                                          structure_thicknesses(structure_thicknesses),
+                                          incidentMediumMaterial(incidentMediumMaterial),
+                                          exitMediumMaterial(exitMediumMaterial) {}
 };
 
-CalculationInfo loadCalculationInfo(const std::string& json_text)
+CalculationInfo loadCalculationInfo(const std::string &json_text)
 {
 
     json calculation_order = json::parse(json_text);
@@ -303,8 +320,7 @@ CalculationInfo loadCalculationInfo(const std::string& json_text)
         incoherent,
         structure_thicknesses,
         calculation_order["incident_medium"],
-        calculation_order["exit_medium"]
-        );
+        calculation_order["exit_medium"]);
 
     return calculation_info;
 }

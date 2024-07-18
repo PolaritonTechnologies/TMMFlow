@@ -3,6 +3,16 @@
 <main class="container-custom">
     <div class="container-fluid">
         <div class="row align-items-center">
+            <!-- Overlay -->
+            <div id="loading"
+                style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999;">
+                <!-- Centered Spinner -->
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            </div>
             <!-- Part 1 -->
             <div class="col-6">
                 <div class="row mb-3">
@@ -11,44 +21,43 @@
                     <!-- <span class="sr-only"></span> -->
                     <!-- </div> -->
                     <div class="col-10 offset-1">
-                        <form action="{{ url_for('optimize') }}" method="post">
-                            <label for="selectedMethods">Selected Optimization Methods</label>
-                            <div id="selectedMethods" class="list-group mb-3"></div>
-                            <label for="optimizationMethod">Optimization Method</label>
-                            <div class="form-group row">
-                                <div class="col-sm-10">
-                                    <select class="form-control" id="optimizationMethod" name="optimizationMethod">
-                                        <option value="LM">Levenberg-Marquardt (Gradient Descent)</option>
-                                        <option value="TNC">Truncated Newton (Gradient Descent)</option>
-                                        <!-- <option value="NCG">Newton CG (Gradient Descent)</option> -->
-                                        <option value="Nelder-Mead">Nelder-Mead (Direct Search)</option>
-                                        <option value="dual_annealing">Dual annealing</option>
-                                        <option value="basinhopping">Basin Hopping</option>
-                                        <option value="differential_evolution">Differential Evolution</option>
-                                    </select>
-                                </div>
-                                <div class="col-sm-1">
-                                    <button type="button"
-                                        class="btn btn-success rounded-circle d-flex align-items-center justify-content-center"
-                                        style="width: 1em; height: 1em; padding: 1em;" id="addOptButton">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
+                        <label for="selectedMethods">Selected Optimization Methods</label>
+                        <div id="selectedMethods" class="list-group mb-3"></div>
+                        <label for="optimizationMethod">Optimization Method</label>
+                        <div class="form-group row">
+                            <div class="col-sm-10">
+                                <select class="form-control" id="optimizationMethod" name="optimizationMethod">
+                                    <option value="LM">Levenberg-Marquardt (Gradient Descent)</option>
+                                    <option value="TNC">Truncated Newton (Gradient Descent)</option>
+                                    <!-- <option value="NCG">Newton CG (Gradient Descent)</option> -->
+                                    <option value="Nelder-Mead">Nelder-Mead (Direct Search)</option>
+                                    <option value="dual_annealing">Dual annealing</option>
+                                    <option value="basinhopping">Basin Hopping</option>
+                                    <option value="differential_evolution">Differential Evolution</option>
+                                </select>
                             </div>
-                        </form>
+                            <div class="col-sm-1">
+                                <button type="button"
+                                    class="btn btn-success rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 1em; height: 1em; padding: 1em;" id="addOptButton">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- </form> -->
                     </div>
                 </div>
                 <div class="row mb-3">
                     <div class="col-5 offset-1">
                         <form method="post" class="w-100">
-                            <button type="submit" class="btn btn-primary w-100" id="startOptimization" {{ 'disabled'
-                                if optimization_running }}>Start Optimization</button>
+                            <button type="submit" class="btn btn-primary w-100" id="startOptimization" {{ 'disabled' if
+                                optimization_running }}>Start Optimization</button>
                         </form>
                     </div>
                     <div class="col-5">
                         <form method="post" class="w-100">
-                            <button type="submit" class="btn btn-danger w-100" id="stopOptimization" {{ 'disabled'
-                                if not optimization_running }}>Stop Optimization</button>
+                            <button type="submit" class="btn btn-danger w-100" id="stopOptimization" {{ 'disabled' if
+                                not optimization_running }}>Stop Optimization</button>
                         </form>
                     </div>
                 </div>
@@ -58,7 +67,7 @@
             <div class="col-6">
                 <section class="row justify-content-center">
                     <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
-                        <div class="container"
+                        <div class="container" id="filter_representation"
                             style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
                             {% if num_boxes and colors is defined %}
                             {% for i in range(num_boxes)|reverse %}
@@ -138,100 +147,131 @@
     var data = [trace];
 
     Plotly.newPlot('merit_graph', data, layout);
+    var updateIntervalId = null;
 
     document.getElementById('startOptimization').addEventListener('click', function (e) {
         e.preventDefault();
 
-        // Get the elements from selectedMethods
+        // Show the spinner
+        document.getElementById('loading').style.display = 'block';
+
+        Plotly.restyle('merit_graph', { x: [[]], y: [[]] }, [0]);
+
+        // graphDiv.data = [];
+
+
         var selectedMethods = $('#selectedMethods').children();
 
-        // Check if selectedMethods has at least one child
         if (selectedMethods.length > 0) {
             var optimizationMethod = selectedMethods.map(function () {
                 var text = $(this).text();
-                // Remove leading number and trailing dash
                 return text.replace(/^\d+|-$/g, '');
             }).get();
-            console.log(optimizationMethod);
+            // console.log(optimizationMethod);
 
-            // Emit a custom event with the selected optimization method
-            var username = retrieveUsername();
-            socket.emit('start_optimization', { optimizationMethod: optimizationMethod, username: username});
-            document.getElementById("stopOptimization").disabled = false;
+            var dataToSend = { optimizationMethod: optimizationMethod };
+
+            $.ajax({
+                type: "POST",
+                url: "/start_optimization",
+                contentType: "application/json",
+                data: JSON.stringify(dataToSend),
+                success: function (response) {
+                    // console.log(response.message);
+                    // Show the spinner
+                    document.getElementById("stopOptimization").disabled = false;
+
+                    update_merit_graph(response.step, response.merit);
+
+                    // Wait another second until the loading spinner is hidden
+                    setTimeout(function () {
+                        document.getElementById('loading').style.display = 'none';
+                    }, 4000);
+
+
+                    // Start periodic updates
+                    if (updateIntervalId !== null) {
+                        clearInterval(updateIntervalId); // Clear existing interval if any
+                    }
+                    updateIntervalId = setInterval(function () {
+                        $.ajax({
+                            type: "GET",
+                            url: "/update_optimization", // Update this URL as needed
+                            success: function (updateResponse) {
+                                // Update the page with the response
+                                // This could involve updating a graph, table, or status text
+                                // console.log("Update received:", updateResponse);
+                                update_merit_graph(updateResponse.best_step, updateResponse.best_merit);
+                                updateFilterRepresentation(updateResponse.num_boxes, updateResponse.colors, updateResponse.heights, updateResponse.number_unique_materials, updateResponse.unique_materials, updateResponse.unique_colors, updateResponse.incoherent);
+
+                                // Update iterations and merit display
+                                $('#iterations').html('<strong>Iterations:</strong> ' + updateResponse.current_step);
+                                $('#merit').html('<strong>Latest Merit:</strong> ' + updateResponse.current_merit.toFixed(2));
+
+                                // Check for a specific response to stop updates
+                                if (updateResponse.finished) {
+                                    clearInterval(updateIntervalId); // Stop the periodic updates
+                                    console.log("Optimization completed. Stopping updates.");
+                                }
+
+                                // Example: $('#status').text(updateResponse.status);
+                            },
+                            error: function (xhr, status, error) {
+                                console.error("Error updating optimization:", error);
+                            }
+                        });
+                    }, 1000); // Update every 2000 milliseconds (2 seconds)
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error starting optimization:", error);
+                }
+            });
         } else {
             console.log("No methods selected");
         }
     });
 
     document.getElementById('stopOptimization').addEventListener('click', function (e) {
-        // Prevent form submission and page reload
-        e.preventDefault();
-        // Remove the spinner 
-        // document.getElementById('loadingOpt').style.display = 'none';
-        socket.emit('stop_optimization', {username:username});
-    });
+        e.preventDefault(); // Prevent form submission and page reload
 
-    socket.on('update_merit_graph', function (data) {
-    // Access the traces array correctly from the data object
-    var traces = data.traces;
-    var username = data.username;
+        // Assuming job_id is stored in a variable named `jobId`
+        // const jobId = document.getElementById('jobIdElement').value; // Or however you're storing/accessing the job ID
 
-    // Only perform operation if the username matches the current username on the page
-    if (username !== retrieveUsername()) {
-        return;
-    }
-
-    // Attempt to parse the traces if it's a string
-    if (typeof traces === 'string') {
-        try {
-            traces = JSON.parse(traces);
-        } catch (error) {
-            console.error('Error parsing traces:', error);
-            return; // Exit the function if parsing fails
-        }
-    }
-
-    // Check if traces is now an array
-    if (!Array.isArray(traces)) {
-        console.error('Expected traces to be an array, but got:', traces);
-        return; // Exit the function if traces is not an array
-    }
-
-    var data = traces.map(function (trace) {
-        return {
-            x: trace.x,
-            y: trace.y,
-            mode: 'lines',
-            line: {
-                color: trace.color
+        fetch('/stop_optimization', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
             },
-            name: trace.name
-        };
+            body: JSON.stringify({}),
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                // Handle success, e.g., show a message to the user
+                // Optionally, remove the spinner or update UI
+                // document.getElementById('loadingOpt').style.display = 'none';
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                // Handle error, e.g., show an error message to the user
+            });
     });
 
-    Plotly.newPlot('merit_graph', data, layout);
-    });
 
-    socket.on('update_filter_representation', function (data) {
-        var username = data.username;
-        // Only perform operation if the username matches the current username on the page
-        if (username !== retrieveUsername()) {
-            return;
-        }
+    function update_merit_graph(step, merit) {
+        // Assuming 'merit_graph' is the ID of the Plotly graph element
+        // var graphDiv = document.getElementById('merit_graph');
 
-        var filter_representation = JSON.parse(data.filter_json);
+        // Graph exists, update it
+        Plotly.extendTraces('merit_graph', {
+            x: [[step]], // Wrap in two arrays because Plotly.extendTraces expects an array of arrays
+            y: [[merit]] // Same as above
+        }, [0]); // [0] indicates we're updating the first trace
+    }
 
-        // Access the values
-        var num_boxes = filter_representation.num_boxes;
-        var colors = filter_representation.colors;
-        var heights = filter_representation.heights;
-        var number_unique_materials = filter_representation.number_unique_materials;
-        var unique_materials = filter_representation.unique_materials;
-        var unique_colors = filter_representation.unique_colors;
-        var incoherent = filter_representation.incoherent;
-
+    function updateFilterRepresentation(num_boxes, colors, heights, number_unique_materials, unique_materials, unique_colors, incoherent) {
         // Get the container element
-        var container = document.querySelector('.container');
+        var container = document.querySelector('#filter_representation');
 
         // Remove existing boxes
         while (container.firstChild) {
@@ -251,17 +291,8 @@
             }
             container.appendChild(div);
         }
-        // Create substrate box
-        // var substrateBox = document.createElement('div');
-        // substrateBox.className = 'substrate_box';
-        // substrateBox.style.backgroundColor = '#A9A9A9'; // Change this to the desired color of the substrate box
-        // substrateBox.style.height = '50px'; // Change this to the desired height of the substrate box
-        // container.appendChild(substrateBox);
 
-        $('#iterations').html('<strong>Iterations:</strong> ' + data.iterations);
-        $('#merit').html('<strong>Latest Merit:</strong> ' + data.merit);
-
-    });
+    }
 
 </script>
 
@@ -280,6 +311,7 @@
         updateNumbers();
     });
 
+
     $('#selectedMethods').sortable({
         stop: function () {
             updateNumbers();
@@ -293,4 +325,38 @@
     }
     $('#selectedMethods').sortable();
 </script>
+
+{% if job_status == "running" %}
+<script>
+    document.getElementById("stopOptimization").disabled = false;
+    function setupPeriodicUpdates() {
+        var updateIntervalId = setInterval(function () {
+            $.ajax({
+                type: "GET",
+                url: "/update_optimization", // Update this URL as needed
+                success: function (updateResponse) {
+                    // Update the page with the response
+                    update_merit_graph(updateResponse.best_step, updateResponse.best_merit);
+                    updateFilterRepresentation(updateResponse.num_boxes, updateResponse.colors, updateResponse.heights, updateResponse.number_unique_materials, updateResponse.unique_materials, updateResponse.unique_colors, updateResponse.incoherent);
+
+                    // Update iterations and merit display
+                    $('#iterations').html('<strong>Iterations:</strong> ' + updateResponse.current_step);
+                    $('#merit').html('<strong>Latest Merit:</strong> ' + updateResponse.current_merit.toFixed(2));
+
+                    // Check for a specific response to stop updates
+                    if (updateResponse.finished) {
+                        clearInterval(updateIntervalId); // Stop the periodic updates
+                        console.log("Optimization completed. Stopping updates.");
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error updating optimization:", error);
+                }
+            });
+        }, 1000); // Update every 2000 milliseconds (2 seconds)
+    }
+
+    setupPeriodicUpdates();
+</script>
+{% endif %}
 {% endblock %}

@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <title>Transfer Matrix Method Simulations</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
     <!-- This here is for asynchronous plotting -->
-    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <!-- Include Bootstrap -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
@@ -28,6 +29,10 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.2/math.min.js"></script>
+
+    {% block header %}
+    <!-- Content overridden by child templates goes here -->
+    {% endblock %}
 </head>
 
 <body>
@@ -43,26 +48,27 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
                 <li class="nav-item {{ 'active' if request.endpoint == 'stack' else '' }}">
-                    <a class="nav-link" href="{{ url_for('stack') }}">Stack</a>
+                    <a class="nav-link" href="{{ url_for('stack_bp.stack') }}">Stack</a>
                 </li>
                 <li class="nav-item {{ 'active' if request.endpoint == 'simulate' else '' }}">
-                    <a class="nav-link" href="{{ url_for('simulate') }}">Simulate</a>
+                    <a class="nav-link" href="{{ url_for('simulate_bp.simulate') }}">Simulate</a>
                 </li>
                 <li class="nav-item {{ 'active' if request.endpoint == 'optimize' else '' }}">
-                    <a class="nav-link" href="{{ url_for('optimize') }}">Optimize</a>
+                    <a class="nav-link" href="{{ url_for('optimize_bp.optimize') }}">Optimize</a>
                 </li>
                 <li class="nav-item {{ 'active' if request.endpoint == 'materials' else '' }}">
-                    <a class="nav-link" href="{{ url_for('materials') }}">Materials</a>
+                    <a class="nav-link" href="{{ url_for('materials_bp.materials') }}">Materials</a>
                 </li>
             </ul>
             <div class="ml-auto">
-            <span class="navbar-text">
-                {% if current_user.is_authenticated %}
-                    Logged in as: {{ current_user.username }} - <a href="{{ url_for('logout') }}" style="text-decoration: underline dashed; color: blue; text-underline-offset: 3px;">Logout</a>
-                {% else %}
+                <span class="navbar-text">
+                    {% if current_user.is_authenticated %}
+                    Logged in as: {{ current_user.username }} - <a href="{{ url_for('auth.logout') }}"
+                        style="text-decoration: underline dashed; color: blue; text-underline-offset: 3px;">Logout</a>
+                    {% else %}
                     Not logged in.
-                {% endif %}
-            </span>
+                    {% endif %}
+                </span>
             </div>
         </div>
     </nav>
@@ -72,34 +78,53 @@
     {% endblock %}
 
 </body>
+
 </html>
 <footer>
     <p>© 2024 Ouga</p>
 </footer>
 <!-- Feeds context to the socket -->
 <script>
-var socket = io.connect("localhost:5000");
     function sendUsername() {
-        // Extract the username from the navbar-text span
         const navbarText = document.querySelector('.navbar-text').textContent;
-        // Assuming the format is "Logged in as: username - Logout"
         const usernamePrefix = "Logged in as: ";
         const usernameSuffix = " - Logout";
         let username = navbarText.includes(usernamePrefix) ? navbarText.split(usernamePrefix)[1].split(usernameSuffix)[0] : null;
-    
+
         if (!username) {
             console.error('No username found or user not logged in.');
             return;
-        }  
-        var socket = io.connect("localhost:5000"); //for testing
-        // var socket = io.connect('http://134.95.47.151/'); // Adjust the URL as necessary    
-        socket.emit('user_login', {username: username});
-    } 
-    document.addEventListener('DOMContentLoaded', function() {
-    const buttons = document.querySelectorAll('button'); // Selects all button elements
-    buttons.forEach(button => {
-        button.addEventListener('click', sendUsername);
-    });
+        }
+
+        const url = "/handle_send_username";
+
+        const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username })
+        };
+
+        fetch(url, requestOptions)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                // Check if the response headers contain 'application/json' before parsing
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return response.json(); // Parse it as JSON
+                } else {
+                    throw new Error('Response not JSON');
+                }
+            })
+            .then(data => console.log('Success:', data))
+            .catch(error => console.error('Error:', error));
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const buttons = document.querySelectorAll('button'); // Selects all button elements
+        buttons.forEach(button => {
+            button.addEventListener('click', sendUsername);
+        });
     });
     function retrieveUsername() {
         const navbarText = document.querySelector('.navbar-text').textContent;

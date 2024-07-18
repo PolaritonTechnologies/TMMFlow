@@ -119,7 +119,7 @@
                 {% endfor %}
                 {% endif %}
             </div>
-            <form action="{{ url_for('reset_filter') }}" method="post" enctype="multipart/form-data"
+            <form action="{{ url_for('stack_bp.reset_filter') }}" method="post" enctype="multipart/form-data"
                 class="ml-3 d-flex align-items-end" style="margin-top:2em;">
                 <button type="submit" class="btn btn-danger" value="resetFilter">Reset Filter</button>
             </form>
@@ -254,9 +254,9 @@
                                 style="margin-bottom: 1em;">Simplify</button>
                             <button id="flip_stack" type="button" class="btn btn-info" style="margin-bottom: 1em;">Flip
                                 Stack</button>
-                            <button id="copy_flip_stack" type="button" class="btn btn-primary"
-                                style="margin-bottom: 1em;">Copy-Flip
-                                Stack</button>
+                            <!-- <button id="copy_flip_stack" type="button" class="btn btn-primary" -->
+                            <!-- style="margin-bottom: 1em;">Copy-Flip -->
+                            <!-- Stack</button> -->
                         </div>
                     </div>
                     <table id="layers" class="table">
@@ -352,7 +352,7 @@
                                     </select>
                                 </td>
                                 <td>
-                                    <input type="text" class="form-control" pattern="^[\d+\-*/.,\[\] ]+$"
+                                    <input type="text" class="form-control" pattern="^[0-9+\/*.,[\] \-]+$"
                                         title="Only [ ] , . - + / * or numbers are allowed."
                                         value="{{ default_values.structure_thicknesses[i] }}"
                                         onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.value = parseFloat(math.evaluate(this.value)).toFixed(2);}">
@@ -1302,11 +1302,7 @@
         var fileType = document.getElementById("fileType").value;
         var fileEnding = document.getElementById("fileEnding").value;
 
-        if (fileType === "Initial") {
-            window.location.href = '/download?fileEnding=' + fileEnding;
-        } else if (fileType === "Optimized") {
-            window.location.href = '/download_current_optimum_file?fileEnding=' + fileEnding;
-        }
+        window.location.href = '/download?fileType=' + fileType + '&fileEnding=' + fileEnding;
     });
     $(document).ready(function () {
         $('.select2').select2({
@@ -1459,34 +1455,36 @@
             row.cells[0].textContent = rowNumber;
         });
     });
-    document.getElementById('copy_flip_stack').addEventListener('click', function () {
-        var table = document.getElementById('layers');
-        var tbody = table.tBodies[0];
-        var cloneTbody = document.createElement('tbody');
 
-        // Get all rows as an array
-        var rows = Array.from(tbody.rows);
+    // document.getElementById('copy_flip_stack').addEventListener('click', function () {
+    //     var table = document.getElementById('layers');
+    //     var tbody = table.tBodies[0];
+    //     var cloneTbody = document.createElement('tbody');
 
-        // Reverse the rows in the original tbody and clone them, excluding the incoherent layer
-        rows.reverse().forEach(function (row) {
-            var incoherentElement = row.querySelector('.incoherent');
-            if (!incoherentElement || incoherentElement.value !== 'true') {
-                cloneTbody.appendChild(row.cloneNode(true));
-            }
-        });
+    //     // Get all rows as an array
+    //     var rows = Array.from(tbody.rows);
 
-        // Add cloneTbody to table
-        table.appendChild(cloneTbody);
+    //     // Reverse the rows in the original tbody and clone them, excluding the incoherent layer
+    //     rows.reverse().forEach(function (row) {
+    //         var incoherentElement = row.querySelector('.incoherent');
+    //         if (!incoherentElement || incoherentElement.value !== 'true') {
+    //             cloneTbody.appendChild(row.cloneNode(true));
+    //         }
+    //     });
 
-        // Update row numbers after the flip
-        var tbody = table.tBodies[0];
-        var totalRows = tbody.rows.length;
-        Array.from(tbody.rows).forEach(function (row, index) {
-            var rowNumber = totalRows - index;
-            row.dataset.rowNumber = rowNumber;
-            row.cells[0].textContent = rowNumber;
-        });
-    });
+    //     // Add cloneTbody to table
+    //     table.appendChild(cloneTbody);
+
+    //     // Update row numbers after the flip
+    //     var tbody = table.tBodies[0];
+    //     var totalRows = tbody.rows.length;
+    //     Array.from(tbody.rows).forEach(function (row, index) {
+    //         var rowNumber = totalRows - index;
+    //         row.dataset.rowNumber = rowNumber;
+    //         row.cells[0].textContent = rowNumber;
+    //     });
+    // });
+
 
     document.getElementById('simplify_stack').addEventListener('click', function () {
         var table = document.getElementById('layers');
