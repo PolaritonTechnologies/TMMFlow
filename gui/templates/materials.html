@@ -14,15 +14,15 @@
             <div style="margin-bottom: 2em;">
                 <button class="btn btn-primary form-control" id="downloadButton">Download</button>
             </div>
-            <p> Upload new material</p>
-            <input type="file" id="fileUpload" style="display: none;" />
-            <button class="btn btn-primary" id="uploadButton">Upload</button>
-            <div class="row d-flex justify-content-center align-items-center">
-                <button class="btn btn-success" id="acceptButton"
-                    style="display: none; margin-top: 1em; margin-right: 1em;">Accept</button>
-                <button class="btn btn-danger" id="rejectButton"
-                    style="display: none; margin-top: 1em; margin-left: 1em;">Reject</button>
-            </div>
+            <!-- <p> Upload new material</p> -->
+            <!-- <input type="file" id="fileUpload" style="display: none;" /> -->
+            <!-- <button class="btn btn-primary" id="uploadButton">Upload</button> -->
+            <!-- <div class="row d-flex justify-content-center align-items-center"> -->
+            <!-- <button class="btn btn-success" id="acceptButton" -->
+            <!-- style="display: none; margin-top: 1em; margin-right: 1em;">Accept</button> -->
+            <!-- <button class="btn btn-danger" id="rejectButton" -->
+            <!-- style="display: none; margin-top: 1em; margin-left: 1em;">Reject</button> -->
+            <!-- </div> -->
         </div>
         <div class="col-8" id="plotDiv"></div>
     </div>
@@ -125,69 +125,69 @@
             });
     });
 
-    document.getElementById('uploadButton').addEventListener('click', function () {
-        document.getElementById('fileUpload').click();
-    });
+    // document.getElementById('uploadButton').addEventListener('click', function () {
+    // document.getElementById('fileUpload').click();
+    // });
 
-    document.getElementById('fileUpload').addEventListener('change', function () {
-        var file = this.files[0];
-        var formData = new FormData();
-        formData.append('file', file);
+    // document.getElementById('fileUpload').addEventListener('change', function () {
+    //     var file = this.files[0];
+    //     var formData = new FormData();
+    //     formData.append('file', file);
 
-        fetch('/upload_material', {
-            method: 'POST',
-            body: formData
-        }).then(response => {
-            if (response.ok) {
-                response.text().then(filename => {
+    //     fetch('/upload_material', {
+    //         method: 'POST',
+    //         body: formData
+    //     }).then(response => {
+    //         if (response.ok) {
+    //             response.text().then(filename => {
 
-                    // Show the accept and reject buttons
-                    document.getElementById('acceptButton').style.display = 'inline';
-                    document.getElementById('rejectButton').style.display = 'inline';
+    //                 // Show the accept and reject buttons
+    //                 document.getElementById('acceptButton').style.display = 'inline';
+    //                 document.getElementById('rejectButton').style.display = 'inline';
 
-                    // Add click event listeners to the accept and reject buttons
-                    document.getElementById('acceptButton').addEventListener('click', function () {
-                        fetch('/accept', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
-                            },
-                            body: 'filename=' + encodeURIComponent(filename)
-                        }).then(response => {
-                            if (response.ok) {
-                                console.log('File accepted');
-                            } else {
-                                console.error('File acceptance failed');
-                            }
-                        });
+    //                 // Add click event listeners to the accept and reject buttons
+    //                 document.getElementById('acceptButton').addEventListener('click', function () {
+    //                     fetch('/accept', {
+    //                         method: 'POST',
+    //                         headers: {
+    //                             'Content-Type': 'application/x-www-form-urlencoded'
+    //                         },
+    //                         body: 'filename=' + encodeURIComponent(filename)
+    //                     }).then(response => {
+    //                         if (response.ok) {
+    //                             console.log('File accepted');
+    //                         } else {
+    //                             console.error('File acceptance failed');
+    //                         }
+    //                     });
 
-                        // Hide the accept and reject buttons
-                        document.getElementById('acceptButton').style.display = 'none';
-                        document.getElementById('rejectButton').style.display = 'none';
-                    });
-                    document.getElementById('rejectButton').addEventListener('click', function () {
-                        fetch('/reject', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
-                            },
-                            body: 'filename=' + encodeURIComponent(filename)
-                        }).then(response => {
-                            if (response.ok) {
-                                console.log('File rejected');
-                            } else {
-                                console.error('File rejection failed');
-                            }
-                        });
-                        // Hide the accept and reject buttons
-                        document.getElementById('acceptButton').style.display = 'none';
-                        document.getElementById('rejectButton').style.display = 'none';
-                    });
-                });
-            } else {
-                console.error('File upload failed');
-            }
-        });
-    });
+    //                     // Hide the accept and reject buttons
+    //                     document.getElementById('acceptButton').style.display = 'none';
+    //                     document.getElementById('rejectButton').style.display = 'none';
+    //                 });
+    //                 document.getElementById('rejectButton').addEventListener('click', function () {
+    //                     fetch('/reject', {
+    //                         method: 'POST',
+    //                         headers: {
+    //                             'Content-Type': 'application/x-www-form-urlencoded'
+    //                         },
+    //                         body: 'filename=' + encodeURIComponent(filename)
+    //                     }).then(response => {
+    //                         if (response.ok) {
+    //                             console.log('File rejected');
+    //                         } else {
+    //                             console.error('File rejection failed');
+    //                         }
+    //                     });
+    //                     // Hide the accept and reject buttons
+    //                     document.getElementById('acceptButton').style.display = 'none';
+    //                     document.getElementById('rejectButton').style.display = 'none';
+    //                 });
+    //             });
+    //         } else {
+    //             console.error('File upload failed');
+    //         }
+    //     });
+    // });
 </script>
 {% endblock %}
