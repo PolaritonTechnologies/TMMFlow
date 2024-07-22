@@ -9,7 +9,7 @@ services:
     environment:
       - FLASK_APP=gui
       - FLASK_ENV=development
-      - PYTHONPATH=/app:/app/src  # Add /src to PYTHONPATH, keeping /app as the default
+      - PYTHONPATH=/app:/app/src
     depends_on:
       - redis
 
@@ -21,10 +21,11 @@ services:
   worker:
     build: .
     command: rq worker
-    working_dir: /app/src  # This ensures the worker starts in /app/src
+    working_dir: /app/src
     environment:
-      - PYTHONPATH=/app:/app/src  # Ensure worker also has /app and /app/src in PYTHONPATH
+      - PYTHONPATH=/app:/app/src
+      - REDIS_URL=redis://redis:6379/
     depends_on:
       - redis
     deploy:
-      replicas: 3
+      replicas: 1
