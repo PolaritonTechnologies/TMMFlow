@@ -62,6 +62,7 @@ def download_material():
     return send_file(path_to_file, as_attachment=True)
 
 
+"""
 @materials_bp.route("/upload_material", methods=["POST"])
 def upload_material():
     if "file" not in request.files:
@@ -90,6 +91,7 @@ def upload_material():
         # socketio.emit("material_data", data)
 
         return filename, 200
+"""
 
 
 @materials_bp.route("/accept", methods=["POST"])
