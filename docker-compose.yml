@@ -22,9 +22,9 @@ services:
     build: .
     command: rq worker
     working_dir: /app/src  # This ensures the worker starts in /app/src
-    volumes:
-      - .:/app
     environment:
       - PYTHONPATH=/app:/app/src  # Ensure worker also has /app and /app/src in PYTHONPATH
     depends_on:
       - redis
+    deploy:
+      replicas: 3
