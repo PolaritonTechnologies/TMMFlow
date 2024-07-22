@@ -1,0 +1,26 @@
+version: "3"
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_APP=gui
+      - FLASK_ENV=development
+    depends_on:
+      - redis
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  worker:
+    build: .
+    command: rq worker
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
