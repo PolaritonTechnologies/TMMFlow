@@ -19,8 +19,11 @@ class Base(DeclarativeBase):
 db = SQLAlchemy(model_class=Base)
 
 # Define the Redis connection and the RQ queue
-redis_conn = Redis()
+redis_url = os.environ.get("REDIS_URL")  # Default to localhost if not set
+redis_conn = Redis.from_url(redis_url)
 q = rq.Queue(connection=redis_conn)
+# redis_conn = Redis()
+# q = rq.Queue(connection=redis_conn)
 
 
 def create_app(test_config=None):

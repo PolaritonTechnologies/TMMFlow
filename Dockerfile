@@ -17,8 +17,10 @@ RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
 EXPOSE 5000
 
 # Define environment variable pointing to the Flask app in /gui/
-ENV FLASK_APP=gui/app.py
+ENV FLASK_APP=gui
+ENV PYTHONPATH="${PYTHONPATH}:/app/src"
 ENV FLASK_ENV=development
+ENV FLASK_DEBUG=1
 
 # Run app.py when the container launches
 CMD ["flask", "run", "--host=0.0.0.0"]

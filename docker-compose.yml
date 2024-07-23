@@ -10,6 +10,7 @@ services:
       - FLASK_APP=gui
       - FLASK_ENV=development
       - PYTHONPATH=/app:/app/src
+      - REDIS_URL=redis://redis:6379/
     depends_on:
       - redis
 
