@@ -721,7 +721,10 @@ class FilterStack:
 
         if self.redis_key != None:
             # Setup Redis connection
-            self.redis_conn = Redis()
+            redis_url = os.environ.get(
+                "REDIS_URL", "redis://localhost:6379"
+            )  # Default to localhost if not set
+            self.redis_conn = Redis.from_url(redis_url)
 
         log("loading filter stack...")
 
