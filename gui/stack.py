@@ -27,6 +27,10 @@ from .database import (
     load_latest_filter,
     select_latest_optimization,
     select_initial_optimization,
+    get_all_filter_versions,
+    select_optimization_by_datetime,
+    get_all_user_projects,
+    select_job_by_datetime_and_name,
 )
 from . import db
 from .utility import (
@@ -82,6 +86,18 @@ def stack():
     material_list = get_available_materials(app.config["MATERIAL_FOLDER"])
     template_list = get_available_templates(app.config["TEMPLATE_FOLDER"])
 
+    # Get all versions of current filter design
+    filter_versions = get_all_filter_versions(job_id)
+    filter_versions_time_stamps = [
+        filter_version.time_stamp.strftime("%Y-%m-%d %H:%M:%S")
+        for filter_version in filter_versions
+    ]
+
+    # Read in all available projects in the past for each user
+    unique_job_ids, unique_filter_names, unique_timestamps = get_all_user_projects(
+        session.get("user_id")
+    )
+
     default_values = {
         "num_boxes": num_boxes,
         "colors": colors,
@@ -93,6 +109,13 @@ def stack():
         "file_label": session.get("filter_name"),
         "available_materials": material_list,
         "available_templates": template_list,
+        "versions": filter_versions_time_stamps,
+        "previous_projects": [
+            unique_timestamps[i].strftime("%Y-%m-%d %H:%M:%S")
+            + ": "
+            + unique_filter_names[i]
+            for i in range(len(unique_job_ids))
+        ],
     }
 
     # Add the entire filter definition to the default values to render it
@@ -566,6 +589,36 @@ def reset_filter():
     return redirect("/")
 
 
+@stack_bp.route("/select_version", methods=["POST"])
+def select_version():
+    selected_version = datetime.strptime(
+        request.form.get("version"), "%Y-%m-%d %H:%M:%S"
+    )
+
+    # Retrieve the optimization entry for the selected version
+    optimization = select_optimization_by_datetime(
+        selected_version, session.get("job_id")
+    )
+    initial_json = json.loads(optimization.current_json)
+
+    # Now create a new optimization entry with the initial json
+    new_optimization = Job(
+        job_id=session.get("job_id"),
+        username=session.get("user_id"),
+        filter_name=session.get("filter_name"),
+        optimization_method="None",
+        current_json=json.dumps(initial_json),
+        time_stamp=datetime.now(),
+    )
+
+    # Commit the new optimization to the database
+    db.session.add(new_optimization)
+    db.session.commit()
+
+    # Reload page
+    return redirect("/")
+
+
 @stack_bp.route("/start_new_design", methods=["POST"])
 def start_new_design():
     # Load in template
@@ -574,5 +627,26 @@ def start_new_design():
 
     # Trigger upload file function with the selected template
     upload_file(os.path.join(app.config["TEMPLATE_FOLDER"], template), filter_name)
+
+    return jsonify({"redirect": url_for("stack_bp.stack")})
+
+
+@stack_bp.route("/load_design", methods=["POST"])
+def load_design():
+    # Load in template
+    filter_version = request.form.get("filter_version")
+
+    # Convert the select elements text to a datetime object and a string with
+    # the filter name
+    filter_date = filter_version.split(" ")[0] + " " + filter_version.split(" ")[1]
+    filter_date = datetime.strptime(filter_date[:-1], "%Y-%m-%d %H:%M:%S")
+    filter_name = filter_version.split(" ")[-1]
+
+    # Retrieve the optimization entry for the selected version
+    job_state = select_job_by_datetime_and_name(filter_date, filter_name)
+
+    # Now set the job_id to what was selected and reload the page
+    session["job_id"] = job_state.job_id
+    session["filter_name"] = filter_name
 
     return jsonify({"redirect": url_for("stack_bp.stack")})

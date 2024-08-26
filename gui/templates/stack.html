@@ -16,6 +16,8 @@
             </form>
             <button type="submit" class="btn btn-secondary mt-3" value="rename" id="start_new_design_button"
                 style="margin-left: 1em;">Start New Design</button>
+            <button type="button" class="btn btn-info mt-3" value="rename" id="load_project_button" data-toggle="modal"
+                data-target="#loadProjectModal" style="margin-left: 1em;">Load Project</button>
         </div>
 
         <!-- Start New Design Modal -->
@@ -49,6 +51,38 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         <button type="button" class="btn btn-primary" id="saveNewDesign">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load Project Modal -->
+        <div class="modal fade" id="loadProjectModal" tabindex="-1" role="dialog"
+            aria-labelledby="loadProjectModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="loadProjectModalLabel">Load Project</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="form-group">
+                                <label for="projectSelect">Select Project</label>
+                                <label for="templateSelect">Select Template</label>
+                                <select class="form-control select2" id="previousProjectSelect">
+                                    {% for project in default_values.previous_projects %}
+                                    <option value="{{ project }}">{{ project }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="selectProjectButton">Select</button>
                     </div>
                 </div>
             </div>
@@ -119,9 +153,20 @@
                 {% endfor %}
                 {% endif %}
             </div>
-            <form action="{{ url_for('stack_bp.reset_filter') }}" method="post" enctype="multipart/form-data"
-                class="ml-3 d-flex align-items-end" style="margin-top:2em;">
-                <button type="submit" class="btn btn-danger" value="resetFilter">Reset Filter</button>
+            <!-- <form action="{{ url_for('stack_bp.reset_filter') }}" method="post" enctype="multipart/form-data" -->
+            <!-- class="ml-3 d-flex align-items-end" style="margin-top:2em;"> -->
+            <!-- <button type="submit" class="btn btn-danger" value="resetFilter">Reset Filter</button> -->
+            <!-- </form> -->
+            <form action="{{ url_for('stack_bp.select_version') }}" method="post" class="ml-3" style="margin-top:2em;">
+                <div class="form-group">
+                    <label for="versionSelect">Select Filter Version</label>
+                    <select class="form-control" id="versionSelect" name="version">
+                        {% for version in default_values.versions %}
+                        <option value="{{ version }}">{{ version }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Select Version</button>
             </form>
         </div>
         <div class="col-lg-2 col-md-4">
@@ -1415,6 +1460,26 @@
         });
 
         $('#newDesignModal').modal('hide');
+    });
+    document.getElementById('selectProjectButton').addEventListener('click', function () {
+        var filterVersion = document.getElementById('previousProjectSelect').value;
+
+        $.ajax({
+            url: '/load_design',
+            type: 'POST',
+            data: { filter_version: filterVersion },
+            complete: function (jqXHR, textStatus) {
+                // If the status code is 302, reload the page
+                if (jqXHR.status === 200) {
+                    location.reload();
+                }
+            },
+            error: function (error) {
+                // Handle error
+            }
+        });
+
+        $('#loadProjectModal').modal('hide');
     });
     document.getElementById('flip_stack').addEventListener('click', function () {
         var table = document.getElementById('layers');

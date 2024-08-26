@@ -14,6 +14,7 @@ from . import db
 
 # Import the FilterStack class
 from FilterStack import FilterStack
+from sqlalchemy import func, distinct
 
 
 def init_db():
@@ -96,6 +97,40 @@ def select_initial_optimization(job_id=None):
     return latest_optimization
 
 
+def select_optimization_by_datetime(date_time, job_id=None):
+    # Truncate the microseconds from the datetime object
+    date_time = date_time.replace(microsecond=0)
+
+    # Load the latest json from the database using the job_id identifier and the date_time string that first has to be converted into a datetime object
+    filter_status = (
+        Job.query.filter_by(job_id=job_id)
+        .filter(
+            func.strftime("%Y-%m-%d %H:%M:%S", Job.time_stamp)
+            == date_time.strftime("%Y-%m-%d %H:%M:%S")
+        )
+        .first()
+    )
+
+    return filter_status
+
+
+def select_job_by_datetime_and_name(date_time, name):
+    # Truncate the microseconds from the datetime object
+    date_time = date_time.replace(microsecond=0)
+
+    # Load the latest json from the database using the job_id identifier and the date_time string that first has to be converted into a datetime object
+    filter_status = (
+        Job.query.filter_by(filter_name=name)
+        .filter(
+            func.strftime("%Y-%m-%d %H:%M:%S", Job.time_stamp)
+            == date_time.strftime("%Y-%m-%d %H:%M:%S")
+        )
+        .first()
+    )
+
+    return filter_status
+
+
 def load_latest_filter(job_id=None):
     # Load the latest filter from the database using the job_id identifier
     if job_id is None:
@@ -112,3 +147,38 @@ def load_latest_filter(job_id=None):
     my_filter = FilterStack(my_filter_dict=latest_json)
 
     return my_filter
+
+
+def get_all_filter_versions(job_id=None):
+    # Load all filter versions from the database
+    all_filter_versions = (
+        Job.query.filter_by(job_id=job_id).order_by(Job.time_stamp.desc()).all()
+    )
+
+    return all_filter_versions
+
+
+def get_all_user_projects(user=None):
+    # Load all unique job IDs from the database for the given user
+    unique_job_ids = (
+        Job.query.with_entities(distinct(Job.job_id)).filter_by(username=user).all()
+    )
+
+    # Extract job IDs from the result
+    unique_job_ids = [job_id[0] for job_id in unique_job_ids]
+
+    # Load filter names and timestamps for the unique job IDs
+    filter_names = []
+    time_stamps = []
+    for job_id in unique_job_ids:
+        filter_name, time_stamp = (
+            Job.query.with_entities(Job.filter_name, Job.time_stamp)
+            .filter_by(job_id=job_id)
+            .order_by(Job.time_stamp.desc())
+            .first()
+        )
+        if filter_name and time_stamp:
+            filter_names.append(filter_name)
+            time_stamps.append(time_stamp)
+
+    return unique_job_ids, filter_names, time_stamps
