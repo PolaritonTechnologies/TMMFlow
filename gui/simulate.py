@@ -102,6 +102,22 @@ def calculate_and_plot_ajax():
     select_latest_optimization(job_id).current_data = json.dumps(plotting_data)
     db.session.commit()
 
+    # Do calculations on the plotting data
+    integrated_spectrum = np.sum(
+        [
+            np.trapz(np.array(plotting_data["z"]).T[i], np.array(plotting_data["y"]))
+            * 100
+            for i in range(np.size(plotting_data["x"]))
+        ]
+    )
+    peak_spectrum = np.max(plotting_data["z"]) * 100
+
+    additional_data = {
+        "integrated_spectrum": integrated_spectrum,
+        "peak_spectrum": peak_spectrum,
+    }
+    plotting_data.update(additional_data)
+
     return jsonify(plotting_data)
 
 
@@ -111,6 +127,24 @@ def plot_data():
     optimization = select_latest_optimization(session.get("job_id"))
     if optimization.current_data is not None:
         plotting_data = json.loads(optimization.current_data)
+
+        # Do calculations on the plotting data
+        integrated_spectrum = np.sum(
+            [
+                np.trapz(
+                    np.array(plotting_data["z"]).T[i], np.array(plotting_data["y"])
+                )
+                * 100
+                for i in range(np.size(plotting_data["x"]))
+            ]
+        )
+        peak_spectrum = np.max(plotting_data["z"]) * 100
+
+        additional_data = {
+            "integrated_spectrum": integrated_spectrum,
+            "peak_spectrum": peak_spectrum,
+        }
+        plotting_data.update(additional_data)
 
         # Return the plotting data as a JSON response
         return jsonify(plotting_data)

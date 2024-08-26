@@ -12,17 +12,31 @@
         </div>
     </div>
     <div class="row align-items-center ">
+
         <div class="col-6">
             <!-- <div id="loading" class="spinner-border text-primary" role="status"
                 style="position: absolute; display: none;">
                 <span class="sr-only">Loading...</span>
             </div> -->
+            <div class="text-center mb-4"
+                style="border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); padding: 20px;">
+                <div style="display: flex;">
+                    <h6><strong>Summary:</strong></h6>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <div style="margin-right: 1%;">Integrated:</div>
+                    <div class="display-6 text-primary" id="integrated_spectrum" style="margin-right: 1%;"> - %nm</div>
+                    <div style="margin-right: 1%;">Peak:</div>
+                    <div class="display-6 text-primary" id="peak_spectrum"> - %</div>
+                </div>
+            </div>
             <div class="row d-flex align-items-center justify-content-center">
                 <div id="heatmap" style="margin-bottom: 5em;"></div>
             </div>
         </div>
 
         <div class="col-6">
+
             <div style="position: relative;">
                 <div id="DatavsWavelengthPlot"></div>
                 <button id="resetPlot" class="btn btn-primary" style="position: absolute; top: 40px; right: 0;">Reset
@@ -265,6 +279,13 @@
             .then(data => {
                 // Use the received data to plot the heatmap
                 plotHeatmap(data, layout, config);
+                // Retrieve the additional data (two floats) from the response
+                const integrated_spectrum = data.integrated_spectrum.toFixed(2);
+                const peak_spectrum = data.peak_spectrum.toFixed(2);
+
+                // Update the divs with the new numbers
+                document.getElementById('integrated_spectrum').innerText = integrated_spectrum + "% nm";
+                document.getElementById('peak_spectrum').innerText = peak_spectrum + " %";
                 // If you need to use the commented-out Plotly code:
                 // var plotData = {
                 //     x: data.x,
@@ -326,6 +347,14 @@
                 plotHeatmap(data, layout, config);
                 // Enable the download button
                 document.getElementById("downloadModalButton").disabled = false;
+
+                // Retrieve the additional data (two floats) from the response
+                const integrated_spectrum = data.integrated_spectrum.toFixed(2);
+                const peak_spectrum = data.peak_spectrum.toFixed(2);
+
+                // Update the divs with the new numbers
+                document.getElementById('integrated_spectrum').innerText = integrated_spectrum + " % nm";
+                document.getElementById('peak_spectrum').innerText = peak_spectrum + " %";
             })
             .catch((error) => {
                 console.error('Error:', error);
