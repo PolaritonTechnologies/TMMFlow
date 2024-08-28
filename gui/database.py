@@ -67,17 +67,24 @@ def get_latest_job_id():
         return int(latest_job_id.job_id)
 
 
-def select_latest_optimization(job_id=None):
+def select_latest_optimization(job_id=None, username=None):
     # Load the latest json from the database using the job_id identifier
-    if job_id is None:
-        raise Exception("Error loading filter: job_id is None")
-
-    # Now execute an SQL query to look for all optimization entries in
-    # optimizations table with the job_id and pick the one with the latest
-    # time_stamp value
-    latest_optimization = (
-        Job.query.filter_by(job_id=job_id).order_by(Job.time_stamp.desc()).first()
-    )
+    if username is not None and job_id is None:
+        # Get the latest Job for the given user overall
+        latest_optimization = (
+            Job.query.filter_by(username=username)
+            .order_by(Job.time_stamp.desc())
+            .first()
+        )
+    elif job_id is not None:
+        # Now execute an SQL query to look for all optimization entries in
+        # optimizations table with the job_id and pick the one with the latest
+        # time_stamp value
+        latest_optimization = (
+            Job.query.filter_by(job_id=job_id).order_by(Job.time_stamp.desc()).first()
+        )
+    else:
+        raise Exception("Error loading filter: job_id and username none")
 
     return latest_optimization
 
@@ -131,15 +138,16 @@ def select_job_by_datetime_and_name(date_time, name):
     return filter_status
 
 
-def load_latest_filter(job_id=None):
+def load_latest_filter(job_id=None, username=None):
     # Load the latest filter from the database using the job_id identifier
-    if job_id is None:
-        raise Exception("Error loading filter: job_id is None")
-
-    # Now execute an SQL query to look for all optimization entries in
-    # optimizations table with the job_id and pick the one with the latest
-    # time_stamp value
-    latest_json = json.loads(select_latest_optimization(job_id).current_json)
+    if job_id is None and username is not None:
+        latest_json = json.loads(
+            select_latest_optimization(username=username).current_json
+        )
+    elif job_id is not None:
+        latest_json = json.loads(select_latest_optimization(job_id).current_json)
+    else:
+        raise Exception("Error loading filter: job_id and username are None")
 
     # Now create the FilterStack object using the initial json and modify so
     # that it matches the latest json (needed to comply with the FilterStack
@@ -152,7 +160,7 @@ def load_latest_filter(job_id=None):
 def get_all_filter_versions(job_id=None):
     # Load all filter versions from the database
     all_filter_versions = (
-        Job.query.filter_by(job_id=job_id).order_by(Job.time_stamp.desc()).all()
+        Job.query.filter_by(job_id=job_id).order_by(Job.time_stamp.asc()).all()
     )
 
     return all_filter_versions

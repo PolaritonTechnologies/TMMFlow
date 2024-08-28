@@ -55,15 +55,25 @@ def stack():
     """
     View for the basic overview over the filter stack design.
     """
-    # If no filter has been initialized so far, load the default file
+    # If no filter has been initialized so far, load the latest database entry for the given user
     if session.get("job_id") is None:
         # The upload_file function calls stack at the end of the function again
         # and sets the filter_initialized flag to True
-        upload_file(app.config["DEFAULT_FILE"])
+        latest_optimization_db = select_latest_optimization(
+            username=session.get("user_id")
+        )
+        session["job_id"] = latest_optimization_db.job_id
+        session["filter_name"] = latest_optimization_db.filter_name
+        job_id = session.get("job_id")
 
-    # Read in the latest design of this session
-    job_id = session.get("job_id")
-    filter_definition = load_latest_filter(job_id).return_current_design_as_json()
+        filter_definition = load_latest_filter(
+            username=session.get("user_id")
+        ).return_current_design_as_json()
+        # upload_file(app.config["DEFAULT_FILE"])
+    else:
+        # Read in the latest design of this session
+        job_id = session.get("job_id")
+        filter_definition = load_latest_filter(job_id).return_current_design_as_json()
     (
         num_boxes,
         colors,
@@ -97,6 +107,17 @@ def stack():
     unique_job_ids, unique_filter_names, unique_timestamps = get_all_user_projects(
         session.get("user_id")
     )
+    # Combine the unique_timestamps, unique_filter_names, and unique_job_ids into a list of tuples
+    projects = list(zip(unique_timestamps, unique_filter_names, unique_job_ids))
+
+    # Sort the projects by timestamp in descending order
+    projects.sort(key=lambda x: x[0], reverse=True)
+
+    # Format the sorted list for display
+    previous_projects = [
+        project[0].strftime("%Y-%m-%d %H:%M:%S") + ": " + project[1]
+        for project in projects
+    ]
 
     default_values = {
         "num_boxes": num_boxes,
@@ -110,12 +131,7 @@ def stack():
         "available_materials": material_list,
         "available_templates": template_list,
         "versions": filter_versions_time_stamps,
-        "previous_projects": [
-            unique_timestamps[i].strftime("%Y-%m-%d %H:%M:%S")
-            + ": "
-            + unique_filter_names[i]
-            for i in range(len(unique_job_ids))
-        ],
+        "previous_projects": previous_projects,
     }
 
     # Add the entire filter definition to the default values to render it

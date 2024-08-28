@@ -127,3 +127,8 @@ input:invalid {
 tr {
     transition: background-color 2s ease;
 }
+
+.active .nav-link {
+    font-weight: bold;
+    color: #007bff !important;
+}
