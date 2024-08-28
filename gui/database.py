@@ -160,7 +160,7 @@ def load_latest_filter(job_id=None, username=None):
 def get_all_filter_versions(job_id=None):
     # Load all filter versions from the database
     all_filter_versions = (
-        Job.query.filter_by(job_id=job_id).order_by(Job.time_stamp.asc()).all()
+        Job.query.filter_by(job_id=job_id).order_by(Job.time_stamp.desc()).all()
     )
 
     return all_filter_versions

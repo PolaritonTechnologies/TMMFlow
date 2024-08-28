@@ -1313,7 +1313,7 @@ class FilterStack:
         return np.array(
             [
                 (
-                    np.clip(np.round(t, 1), b[0], b[1])
+                    np.clip(np.nan_to_num(np.round(t, 1), nan=0.0), b[0], b[1])
                     if self.filter_definition["thickness_opt_allowed"][i]
                     else t
                 )
