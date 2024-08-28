@@ -141,3 +141,14 @@ It would be great if we had implement this monitor in a separate tab at least fo
 The following is how the GUI interacts with the
 
 ## Optimization
+
+### Design Strategies (2 materials)
+
+1. Start from a generic design (e.g. 25 pairs of SiO2 - Ta2O5 on one side and 5
+   layers of MgF2 - Ta2O5 on the back) with thicknesses defined by the approximate wavelength region of interest (lambda/4).
+2. Most important point: Define targets to match **all** design features of
+   interest. This might also include less important regions but ideally the whole
+   spectrum of interest is covered. Consider lower tolerances for critical areas.
+3. Run **dual annealing** (~3 h) + 5 x **Nelder-Mead** (~10 min) + **basin
+   hopping** (~3 h) to obtain a global best solution.
+4. Refine targets to match desired features and repeat steps 1 - 3.
