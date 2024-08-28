@@ -1120,10 +1120,11 @@ class FilterStack:
             "step": self.iteration_no,
             "merit": f,
         }
-        self.redis_conn.set(
-            f"current:{self.redis_key}",
-            json.dumps(intermediate_result),
-        )
+        if self.redis_key != None:
+            self.redis_conn.set(
+                f"current:{self.redis_key}",
+                json.dumps(intermediate_result),
+            )
 
         # Save the current best optimisation values to file
         if f < self.optimum_merit or f == 0:
@@ -1143,11 +1144,14 @@ class FilterStack:
                 file_name = self.current_structure.split("/")[-1]
                 temp_json = self.return_current_design_as_json()
 
-                temp_path = os.path.join(
-                    os.path.dirname(os.path.realpath(__file__)),
-                    "temp",
-                    f"{file_name}.json",
+                temp_dir = os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)), "temp"
                 )
+
+                # Create the directory if it does not exist
+                os.makedirs(temp_dir, exist_ok=True)
+
+                temp_path = os.path.join(temp_dir, f"{file_name}.json")
 
                 with open(temp_path, "w") as file:
                     json.dump(temp_json, file)
