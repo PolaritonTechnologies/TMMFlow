@@ -50,10 +50,14 @@ def convert_numpy_to_list(data):
         return data
 
 
-def optimization_function(optimization_method, latest_design, redis_key):
+def optimization_function(
+    optimization_method, latest_design, redis_key, additional_opt_parameters=[]
+):
     my_filter = FilterStack(latest_design)
     # database_entry = select_latest_optimization(job_id)
-    ret = my_filter.perform_optimisation(optimization_method, redis_key)
+    ret = my_filter.perform_optimisation(
+        optimization_method, redis_key, additional_opt_parameters
+    )
     return ret
     # db.session.commit()  # Commit changes at the end of the operation
 
@@ -695,7 +699,9 @@ class FilterStack:
 
         return merit
 
-    def perform_optimisation(self, opt_methods, redis_key=None):
+    def perform_optimisation(
+        self, opt_methods, redis_key=None, additional_parameters=[]
+    ):
         """
         Performs the optimization process based on the specified optimization
         type. This function sets up the initial conditions and bounds for the
@@ -733,7 +739,10 @@ class FilterStack:
 
         log("running optimisation...")
 
+        iterator = 0
+
         for optimization_method in opt_methods:
+
             log("running " + optimization_method + "...")
 
             lib.initialise_optimization(
@@ -894,11 +903,20 @@ class FilterStack:
                     method="Nelder-Mead",
                     callback=self.scipy_callback,
                 )
-            elif optimization_method == "particle_swarm":
+            elif optimization_method == "particle swarm":
                 # Particle swarm optimization
                 ret = particle_swarm(
                     partial_merit_function,
                     bounds=bounds,
+                    n_particles=additional_parameters[iterator]["particles"],
+                    c1=additional_parameters[iterator]["c1"],
+                    c2=additional_parameters[iterator]["c2"],
+                    w=additional_parameters[iterator]["w"],
+                    n_iter=additional_parameters[iterator]["iterations"],
+                )
+            else:
+                raise ValueError(
+                    f"Optimization method {optimization_method} not implemented"
                 )
 
             """
@@ -968,6 +986,7 @@ class FilterStack:
             )
             self.log_func("Optimized merit value: " + str(self.optimum_merit))
             self.log_func("Number of function evaluations: " + str(ret.nfev))
+            iterator += 1
 
         """
         if key != None:

@@ -16,6 +16,10 @@ from scipy.optimize import minimize, Bounds
 from scipy.special import gammaln
 from scipy._lib._util import check_random_state
 from scipy.optimize._constraints import new_bounds_to_old
+# import the pyswarms library and implement a particle swarm optimisation for the thicknesses only
+import pyswarms as ps
+from pyswarms.utils.functions import single_obj as fx
+from functools import partial
 
 __all__ = ["dual_annealing"]
 
@@ -934,10 +938,7 @@ def gradient_descent(function, x0, bounds, callback, n_iter=500, tolerance=2.5e-
     return optimize_res
 
 
-# import the pyswarms library and implement a particle swarm optimisation for the thicknesses only
-import pyswarms as ps
-from pyswarms.utils.functions import single_obj as fx
-from functools import partial
+
 
 
 def merit_as_objective_function(x, function=None):

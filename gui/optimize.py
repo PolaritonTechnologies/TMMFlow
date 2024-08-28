@@ -18,6 +18,7 @@ from .stack import extract_filter_design
 from FilterStack import FilterStack, optimization_function
 
 import rq
+import numpy as np
 
 # Define the Blueprint
 optimize_bp = Blueprint("optimize_bp", __name__, template_folder="templates")
@@ -125,12 +126,30 @@ def start_optimization():
     # Set the cancellation flag in the redis database to false
     redis_conn.set(f"job_cancel_flag:{job_id}", "false")
 
+    opt_parameters = np.empty(np.size(request.json["optimizationMethod"]), dtype=object)
+    opt_methods = request.json["optimizationMethod"].copy()
+
+    for i in range(np.size(request.json["optimizationMethod"])):
+        if "(" in request.json["optimizationMethod"][i]:
+            parameters = (
+                request.json["optimizationMethod"][i].split("(")[1][:-1].split(",")
+            )
+            opt_parameters_dict = {}
+            for param in parameters:
+                key, value = param.split(":")
+                opt_parameters_dict[key.strip()] = (
+                    float(value) if "." in value else int(value)
+                )
+            opt_parameters[i] = opt_parameters_dict
+            opt_methods[i] = request.json["optimizationMethod"][i].split("(")[0]
+
     # Enqueue the task with RQ
     job = q.enqueue(
         optimization_function,
-        optimization_method=request.json["optimizationMethod"],
+        optimization_method=opt_methods,
         latest_design=latest_design,  # This needs to be serializable or reconstructed within the task
         redis_key=job_id,
+        additional_opt_parameters=opt_parameters,
         job_timeout="1d",  # Increase the timeout to be able to run long simulations
         # job_id=str(job_id),
     )

@@ -48,6 +48,50 @@
                         <!-- </form> -->
                     </div>
                 </div>
+                <!-- Modal -->
+                <div class="modal fade" id="particleSwarmModal" tabindex="-1" role="dialog"
+                    aria-labelledby="particleSwarmModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="particleSwarmModalLabel">Particle Swarm Parameters</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="particleSwarmForm">
+                                    <div class="form-group">
+                                        <label for="c1">Cognitive Parameter (c1)</label>
+                                        <input type="number" class="form-control" id="c1" step="any" value=0.5 required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="c2">Social Parameter (c2)</label>
+                                        <input type="number" class="form-control" id="c2" step="any" value=0.3 required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="w">Inertia (w)</label>
+                                        <input type="number" class="form-control" id="w" step="any" value=0.9 required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="no_particles">Number of Particles</label>
+                                        <input type="number" class="form-control" id="no_particles" step="1" value=10
+                                            required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="no_iteration">Number of Iterations</label>
+                                        <input type="number" class="form-control" id="no_iteration" step="1" value=1000
+                                            required>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" id="saveParticleSwarmParams">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="row mb-3">
                     <div class="col-5 offset-1">
                         <form method="post" class="w-100">
@@ -300,7 +344,29 @@
 <script>
     $('#addOptButton').click(function () {
         var selectedMethod = $('#optimizationMethod').val();
-        var methodElement = $('<div>').addClass('list-group-item d-flex').text(selectedMethod);
+        if (selectedMethod === 'particle_swarm') {
+            $('#particleSwarmModal').modal('show');
+        } else {
+            addMethodToList(selectedMethod);
+        }
+    });
+
+    $('#saveParticleSwarmParams').click(function () {
+        var c1 = $('#c1').val();
+        var c2 = $('#c2').val();
+        var w = $('#w').val();
+        var no_particles = $('#no_particles').val();
+        var no_iteration = $('#no_iteration').val();
+        var params = `c1: ${c1}, c2: ${c2}, w: ${w}, particles: ${no_particles}, iterations: ${no_iteration}`;
+        addMethodToList('particle swarm', params);
+        $('#particleSwarmModal').modal('hide');
+    });
+
+    function addMethodToList(method, params = '') {
+        var methodElement = $('<div>').addClass('list-group-item d-flex').text(method);
+        if (params) {
+            methodElement.append($('<div>').addClass('ml-2').text(`(${params})`));
+        }
         var numberElement = $('<div>').addClass('mr-2 number').text('');
         var removeButton = $('<button>').addClass('btn btn-sm btn-danger ml-auto').text('-').click(function () {
             $(this).parent().remove();
@@ -310,7 +376,7 @@
         methodElement.append(removeButton);
         $('#selectedMethods').append(methodElement);
         updateNumbers();
-    });
+    }
 
 
     $('#selectedMethods').sortable({
