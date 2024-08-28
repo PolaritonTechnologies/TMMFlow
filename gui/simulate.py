@@ -102,20 +102,9 @@ def calculate_and_plot_ajax():
     select_latest_optimization(job_id).current_data = json.dumps(plotting_data)
     db.session.commit()
 
-    # Do calculations on the plotting data
-    integrated_spectrum = np.sum(
-        [
-            np.trapz(np.array(plotting_data["z"]).T[i], np.array(plotting_data["y"]))
-            * 100
-            for i in range(np.size(plotting_data["x"]))
-        ]
-    )
-    peak_spectrum = np.max(plotting_data["z"]) * 100
+    current_json = my_filter.filter_definition
 
-    additional_data = {
-        "integrated_spectrum": integrated_spectrum,
-        "peak_spectrum": peak_spectrum,
-    }
+    additional_data = extract_spectral_parameters(current_json, plotting_data)
     plotting_data.update(additional_data)
 
     return jsonify(plotting_data)
@@ -127,23 +116,9 @@ def plot_data():
     optimization = select_latest_optimization(session.get("job_id"))
     if optimization.current_data is not None:
         plotting_data = json.loads(optimization.current_data)
+        current_json = json.loads(optimization.current_json)
 
-        # Do calculations on the plotting data
-        integrated_spectrum = np.sum(
-            [
-                np.trapz(
-                    np.array(plotting_data["z"]).T[i], np.array(plotting_data["y"])
-                )
-                * 100
-                for i in range(np.size(plotting_data["x"]))
-            ]
-        )
-        peak_spectrum = np.max(plotting_data["z"]) * 100
-
-        additional_data = {
-            "integrated_spectrum": integrated_spectrum,
-            "peak_spectrum": peak_spectrum,
-        }
+        additional_data = extract_spectral_parameters(current_json, plotting_data)
         plotting_data.update(additional_data)
 
         # Return the plotting data as a JSON response
@@ -204,3 +179,63 @@ def download_data():
     ).to_csv(file_path, sep="\t")
 
     return send_file(file_path, as_attachment=True)
+
+
+def extract_spectral_parameters(current_json, plotting_data):
+    target_passband_wavelength = np.array(
+        current_json["targets_wavelengths"], dtype=object
+    )[np.array(current_json["targets_value"]) > 0.1]
+
+    # Integrate the spectrum for the target passband
+    # Only choose first target (target_no = 1)
+    target_no = 0
+    if np.size(target_passband_wavelength[target_no]) == 1:
+        integrated_passband = 0
+    else:
+        # Check that the target passband is within the range of the plotted data
+        if target_passband_wavelength[target_no][1] > np.max(plotting_data["y"]):
+            integrated_passband = 0
+        elif target_passband_wavelength[target_no][0] < np.min(plotting_data["y"]):
+            integrated_passband = 0
+        else:
+            target_index_low = np.where(
+                np.isclose(plotting_data["y"], target_passband_wavelength[target_no][0])
+            )[0][0]
+
+            target_index_high = np.where(
+                np.isclose(plotting_data["y"], target_passband_wavelength[target_no][1])
+            )[0][0]
+            integrated_passband = np.trapz(
+                [
+                    np.trapz(
+                        np.array(plotting_data["z"]).T[i][
+                            target_index_low:target_index_high
+                        ],
+                        np.array(
+                            plotting_data["y"][target_index_low:target_index_high]
+                        ),
+                    )
+                    * 100
+                    for i in range(np.size(plotting_data["x"]))
+                ],
+                plotting_data["x"],
+            )
+
+    # Do calculations on the plotting data
+    integrated_spectrum = np.trapz(
+        [
+            np.trapz(np.array(plotting_data["z"]).T[i], np.array(plotting_data["y"]))
+            * 100
+            for i in range(np.size(plotting_data["x"]))
+        ],
+        plotting_data["x"],
+    )
+    peak_spectrum = np.max(plotting_data["z"]) * 100
+
+    additional_data = {
+        "integrated_spectrum": integrated_spectrum,
+        "integrated_passband": integrated_passband,
+        "peak_spectrum": peak_spectrum,
+    }
+
+    return additional_data

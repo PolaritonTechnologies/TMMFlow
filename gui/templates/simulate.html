@@ -27,6 +27,9 @@
                     <div style="margin-right: 1%;">Integrated:</div>
                     <div class="display-6 text-primary" id="integrated_spectrum" style="margin-right: 1%;"> - %nm,
                     </div>
+                    <div style="margin-right: 1%;">Integrated Passband:</div>
+                    <div class="display-6 text-primary" id="integrated_passband" style="margin-right: 1%;"> - %nm,
+                    </div>
                     <div style="margin-right: 1%;">Peak:</div>
                     <div class="display-6 text-primary" id="peak_spectrum"> - %</div>
                 </div>
@@ -282,10 +285,12 @@
                 plotHeatmap(data, layout, config);
                 // Retrieve the additional data (two floats) from the response
                 const integrated_spectrum = data.integrated_spectrum.toFixed(2);
+                const integrated_passband = data.integrated_passband.toFixed(2);
                 const peak_spectrum = data.peak_spectrum.toFixed(2);
 
                 // Update the divs with the new numbers
-                document.getElementById('integrated_spectrum').innerText = integrated_spectrum + "% nm";
+                document.getElementById('integrated_spectrum').innerText = integrated_spectrum + "% nm, ";
+                document.getElementById('integrated_passband').innerText = integrated_passband + " % nm, ";
                 document.getElementById('peak_spectrum').innerText = peak_spectrum + " %";
                 // If you need to use the commented-out Plotly code:
                 // var plotData = {
@@ -351,10 +356,12 @@
 
                 // Retrieve the additional data (two floats) from the response
                 const integrated_spectrum = data.integrated_spectrum.toFixed(2);
+                const integrated_passband = data.integrated_passband.toFixed(2);
                 const peak_spectrum = data.peak_spectrum.toFixed(2);
 
                 // Update the divs with the new numbers
                 document.getElementById('integrated_spectrum').innerText = integrated_spectrum + " % nm, ";
+                document.getElementById('integrated_passband').innerText = integrated_passband + " % nm, ";
                 document.getElementById('peak_spectrum').innerText = peak_spectrum + " %";
             })
             .catch((error) => {
