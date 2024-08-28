@@ -957,7 +957,7 @@ class GlobalBestPSO(SwarmOptimizer):
         oh_strategy=None,
         bh_strategy="periodic",
         velocity_clamp=None,
-        vh_strategy="unmodified",
+        vh_strategy="zero",
         center=1.00,
         ftol=-np.inf,
         ftol_iter=1,

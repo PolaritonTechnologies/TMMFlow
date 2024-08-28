@@ -27,10 +27,10 @@ parser.add_argument(
 # Parse the arguments
 args = parser.parse_args()
 """
-json_path = "../examples/demo_test.json"
+json_path = "../examples/Optimized_82.json"
 optimisation_method = ["particle swarm"]
 additional_parameters = [
-    {"particles": 30, "c1": 1.5, "c2": 1.5, "w": 2.5, "iterations": 10000}
+    {"particles": 30, "c1": 1.5, "c2": 1.5, "w": 0.6, "iterations": 10000}
 ]
 
 # Read the JSON file
