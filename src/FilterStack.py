@@ -1236,6 +1236,8 @@ class FilterStack:
                 return True
             elif self.optimization_method == "differential_evolution":
                 return True
+            elif self.optimization_method == "particle swarm":
+                return True
 
         else:
             return False
