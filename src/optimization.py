@@ -817,6 +817,7 @@ def gradient(function, x):
         grad[i] = (function(x_plus) - function(x_minus)) / (2 * h)
     return grad
 
+
 def hessian(function, x):
     """
     Function to calculate the Hessian of a given function
@@ -842,10 +843,14 @@ def hessian(function, x):
             x_j = x.copy()
             x_j[j] += h
 
-            hessian[i, j] = (function(x_ij) - function(x_i) - function(x_j) + function(x)) / (h**2)
+            hessian[i, j] = (
+                function(x_ij) - function(x_i) - function(x_j) + function(x)
+            ) / (h**2)
     return hessian
 
+
 from scipy.optimize import least_squares
+
 
 def gradient_descent(function, x0, bounds, callback, n_iter=500, tolerance=2.5e-3):
     """
@@ -869,11 +874,11 @@ def gradient_descent(function, x0, bounds, callback, n_iter=500, tolerance=2.5e-
     # drop_rate = 0.8
     # epochs_drop = 100
     # Optimized for Gauss-Newton
-    # learn_rate = 5e-2 
+    # learn_rate = 5e-2
     # drop_rate = 0.8
     # epochs_drop = 10
     # Levenberg-Marquardt
-    lambda_ = 0.01 
+    lambda_ = 0.01
 
     for i in range(1, n_iter + 1):
         # Increase counter
@@ -894,7 +899,9 @@ def gradient_descent(function, x0, bounds, callback, n_iter=500, tolerance=2.5e-
         # diff = adapt_learn_rate * grad # Simple gradient descent
 
         # diff = (1 / (np.sum(grad**2))) * grad * fun_eval # Gauss-Newton (for scalar function)
-        diff = (1 / (np.sum(grad**2) + lambda_)) * grad * fun_eval # Levenberg-Marquardt (for scalar function)
+        diff = (
+            (1 / (np.sum(grad**2) + lambda_)) * grad * fun_eval
+        )  # Levenberg-Marquardt (for scalar function)
 
         # Update the damping factor
         """
@@ -923,5 +930,98 @@ def gradient_descent(function, x0, bounds, callback, n_iter=500, tolerance=2.5e-
 
         if callback(0) == True:
             break
+
+    return optimize_res
+
+
+# import the pyswarms library and implement a particle swarm optimisation for the thicknesses only
+import pyswarms as ps
+from pyswarms.utils.functions import single_obj as fx
+from functools import partial
+
+
+def merit_as_objective_function(x, function=None):
+    """
+
+    Function to convert the merit function to a form that can be used as an objective function
+    for particle swarm optimisation
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        set of inputs of shape :code:`(n_particles, dimensions)`
+
+    Returns
+    -------
+    numpy.ndarray
+        computed cost of size :code:`(n_particles, )`
+
+    """
+
+    # Convert x to a list of lists
+    x = x.tolist()
+
+    # Convert x to a list of tuples
+    x = [tuple(x_i) for x_i in x]
+
+    # Compute the cost
+    cost = [function(x_i) for x_i in x]
+
+    return np.array(cost)
+
+
+def particle_swarm(
+    partial_merit_function,
+    bounds,
+    n_particles=10,
+    c1=0.5,
+    c2=0.3,
+    w=0.9,
+    n_iter=1000,
+):
+    """
+    Actual particle swarm optimisation function - does not accept change of layer order yet
+    """
+
+    print("Bounds" + str(bounds))
+
+    min_bound = [b[0] for b in bounds]
+    max_bound = [b[1] for b in bounds]
+
+    # convert min_bound and max_bound to np arrays
+
+    min_bound = np.array(min_bound)
+    max_bound = np.array(max_bound)
+
+    bound_optim = (min_bound, max_bound)
+
+    # Initialize swarm
+    options = {"c1": c1, "c2": c2, "w": w}
+
+    # Initialize optimiser
+    optimizer = ps.single.GlobalBestPSO(
+        n_particles=n_particles,
+        dimensions=len(bounds),
+        options=options,
+        bounds=bound_optim,
+    )
+
+    partial_merit_as_objective_function_with_layer_order = partial(
+        merit_as_objective_function,
+        function=partial_merit_function,
+    )
+
+    # Perform optimization using the merit_as_objective_function
+    cost, pos = optimizer.optimize(
+        partial_merit_as_objective_function_with_layer_order, iters=n_iter, verbose=True
+    )
+
+    # Create an Optimisation item to return
+    optimize_res = OptimizeResult()
+    optimize_res.fun_best = cost
+    optimize_res.x = pos
+    optimize_res.nit = n_iter
+    optimize_res.nfev = n_iter * n_particles
+    optimize_res.success = True
 
     return optimize_res

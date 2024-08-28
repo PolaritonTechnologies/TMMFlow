@@ -24,7 +24,7 @@ from scipy.optimize import (
     brute,
 )
 
-from optimization import dual_annealing, gradient_descent, gradient
+from optimization import dual_annealing, gradient_descent, gradient, particle_swarm
 
 
 def ignore(msg=None):
@@ -893,6 +893,12 @@ class FilterStack:
                     bounds=bounds,
                     method="Nelder-Mead",
                     callback=self.scipy_callback,
+                )
+            elif optimization_method == "particle_swarm":
+                # Particle swarm optimization
+                ret = particle_swarm(
+                    partial_merit_function,
+                    bounds=bounds,
                 )
 
             """
