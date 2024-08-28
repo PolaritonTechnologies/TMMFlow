@@ -913,6 +913,7 @@ class FilterStack:
                     c2=additional_parameters[iterator]["c2"],
                     w=additional_parameters[iterator]["w"],
                     n_iter=additional_parameters[iterator]["iterations"],
+                    callback=self.scipy_callback,
                 )
             else:
                 raise ValueError(
