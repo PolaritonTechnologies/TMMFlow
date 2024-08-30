@@ -1321,8 +1321,31 @@
                     var value = parseFloat(col.textContent);
                     var input = parseFloat(row.cells[7].getElementsByTagName('input')[0].value);
                     if (value > input) {
-                        errorMessages.push('Invalid input in row ' + i + '. The value in column 9 should be smaller than the input in column 8.');
+                        errorMessages.push('Invalid input in target row ' + i + '. The value in column 9 should be smaller than the input in column 8.');
                     }
+                } else if (j === 9) {
+                    // The numbers in this column cannot be larger than the total number of rows in the target table
+                    var value;
+                    // If the cell contains an input element, get its value
+                    value = col.getElementsByTagName('input')[0].value;
+                    var operatorsRegex = /[+\-*/]/;
+
+                    // Split the input value by the operators
+                    var splitValues = value.split(operatorsRegex);
+
+                    // Now parse all splitValues as ints
+                    splitValues = splitValues.map(function (value) {
+                        return parseInt(value);
+                    });
+
+                    // Iterate over each element in the splitValues array
+                    splitValues.forEach(function (intValue) {
+                        // If any element of the splitValues array is larger than the number of rows in the target table, add an error message
+                        if (intValue > table.rows.length - 1) {
+                            errorMessages.push('Invalid input in target row ' + i + '. No arithmetic numbers larger than the number of available targets are allowed.');
+                        }
+                    });
+
                 }
             }
         }
