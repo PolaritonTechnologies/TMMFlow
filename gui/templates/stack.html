@@ -120,6 +120,29 @@
         </div>
     </section>
     <section class="row justify-content-center">
+        <div class="col-lg-2 col-md-2">
+
+            <div class="row d-flex justify-content-center">
+                <h4 style="margin-bottom: 1em;"> Versioning</h4>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <form action="{{ url_for('stack_bp.select_version') }}" method="post" class="ml-3"
+                    style="margin-top:2em;">
+                    <div class="form-group">
+                        <!-- <label for="versionSelect">Select Filter Version</label> -->
+                        <select class="form-control" id="versionSelect" name="version">
+                            {% for version in default_values.versions %}
+                            <option value="{{ version }}">{{ version }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <button type="submit" class="btn btn-primary">Select Version</button>
+                </form>
+            </div>
+            <div class="vertical-line"></div>
+        </div>
         <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
             <div class="container"
                 style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
@@ -157,29 +180,27 @@
             <!-- class="ml-3 d-flex align-items-end" style="margin-top:2em;"> -->
             <!-- <button type="submit" class="btn btn-danger" value="resetFilter">Reset Filter</button> -->
             <!-- </form> -->
-            <form action="{{ url_for('stack_bp.select_version') }}" method="post" class="ml-3" style="margin-top:2em;">
-                <div class="form-group">
-                    <label for="versionSelect">Select Filter Version</label>
-                    <select class="form-control" id="versionSelect" name="version">
-                        {% for version in default_values.versions %}
-                        <option value="{{ version }}">{{ version }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">Select Version</button>
-            </form>
+            <div class="vertical-line"></div>
+
         </div>
         <div class="col-lg-2 col-md-4">
-            <div class="row">
-                <h4 style="margin-bottom: 1em;"> Filter Design Summary </h4>
+            <div class="row d-flex justify-content-center">
+                <h4 style="margin-bottom: 1em;"> Design Summary </h4>
             </div>
-            <div class="row">
-                <div class="col-7 text-end"><b>Total no. layers:</b></div>
-                <div class="col-5 text-start"><span id="layerCount"></span></div>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5 text-end"><b>Total no. layers:</b></div>
+                <div class="col-7 text-start"><span id="layerCount"></span></div>
             </div>
-            <div class="row">
-                <div class="col-7 text-end"><b>Total thickness:</b></div>
-                <div class="col-5 text-start"><span id="totalThickness"></span> nm</div>
+            <hr>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5 text-end"><b>Materials in use:</b></div>
+                <div class="col-7 text-start"><span id="materialsInUse"></span></div>
+            </div>
+            <!-- Add a horizontal line to display the total thickness underneath-->
+            <hr>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5 text-end"><b>Total thickness:</b></div>
+                <div class="col-7 text-start"><span id="totalThickness"></span> nm</div>
             </div>
         </div>
 
@@ -562,6 +583,9 @@
 
 
         </table>
+        <!-- Container for the Plotly graph -->
+        <div id="target_graph" style="margin-top: -20px;"></div>
+
         <section class="text-center my-5">
             <input type="submit" value="Save" class="btn btn-primary" style="margin-right: 1em; margin-bottom: 5em;"
                 id="saveButton">
@@ -887,7 +911,7 @@
             cell5.innerHTML = `
                 <div class="input-group">
                     <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Min" value = 0.0>
-                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Max" value = 100.0>
+                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Max" value = 500.0>
                 </div>
                 `;
             cell6.innerHTML = `
@@ -1285,9 +1309,6 @@
             var cell8InputValue = row.cells[7].getElementsByClassName('incoherent')[0].value;
             var incoherentBoolean = JSON.parse(cell8InputValue.toLowerCase());
 
-            // Now incoherentBoolean is a boolean
-            console.log(incoherentBoolean);
-
             // Check that the value in column 2 is within the bounds given in column 4, unless the input element in cell 8 has the class "incoherent"
             if (!incoherentBoolean && (valueInColumn2 < lowerBound || valueInColumn2 > upperBound)) {
                 errorMessages.push('Invalid thickness input for layer ' + layerNumber + '. The value should be within the bounds [' + lowerBound + ', ' + upperBound + '].');
@@ -1404,32 +1425,55 @@
         });
     });
     $(document).ready(function () {
-        // Calculate the number of layers
-        var layerCount = 0;
-        var totalThickness = 0;
-        $("#layers tbody tr").each(function () {
-            var layerType = $(this).find('td').eq(1).find('select').val();
-            var layerNumber = parseInt(layerType.split('_')[0]);
+        $(document).ready(function () {
+            // Calculate the number of layers
+            var layerCount = 0;
+            var totalThickness = 0;
+            var materialThickness = {}; // Object to store thickness by material
 
-            var thicknessField = $(this).find('td').eq(2).find('input').val();
-            if (!isNaN(layerNumber)) {
-                layerCount += layerNumber * (layerType.split('_').length - 1);
-                var thicknessValues = thicknessField.replace('[', '').replace(']', '').split(',').map(Number);
-                var thickness = thicknessValues.reduce((a, b) => a + b, 0);
-                totalThickness += parseFloat(thickness) * layerNumber;
-            } else {
-                layerCount += 1;  // Count as 1 layer if there's no leading number
-                // Only count as thickness if layer is not incoherent
-                if ($(this).find('td').eq(7).find('input').val() === 'false') {
-                    totalThickness += parseFloat(thicknessField);
+            $("#layers tbody tr").each(function () {
+                var layerType = $(this).find('td').eq(1).find('select').val();
+                var layerNumber = parseInt(layerType.split('_')[0]);
+                var material = layerType;
+
+                var thicknessField = $(this).find('td').eq(2).find('input').val();
+                if (!isNaN(layerNumber)) {
+                    layerCount += layerNumber * (layerType.split('_').length - 1);
+                    var thicknessValues = thicknessField.replace('[', '').replace(']', '').split(',').map(Number);
+                    var thickness = thicknessValues.reduce((a, b) => a + b, 0);
+                    totalThickness += parseFloat(thickness) * layerNumber;
+
+                    // Update material thickness
+                    if (!materialThickness[material]) {
+                        materialThickness[material] = 0;
+                    }
+                    materialThickness[material] += parseFloat(thickness) * layerNumber;
+                } else {
+                    layerCount += 1;  // Count as 1 layer if there's no leading number
+                    // Only count as thickness if layer is not incoherent
+                    if ($(this).find('td').eq(7).find('input').val() === 'false') {
+                        totalThickness += parseFloat(thicknessField);
+
+                        // Update material thickness
+                        if (!materialThickness[material]) {
+                            materialThickness[material] = 0;
+                        }
+                        materialThickness[material] += parseFloat(thicknessField);
+                    }
                 }
+            });
+
+            // Display the statistics
+            $("#layerCount").text(layerCount);
+            $("#totalThickness").text(totalThickness.toFixed(0));
+
+            // Display thickness by material
+            var materialThicknessHtml = '';
+            for (var material in materialThickness) {
+                materialThicknessHtml += '<p>' + material + ': ' + materialThickness[material].toFixed(0) + ' nm </p>';
             }
-
+            $("#materialsInUse").html(materialThicknessHtml);
         });
-
-        // Display the statistics
-        $("#layerCount").text(layerCount);
-        $("#totalThickness").text(totalThickness.toFixed(0));
     });
     document.getElementById('toggleThicknessOptCheckboxes').addEventListener('click', function () {
         toggleCheckboxesInColumn(3);
@@ -1688,5 +1732,201 @@
             }
         });
     });
+    // Create a dummy graph
+    var trace = {
+        x: [],
+        y: [],
+        mode: 'lines',
+        type: 'scatter',
+        line: {
+            color: 'rgb(0, 0, 0)',
+            width: 2
+        }
+    };
+
+    var layout = {
+        xaxis: {
+            title: 'Wavelength (nm)',
+            // showgrid: true,
+            zeroline: true
+        },
+        yaxis: {
+            title: 'Intensity (%)',
+            type: 'lin',
+            showline: true
+        },
+        hovermode: 'closest',
+        plot_bgcolor: 'rgb(223, 232, 243)'
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // Add event listeners to the input fields
+        var table = document.getElementById("target");
+        if (table) {
+            for (var i = 1, row; row = table.rows[i]; i++) {
+                for (var j = 0, col; col = row.cells[j]; j++) {
+                    var inputs = col.getElementsByTagName('input');
+                    for (var k = 0; k < inputs.length; k++) {
+                        inputs[k].addEventListener('keydown', function (event) {
+                            if (event.key === 'Enter') {
+                                update_target_graph();
+                            }
+                        });
+                    }
+                }
+            }
+        } else {
+            console.error("Table with ID 'target' not found.");
+        }
+
+        update_target_graph();
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+        update_target_graph();
+    });
+
+
+    var data = [trace];
+    Plotly.newPlot('target_graph', data, layout);
+    function update_target_graph() {
+        // Get the current visibility state of each legend group
+        var graphDiv = document.getElementById('target_graph');
+        var visibilityMap = {};
+        if (graphDiv.data) {
+            graphDiv.data.forEach(trace => {
+                if (trace.legendgroup) {
+                    visibilityMap[trace.legendgroup] = trace.visible;
+                }
+            });
+        }
+        // Clear the graph
+        var graphDiv = document.getElementById('target_graph');
+        var numTraces = graphDiv.data.length;
+        Plotly.deleteTraces('target_graph', Array.from(Array(numTraces).keys()));
+
+        // Define a colormap to always plot the same angle target with the same color 
+        var colorMap = {};
+        var colorIndex = 0;
+        var colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+
+        var table = document.getElementById("target");
+        if (!table) {
+            console.error("Table with ID 'target' not found.");
+            return;
+        }
+
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            var polar_angle_min, polar_angle_max, wavelength_min, wavelength_max, target_condition, target_value;
+
+            for (var j = 0, col; col = row.cells[j]; j++) {
+                if (j === 3) {
+                    var inputs = col.getElementsByTagName('input');
+                    if (inputs.length >= 2) {
+                        polar_angle_min = parseFloat(inputs[0].value);
+                        polar_angle_max = parseFloat(inputs[1].value);
+                    }
+                } else if (j === 5) {
+                    var inputs = col.getElementsByTagName('input');
+                    if (inputs.length >= 2) {
+                        wavelength_min = parseFloat(inputs[0].value);
+                        wavelength_max = parseFloat(inputs[1].value);
+                    }
+                } else if (j === 6) {
+                    var input = col.querySelector('input');
+                    if (input) {
+                        target_condition = parseFloat(input.value);
+                    } else {
+                        target_condition = parseFloat(col.textContent);
+                    }
+                } else if (j === 7) {
+                    var input = col.querySelector('input');
+                    if (input) {
+                        target_value = parseFloat(input.value);
+                    } else {
+                        target_value = parseFloat(col.textContent);
+                    }
+                }
+            }
+            if (!(polar_angle_min in colorMap)) {
+                colorMap[polar_angle_min] = colors[colorIndex % colors.length];
+                colorIndex++;
+            }
+            if (wavelength_min !== undefined && wavelength_max !== undefined && target_value !== undefined) {
+                Plotly.addTraces('target_graph', {
+                    x: [wavelength_min, wavelength_max],
+                    y: [target_value, target_value],
+                    mode: 'lines',
+                    type: 'scatter',
+                    name: "target " + i + ", " + polar_angle_min + "°",
+                    line: { width: 6, color: colorMap[polar_angle_min] },
+                    opacity: 0.5,
+                    legendgroup: "angle_" + polar_angle_min, // Group traces by angle
+                });
+            } else if (wavelength_min !== undefined && target_value !== undefined) {
+                Plotly.addTraces('target_graph', {
+                    x: [wavelength_min],
+                    y: [target_value],
+                    mode: 'markers',
+                    type: 'scatter',
+                    name: "target " + i + ", " + polar_angle_min + "°",
+                    marker: {
+                        size: 10,
+                        color: colorMap[polar_angle_min] // Set the color for the marker
+                    },
+                    opacity: 0.5,
+                    legendgroup: "angle_" + polar_angle_min, // Group traces by angle
+
+                });
+            }
+            else {
+                console.error("Missing data for row " + i);
+            }
+            if (!isNaN(polar_angle_max)) {
+                if (!(polar_angle_max in colorMap)) {
+                    colorMap[polar_angle_max] = colors[colorIndex % colors.length];
+                    colorIndex++;
+                }
+
+                if (wavelength_min !== undefined && wavelength_max !== undefined && target_value !== undefined) {
+                    Plotly.addTraces('target_graph', {
+                        x: [wavelength_min, wavelength_max],
+                        y: [target_value, target_value],
+                        mode: 'lines',
+                        type: 'scatter',
+                        name: "target " + i + ", " + polar_angle_max + "°",
+                        line: { width: 6, color: colorMap[polar_angle_max] },
+                        opacity: 0.5,
+                        legendgroup: "angle_" + polar_angle_max, // Group traces by angle
+                    });
+                } else if (wavelength_min !== undefined && target_value !== undefined) {
+                    Plotly.addTraces('target_graph', {
+                        x: [wavelength_min],
+                        y: [target_value],
+                        mode: 'markers',
+                        type: 'scatter',
+                        name: "target " + i + ", " + polar_angle_max + "°",
+                        marker: {
+                            size: 10,
+                            color: colorMap[polar_angle_max] // Set the color for the marker
+                        },
+                        opacity: 0.5,
+                        legendgroup: "angle_" + polar_angle_max, // Group traces by angle
+                    });
+                }
+                else {
+                    console.error("Missing data for row " + i);
+                }
+            }
+
+        }
+        // Restore the visibility state of each legend group
+        graphDiv.data.forEach((trace, index) => {
+            if (trace.legendgroup && visibilityMap[trace.legendgroup] !== undefined) {
+                Plotly.restyle('target_graph', { visible: visibilityMap[trace.legendgroup] }, [index]);
+            }
+        });
+    }
+
+
 </script>
 {% endblock %}

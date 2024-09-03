@@ -59,6 +59,11 @@ footer {
 #legend {
     /* display: flex; */
     padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center items vertically */
+    align-items: flex-start; /* Align items to the start horizontally */
+    height: 100%; /* Ensure the legend takes the full height of its container */
 }
 
 .legend-item {
@@ -131,4 +136,12 @@ tr {
 .active .nav-link {
     font-weight: bold;
     color: #007bff !important;
+}
+.vertical-line {
+    border-left: 1px solid lightgray; /* Match the style of the default <hr> line */
+    height: 100%; /* Ensure the line takes the full height of the column */
+    position: absolute; /* Position the line absolutely within the column */
+    left: 100%; /* Position the line at the right side of the column */
+    top: 0; /* Start the line from the top of the column */
+    transform: translateX(-50%); /* Adjust the position to align correctly */
 }
