@@ -1434,7 +1434,6 @@
             $("#layers tbody tr").each(function () {
                 var layerType = $(this).find('td').eq(1).find('select').val();
                 var layerNumber = parseInt(layerType.split('_')[0]);
-                var material = layerType;
 
                 var thicknessField = $(this).find('td').eq(2).find('input').val();
                 if (!isNaN(layerNumber)) {
@@ -1443,12 +1442,18 @@
                     var thickness = thicknessValues.reduce((a, b) => a + b, 0);
                     totalThickness += parseFloat(thickness) * layerNumber;
 
-                    // Update material thickness
-                    if (!materialThickness[material]) {
-                        materialThickness[material] = 0;
-                    }
-                    materialThickness[material] += parseFloat(thickness) * layerNumber;
+                    // Extract the material from the layer type by splitting at all underscores. Iterate over all materials (the first element is a number and can be omitted)
+                    var materials = layerType.split('_').slice(1);
+                    materials.forEach(function (material, index) {
+                        // Update material thickness
+                        if (!materialThickness[material]) {
+                            materialThickness[material] = 0;
+                        }
+                        materialThickness[material] += parseFloat(thicknessValues[index]) * layerNumber;
+                    });
+
                 } else {
+                    var material = layerType;
                     layerCount += 1;  // Count as 1 layer if there's no leading number
                     // Only count as thickness if layer is not incoherent
                     if ($(this).find('td').eq(7).find('input').val() === 'false') {
