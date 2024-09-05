@@ -14,6 +14,7 @@ sudo apt install software-properties-common
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt update
 sudo apt install gcc-11 g++-11
+sudo apt-get install libeigen3-dev
 ```
 
 %% Not Supported yet %%
