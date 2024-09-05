@@ -13,8 +13,9 @@ sudo apt install
 sudo apt install software-properties-common
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt update
-sudo apt install gcc-11 g++-11
+sudo apt install g++
 sudo apt-get install libeigen3-dev
+sudo apt-get install nlohmann-json3-dev
 ```
 
 %% Not Supported yet %%
