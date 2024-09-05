@@ -7,7 +7,7 @@ from flask_login import UserMixin
 # Standard python functions
 from datetime import datetime
 import json
-import os
+import pandas as pd
 
 # Hash passwords for security
 import bcrypt
@@ -75,6 +75,27 @@ class Job(db.Model):
     steps = db.Column(db.Integer, nullable=True)
     initial_merit = db.Column(db.Float, nullable=True)
     current_merit = db.Column(db.Float, nullable=True)
+
+
+class Material(db.Model):
+    """
+    CREATE TABLE materials (
+    id INTEGER PRIMARY KEY,
+    name TEXT,
+    creation_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    username TEXT,
+    team TEXT,
+    data TEXT
+    );
+    """
+
+    __tablename__ = "materials"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String, nullable=False, unique=True)
+    creation_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
+    username = db.Column(db.String, nullable=False)
+    team = db.Column(db.String, nullable=False)
+    data = db.Column(db.Text, nullable=True)
 
 
 def get_latest_job_id():
@@ -212,10 +233,71 @@ def get_all_user_projects(user=None):
     return unique_job_ids, filter_names, time_stamps
 
 
+def get_all_user_projects(user=None):
+    # Load all unique job IDs from the database for the given user
+    unique_job_ids = (
+        Job.query.with_entities(distinct(Job.job_id)).filter_by(username=user).all()
+    )
+
+    # Extract job IDs from the result
+    unique_job_ids = [job_id[0] for job_id in unique_job_ids]
+
+    # Load filter names and timestamps for the unique job IDs
+    filter_names = []
+    time_stamps = []
+    for job_id in unique_job_ids:
+        filter_name, time_stamp = (
+            Job.query.with_entities(Job.filter_name, Job.time_stamp)
+            .filter_by(job_id=job_id)
+            .order_by(Job.time_stamp.desc())
+            .first()
+        )
+        if filter_name and time_stamp:
+            filter_names.append(filter_name)
+            time_stamps.append(time_stamp)
+
+    return unique_job_ids, filter_names, time_stamps
+
+
 # Function to hash a password
-def hash_password(password):
+def change_password_database(username, password):
+    # Select user
+    user = User.query.filter_by(username=username).first()
+
     # Generate a salt
     salt = bcrypt.gensalt()
     # Hash the password with the salt
     hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
-    return hashed_password
+
+    # Update the user's password
+    user.pw = hashed_password.decode("utf-8")
+
+    # Write back to database
+    db.session.commit()
+
+
+# Function to hash a password
+def get_available_materials(team):
+    # Get all available materials for the given team and the default team "default"
+    available_materials_db_entries = Material.query.filter(
+        (Material.team == team) | (Material.team == "default")
+    ).all()
+
+    # Extract the names of the materials
+    available_materials = [material.name for material in available_materials_db_entries]
+
+    return available_materials
+
+
+# Function to hash a password
+def get_material_data(material, team):
+    # Get the material data for the specific material "material" and the team "team"
+    material_data = Material.query.filter(
+        (Material.name == material)
+        & ((Material.team == team) | (Material.team == "default"))
+    ).first()
+
+    # Convert material_data from json to pandas dataframe
+    material_data_df = pd.DataFrame(json.loads(material_data.data))
+
+    return material_data_df

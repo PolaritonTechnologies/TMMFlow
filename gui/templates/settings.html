@@ -9,6 +9,8 @@
                     Settings</a>
                 <a href="#" class="list-group-item list-group-item-action" data-target="#userSettings">User
                     Settings</a>
+                <a href="#" class="list-group-item list-group-item-action" data-target="#teamSettings">Team
+                    Settings</a>
                 <a href="#" class="list-group-item list-group-item-action" data-target="#contact">Contact
                 </a>
             </div>
@@ -16,6 +18,7 @@
         <div class="col-md-10">
             <div id="simulationSettings" class="settings-content">
                 <h2>Simulation Settings</h2>
+                <br>
                 <form class="form-horizontal">
                     <div class="form-group">
                         <label for="simParam1">Parameter 1</label>
@@ -32,29 +35,43 @@
                 <h2>User Settings</h2>
                 <br>
                 <!-- Add information for the user to tell them what group they are part of -->
-                <h5>Team</h5>
-                <p>You are part of the <strong>University of Cologne, Gatherlab</strong> team. Please contact us, if
-                    this is incorrect. </p>
-                <br>
-                <h5>Modify password</h5>
                 <form class="form-horizontal">
                     <!-- <div class="form-group">
                         <label for="email">Email</label>
                         <input type="email" class="form-control" id="email" placeholder="Enter email">
                     </div> -->
                     <div class="form-group">
-                        <label for="password">New Password</label>
-                        <input type="password" class="form-control" id="password" placeholder="New Password">
+                        <label for="username">Username</label>
+                        <input type="username" class="form-control" id="username" value={{default_values.username}}
+                            disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="e-mail" class="form-control" id="email" value={{default_values.email}} disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Change Password</label>
+                        <input type="password" class="form-control" id="passwordChanged" placeholder="New Password"
+                            style="margin-bottom: 10px;">
+                        <input type="password" class="form-control" id="passwordRepeated" placeholder="Repeat Password">
                     </div>
                     <!-- Add a button to save the user settings -->
-                    <button type="submit" class="btn btn-primary" id="saveUserSettings">Save</button>
+                    <button type="submit" class="btn btn-primary" id="changePasswordButton">Change Password</button>
                 </form>
+            </div>
+            <div id="teamSettings" class="settings-content" style="display: none;">
+                <h2>Team Settings</h2>
+                <br>
+                <!-- Add information for the user to tell them what group they are part of -->
+                <p>You are part of the <strong>{{default_values.team}}</strong> team. Please contact us, if
+                    this is incorrect. </p>
+
             </div>
             <div id="contact" class="settings-content" style="display: none;">
                 <h2>Contact</h2>
                 <br>
                 <p>Please contact us if you have any feature requests, bug reports or the like via
-                    <a href="mailto:julian.butscher@uni-koeln.de">julian.butscher@uni-koeln.de</a>.
+                    <a href="mailto:contact-hcnb@uni-koeln.de">contact-hcnb@uni-koeln.de</a>.
                 </p>
                 <br>
                 <p>This is a placeholder for a future contact form</p>
@@ -91,6 +108,35 @@
 
                 // Add active class to the clicked menu item
                 this.classList.add('active');
+            });
+        });
+    });
+
+    $(document).ready(function () {
+        $('#changePasswordButton').click(function () {
+            event.preventDefault(); // Prevent the default form submission
+
+            var passwordChanged = $('#passwordChanged').val();
+            var passwordRepeated = $('#passwordRepeated').val();
+
+            $.ajax({
+                type: 'POST',
+                url: '/change_password',
+                data: JSON.stringify({
+                    passwordChanged: passwordChanged,
+                    passwordRepeated: passwordRepeated
+                }),
+                contentType: 'application/json',
+                success: function (response) {
+                    if (response.status === 'success') {
+                        alert('Password changed successfully.');
+                    } else {
+                        alert('Passwords do not match.');
+                    }
+                },
+                error: function () {
+                    alert('An error occurred.');
+                }
             });
         });
     });

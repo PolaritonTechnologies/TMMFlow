@@ -6,6 +6,7 @@ from flask import (
     send_file,
     render_template,
     current_app as app,
+    session,
 )
 from werkzeug.utils import secure_filename
 
@@ -16,7 +17,9 @@ import pandas as pd
 
 # GUI python functions
 from .auth import login_required
-from .utility import get_available_materials
+
+# from .utility import get_available_materials
+from .database import get_available_materials, get_material_data
 
 # Define the Blueprint
 materials_bp = Blueprint("materials_bp", __name__, template_folder="templates")
@@ -30,7 +33,7 @@ def materials():
     Basic view for materials
     """
     # Get a list of all .csv files in the directory
-    material_list = get_available_materials(app.config["MATERIAL_FOLDER"])
+    material_list = get_available_materials(session["team"])
 
     return render_template("materials.html", available_materials=material_list)
 
@@ -39,10 +42,9 @@ def materials():
 def get_material_data_ajax():
     data = request.json
     material = data["material"]
-    # Load file and get data
-    df = pd.read_csv(
-        app.config["MATERIAL_FOLDER"] + material + ".csv", skiprows=1, sep="\t"
-    )
+
+    # Get material data from database and convert back from json to pandas dataframe
+    df = get_material_data(material, session["team"])
 
     # Convert the first column to a list and all following columns to a list of lists
     response_data = {
@@ -57,7 +59,21 @@ def get_material_data_ajax():
 @materials_bp.route("/download_material")
 def download_material():
     file_name = request.args.get("fileName")
-    path_to_file = app.config["MATERIAL_FOLDER"] + file_name + ".csv"
+
+    # Get material data from database and convert back from json to pandas dataframe
+    df = get_material_data(file_name, session["team"])
+
+    # Save the dataframe to a .csv file in the instance/temp folder
+    upload_folder = os.path.join(
+        os.path.dirname(app.instance_path), app.config["UPLOAD_FOLDER"]
+    )
+    path_to_file = os.path.join(upload_folder, file_name + ".csv")
+
+    df.to_csv(
+        path_to_file,
+        sep="\t",
+        index=False,
+    )
 
     return send_file(path_to_file, as_attachment=True)
 

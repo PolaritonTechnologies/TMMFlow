@@ -61,8 +61,10 @@ def login():
         password = request.form["password"]
         user = User.query.filter_by(username=username).first()
 
-        if user is not None and user.verify_password(password):
+        if user is not None and user.verify_password(password) and user.active:
             session["user_id"] = username
+            session["team"] = user.team
+            session["email"] = user.email
             session["job_id"] = None
             session["filter_name"] = None
             login_user(user)
