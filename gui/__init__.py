@@ -80,7 +80,7 @@ def create_app(test_config=None):
     db.init_app(app)
     app.cli.add_command(init_db_command)
 
-    from . import auth, stack, simulate, materials, optimize
+    from . import auth, stack, simulate, materials, optimize, settings
 
     auth.login_manager.init_app(app)
 
@@ -89,6 +89,7 @@ def create_app(test_config=None):
     app.register_blueprint(simulate.simulate_bp, url_prefix="/")
     app.register_blueprint(materials.materials_bp, url_prefix="/")
     app.register_blueprint(optimize.optimize_bp, url_prefix="/")
+    app.register_blueprint(settings.settings_bp, url_prefix="/")
     app.add_url_rule("/", endpoint="stack_bp.stack")
 
     # app.config.from_object(rq_dashboard.default_settings)
