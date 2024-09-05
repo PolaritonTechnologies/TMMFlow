@@ -92,6 +92,7 @@ class Material(db.Model):
     __tablename__ = "materials"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False, unique=True)
+    material_class = db.Column(db.String, nullable=False)
     creation_time = db.Column(db.DateTime, nullable=False, default=datetime.now())
     username = db.Column(db.String, nullable=False)
     team = db.Column(db.String, nullable=False)
@@ -276,7 +277,7 @@ def change_password_database(username, password):
     db.session.commit()
 
 
-# Function to hash a password
+# Function to get all available materials from DB
 def get_available_materials(team):
     # Get all available materials for the given team and the default team "default"
     available_materials_db_entries = Material.query.filter(
@@ -285,11 +286,14 @@ def get_available_materials(team):
 
     # Extract the names of the materials
     available_materials = [material.name for material in available_materials_db_entries]
+    material_classes = [
+        material.material_class for material in available_materials_db_entries
+    ]
 
-    return available_materials
+    return available_materials, material_classes
 
 
-# Function to hash a password
+# Function to get a specific material from DB
 def get_material_data(material, team):
     # Get the material data for the specific material "material" and the team "team"
     material_data = Material.query.filter(
@@ -301,3 +305,23 @@ def get_material_data(material, team):
     material_data_df = pd.DataFrame(json.loads(material_data.data))
 
     return material_data_df
+
+
+# Function to delete a specific material from the DB
+def delete_material_from_db(material, team):
+    try:
+        # Find the material to delete
+        material_to_delete = Material.query.filter_by(name=material, team=team).first()
+
+        if material_to_delete:
+            # Delete the material
+            db.session.delete(material_to_delete)
+            # Commit the changes
+            db.session.commit()
+            return True
+        else:
+            return False
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting material: {e}")
+        return False

@@ -19,7 +19,11 @@ import pandas as pd
 from .auth import login_required
 
 # from .utility import get_available_materials
-from .database import get_available_materials, get_material_data
+from .database import (
+    get_available_materials,
+    get_material_data,
+    delete_material_from_db,
+)
 
 # Define the Blueprint
 materials_bp = Blueprint("materials_bp", __name__, template_folder="templates")
@@ -33,9 +37,19 @@ def materials():
     Basic view for materials
     """
     # Get a list of all .csv files in the directory
-    material_list = get_available_materials(session["team"])
+    material_list, material_classes = get_available_materials(session["team"])
 
-    return render_template("materials.html", available_materials=material_list)
+    # Group materials by their classes
+    grouped_materials = {}
+    for material, material_class in zip(material_list, material_classes):
+        if material_class not in grouped_materials:
+            grouped_materials[material_class] = []
+        grouped_materials[material_class].append(material)
+
+    return render_template(
+        "materials.html",
+        grouped_materials=grouped_materials,
+    )
 
 
 @materials_bp.route("/get_material_data_ajax", methods=["POST"])
@@ -78,7 +92,16 @@ def download_material():
     return send_file(path_to_file, as_attachment=True)
 
 
-"""
+@materials_bp.route("/delete_material", methods=["POST"])
+def delete_material():
+    material = request.form.get("material")
+
+    delete_material_from_db(material, session["team"])
+
+    # Return a success message
+    return jsonify({"message": f"Material {material} deleted successfully"})
+
+
 @materials_bp.route("/upload_material", methods=["POST"])
 def upload_material():
     if "file" not in request.files:
@@ -101,13 +124,7 @@ def upload_material():
             "y": df.iloc[:, 1:].values.T.tolist(),
             "name": df.columns[1:].tolist(),
         }
-
-        # Emit the data
-        #! Check if this is still working without socket.io
-        # socketio.emit("material_data", data)
-
-        return filename, 200
-"""
+        return jsonify({"status": "success", "data": data, "filename": filename}), 200
 
 
 @materials_bp.route("/accept", methods=["POST"])

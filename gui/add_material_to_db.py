@@ -19,6 +19,7 @@ class Material(Base):
     __tablename__ = "materials"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
+    material_class = Column(String, nullable=False)
     creation_time = Column(DateTime, nullable=False, default=datetime.now)
     username = Column(String, nullable=False)
     team = Column(String, nullable=False)
@@ -29,15 +30,17 @@ class Material(Base):
 Base.metadata.create_all(engine)
 
 # User details
-name = "ZrO2"
+name = "AlPcCl"
+material_class = "organic"
 username = "julian"
-# team = "University of Cologne, HCNB"
-team = "default"
-data = pd.read_csv("../materials/ZrO2.csv", sep="\t", skiprows=1).to_json()
+team = "University of Cologne, HCNB"
+# team = "default"
+data = pd.read_csv("../materials/AlPcCl.csv", sep="\t", skiprows=1).to_json()
 
 # Create a new material instance
 new_material = Material(
     username=username,
+    material_class=material_class,
     name=name,
     team=team,
     data=data,
