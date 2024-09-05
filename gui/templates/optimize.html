@@ -144,6 +144,7 @@
     <div class="position-relative">
         <div id="merit_graph"></div>
         <div class="d-flex justify-content-end position-absolute" style="top: 2em; right: 0;">
+            <div id="optStatus" class="text-center mr-2" style="color:red;"></div>
             <div id="iterations" class="text-right mr-2"></div>
             <div id="merit" class="text-right"></div>
         </div>
@@ -221,15 +222,16 @@
 
                     update_merit_graph(response.step, response.merit);
 
-                    // Wait another second until the loading spinner is hidden
+                    // Wait another four seconds until the loading spinner is hidden
                     setTimeout(function () {
                         document.getElementById('loading').style.display = 'none';
-                    }, 4000);
+                    }, 3500);
 
 
                     // Start periodic updates
                     if (updateIntervalId !== null) {
-                        clearInterval(updateIntervalId); // Clear existing interval if any
+                        // Clear existing interval if any
+                        clearInterval(updateIntervalId);
                     }
                     updateIntervalId = setInterval(function () {
                         $.ajax({
@@ -250,6 +252,8 @@
                                 if (updateResponse.finished) {
                                     clearInterval(updateIntervalId); // Stop the periodic updates
                                     console.log("Optimization completed. Stopping updates.");
+                                    // Display a message to the user
+                                    $('#optStatus').text("Optimization completed.");
                                 }
 
                                 // Example: $('#status').text(updateResponse.status);
@@ -285,13 +289,10 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Success:', data);
-                // Handle success, e.g., show a message to the user
-                // Optionally, remove the spinner or update UI
-                // document.getElementById('loadingOpt').style.display = 'none';
+                $('#optStatus').text("Optimization stop requested by user.");
             })
             .catch((error) => {
                 console.error('Error:', error);
-                // Handle error, e.g., show an error message to the user
             });
     });
 

@@ -126,6 +126,7 @@ def start_optimization():
     # Set the cancellation flag in the redis database to false
     redis_conn.set(f"job_cancel_flag:{job_id}", "false")
 
+    # Extract optimization parameters from the request (if there are any they are in parantheses)
     opt_parameters = np.empty(np.size(request.json["optimizationMethod"]), dtype=object)
     opt_methods = request.json["optimizationMethod"].copy()
 

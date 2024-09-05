@@ -186,6 +186,37 @@ def extract_spectral_parameters(current_json, plotting_data):
         current_json["targets_wavelengths"], dtype=object
     )[np.array(current_json["targets_value"]) > 0.1]
 
+    # Check if there is a target passband
+    if np.size(target_passband_wavelength) == 0:
+        return {"integrated_spectrum": 0, "integrated_passband": 0, "peak_spectrum": 0}
+
+    # The cosine factor is included to account for a uniform emitter so to
+    # weight the area on the spherical surface correctly (dA =
+    # sin(theta)d(theta)d(phi)). Additionally we divided by 2 pi to normalize
+    # the total intensity of one half sphere. In another addition, we divide by
+    # the maximum achievable intensity through the passband.
+    maximum_achievable_intensity = 0
+
+    for i in np.arange(
+        min(plotting_data["x"]),
+        max(plotting_data["x"]),
+        plotting_data["x"][1] - plotting_data["x"][0],
+    ):
+        maximum_achievable_intensity += (
+            100
+            * abs(target_passband_wavelength[0][1] - target_passband_wavelength[0][0])
+            * (np.cos(i * np.pi / 180) - np.cos((i + 1) * np.pi / 180))
+        )
+
+    normalization_factors = (
+        1
+        / maximum_achievable_intensity
+        * (
+            np.cos(np.array(plotting_data["x"]) * np.pi / 180)
+            - np.cos((np.array(plotting_data["x"]) + 1) * np.pi / 180)
+        )
+    )
+
     # Integrate the spectrum for the target passband
     # Only choose first target (target_no = 1)
     target_no = 0
@@ -217,7 +248,8 @@ def extract_spectral_parameters(current_json, plotting_data):
                     )
                     * 100
                     for i in range(np.size(plotting_data["x"]))
-                ],
+                ]
+                * normalization_factors,
                 plotting_data["x"],
             )
 
@@ -227,7 +259,8 @@ def extract_spectral_parameters(current_json, plotting_data):
             np.trapz(np.array(plotting_data["z"]).T[i], np.array(plotting_data["y"]))
             * 100
             for i in range(np.size(plotting_data["x"]))
-        ],
+        ]
+        * normalization_factors,
         plotting_data["x"],
     )
     peak_spectrum = np.max(plotting_data["z"]) * 100

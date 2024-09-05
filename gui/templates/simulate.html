@@ -222,7 +222,12 @@
         height: 800,
         margin: { l: 50, r: 50, b: 100, t: 100, pad: 4 },
         xaxis: { title: "Angle (°)" },
-        yaxis: { title: "Wavelength (nm)" },
+        yaxis: {
+            title: {
+                text: "Wavelength (nm)",
+                standoff: 100  // Adjust this value to move the title further to the left
+            }
+        },
     };
     var config = {
         modeBarButtonsToAdd: [{
@@ -289,8 +294,8 @@
                 const peak_spectrum = data.peak_spectrum.toFixed(2);
 
                 // Update the divs with the new numbers
-                document.getElementById('integrated_spectrum').innerText = integrated_spectrum + "% nm, ";
-                document.getElementById('integrated_passband').innerText = integrated_passband + " % nm, ";
+                document.getElementById('integrated_spectrum').innerText = integrated_spectrum + " % nm °, ";
+                document.getElementById('integrated_passband').innerText = integrated_passband + " % nm °, ";
                 document.getElementById('peak_spectrum').innerText = peak_spectrum + " %";
                 // If you need to use the commented-out Plotly code:
                 // var plotData = {
@@ -360,8 +365,8 @@
                 const peak_spectrum = data.peak_spectrum.toFixed(2);
 
                 // Update the divs with the new numbers
-                document.getElementById('integrated_spectrum').innerText = integrated_spectrum + " % nm, ";
-                document.getElementById('integrated_passband').innerText = integrated_passband + " % nm, ";
+                document.getElementById('integrated_spectrum').innerText = integrated_spectrum + " % nm °, ";
+                document.getElementById('integrated_passband').innerText = integrated_passband + " % nm °, ";
                 document.getElementById('peak_spectrum').innerText = peak_spectrum + " %";
             })
             .catch((error) => {
