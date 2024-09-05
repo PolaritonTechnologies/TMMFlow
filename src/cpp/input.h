@@ -1,11 +1,11 @@
 #include <fstream>
-#include "json.hpp"
 #include <iostream>
 #include <vector>
 #include <set>
 #include <string>
 #include <cmath>
 #include <complex>
+#include <nlohmann/json.hpp>
 #include "Eigen/Dense"
 #include "spline.h"
 

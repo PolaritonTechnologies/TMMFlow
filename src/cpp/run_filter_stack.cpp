@@ -3,7 +3,7 @@
 #include "FilterStack.h"
 #include <iostream>
 #include <cmath>
-#include "json.hpp"
+#include <nlohmann/json.hpp>
 
 extern "C"
 {
