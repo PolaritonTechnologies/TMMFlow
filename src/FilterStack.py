@@ -1,6 +1,3 @@
-# import eventlet
-
-# eventlet.monkey_patch()
 import ctypes
 import json
 import os
@@ -24,7 +21,13 @@ from scipy.optimize import (
     brute,
 )
 
-from optimization import dual_annealing, gradient_descent, gradient, particle_swarm
+from optimization import (
+    dual_annealing,
+    gradient_descent,
+    gradient,
+    particle_swarm,
+    grid_search,
+)
 
 
 def ignore(msg=None):
@@ -304,7 +307,7 @@ class FilterStack:
         # Link C++ functions and create filter
         lib = ctypes.CDLL(
             os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "./run_filter_stack.so"
+                os.path.dirname(os.path.realpath(__file__)), "./cpp/run_filter_stack.so"
             )
         )
 
@@ -906,6 +909,18 @@ class FilterStack:
             elif optimization_method == "particle swarm":
                 # Particle swarm optimization
                 ret = particle_swarm(
+                    partial_merit_function,
+                    bounds=bounds,
+                    n_particles=additional_parameters[iterator]["particles"],
+                    c1=additional_parameters[iterator]["c1"],
+                    c2=additional_parameters[iterator]["c2"],
+                    w=additional_parameters[iterator]["w"],
+                    n_iter=additional_parameters[iterator]["iterations"],
+                    callback=self.scipy_callback,
+                )
+            elif optimization_method == "grid search particle swarm hyperparameter":
+                # Particle swarm optimization
+                grid_search(
                     partial_merit_function,
                     bounds=bounds,
                     n_particles=additional_parameters[iterator]["particles"],
@@ -1532,6 +1547,7 @@ class FilterStack:
         polarization=None,
         save_figure=False,
         save_data=False,
+        save_to_test=False,
     ):
         """
         Calculates the angle-resolved (AR)) data for a given set of parameters.
@@ -1598,16 +1614,37 @@ class FilterStack:
         if save_data:
             header_lines = []
 
-            # Save header lines indicating what the simulation represents
-            temp_path = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "./temp/value.csv"
-            )
-            # temp_path = os.path.join(os.getcwd(), "temp", "value.csv")
-            with open(temp_path, "w") as the_file:
-                the_file.write("\n".join(header_lines))
+            if not save_to_test:
 
-            # Save actual data by appending
-            self.stored_data[0].to_csv(temp_path, sep=",", header=True, mode="a")
+                # Save header lines indicating what the simulation represents
+                temp_path = os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)), "./temp/value.csv"
+                )
+                # temp_path = os.path.join(os.getcwd(), "temp", "value.csv")
+                with open(temp_path, "w") as the_file:
+                    the_file.write("\n".join(header_lines))
+
+                # Save actual data by appending
+                self.stored_data[0].to_csv(temp_path, sep=",", header=True, mode="a")
+
+            if save_to_test:
+
+                # if test_reference.csv does not exist, then save in test_reference.csv, else save in test_to_compare.csv
+                test_path = os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)),
+                    "tests/test_reference.csv",
+                )
+                if os.path.exists(test_path):
+                    test_path = os.path.join(
+                        os.path.dirname(os.path.realpath(__file__)),
+                        "tests/this_test.csv",
+                    )
+                with open(test_path, "w") as the_file:
+                    the_file.write("\n".join(header_lines))
+
+                # Save actual data by appending
+                self.stored_data[0].to_csv(test_path, sep=",", header=True, mode="a")
+
         if save_figure:
             # Print time elapsed for the generation of the reflectivity matrix
             log(time.time() - initial_time)
