@@ -11,6 +11,8 @@ A Dual Annealing global optimization algorithm
 """
 
 import numpy as np
+import itertools
+import json
 from scipy.optimize import OptimizeResult
 from scipy.optimize import minimize, Bounds
 from scipy.special import gammaln
@@ -946,6 +948,7 @@ from pyswarms.backend.topology import Star
 from pyswarms.backend.handlers import BoundaryHandler, VelocityHandler, OptionsHandler
 from pyswarms.base import SwarmOptimizer
 from pyswarms.utils.reporter import Reporter
+from pyswarms.utils.search.grid_search import GridSearch
 
 class GlobalBestPSO(SwarmOptimizer):
     def __init__(
@@ -957,7 +960,7 @@ class GlobalBestPSO(SwarmOptimizer):
         oh_strategy=None,
         bh_strategy="periodic",
         velocity_clamp=None,
-        vh_strategy="zero",
+        vh_strategy="unmodified",
         center=1.00,
         ftol=-np.inf,
         ftol_iter=1,
@@ -1059,17 +1062,6 @@ class GlobalBestPSO(SwarmOptimizer):
                 the global best cost and the global best position.
             """
 
-            # Verbosity is disabled in the gui optimization
-            # if verbose:
-                # log_level = logging.INFO
-            # else:
-                # log_level = logging.NOTSET
-
-            #self.rep.log("Obj. func. args: {}".format(kwargs), lvl=logging.DEBUG)
-            #self.rep.log(
-            #    "Optimize for {} iters with {}".format(iters, self.options),
-            #    lvl=log_level,
-            #)
             # Populate memory of the handlers
             self.bh.memory = self.swarm.position
             self.vh.memory = self.swarm.position
@@ -1132,17 +1124,98 @@ class GlobalBestPSO(SwarmOptimizer):
             final_best_pos = self.swarm.pbest_pos[
                 self.swarm.pbest_cost.argmin()
             ].copy()
-            # Write report in log and return final cost and position
-            #self.rep.log(
-            #    "Optimization finished | best cost: {}, best pos: {}".format(
-            #        final_best_cost, final_best_pos
-            #    ),
-            #    lvl=log_level,
-            #)
+
             # Close Pool of Processes
             if n_processes is not None:
                 pool.close()
             return (final_best_cost, final_best_pos)
+
+def generate_grid(options):
+    """Generate the grid of all hyperparameter value combinations"""
+
+    # Extract keys and values from options dictionary
+    keys = list(options.keys())
+    values = list(options.values())
+
+    # Generate the grid
+    grid = []
+    for i in range(len(values[0])):
+        for j in range(len(values[1])):
+            for k in range(len(values[2])):
+                for l in range(len(values[3])):
+                    grid.append(
+                        {
+                            keys[0]: values[0][i],
+                            keys[1]: values[1][j],
+                            keys[2]: values[2][k],
+                            keys[3]: values[3][l],
+                        }
+                    )
+    return grid
+       
+def grid_search(
+    partial_merit_function,
+    bounds,
+    n_particles=[5, 10, 20, 30],
+    c1=[0.5, 1.0, 1.5, 2.0],
+    c2=[0.5, 1.0, 1.5, 2.0],
+    w=[0.5, 0.75, 1.0, 1.5],
+    n_iter=200000,
+    output_results_file="particle_swarm_optimization_results.json",
+    callback=None,
+):
+    """
+    Particle swarm hyperparameter optimisation using a grid_search // Cartesian Product
+    based on https://pyswarms.readthedocs.io/en/latest/api/pyswarms.utils.search.html#module-pyswarms.utils.search.grid_search
+    """
+
+    print("Parameters for the grid search are: n_particles: " + str(n_particles) + ", c1: " + str(c1) + ", c2: " + str(c2) + ", w: " + str(w))
+    options = {
+        "n_particles": n_particles,
+        "c1": c1,
+        "c2": c2,
+        "w": w,
+    }
+
+    # form the cartesian product
+    grid = generate_grid(options)
+    #print("The grid for optimisation is: " + str(grid))
+
+    # for all elements in the grid, perform the particle swarm optimisation
+    # at the end of each optimisation, save the results inside the json output_results_file
+    # the results are sorted to have the best results first
+
+    results = []
+    for params in grid:
+        print("Optimisation for params: " + str(params))
+        optimize_res = particle_swarm(
+            partial_merit_function,
+            bounds,
+            n_particles=params["n_particles"],
+            c1=params["c1"],
+            c2=params["c2"],
+            w=params["w"],
+            n_iter=n_iter,
+            callback=callback,
+        )
+
+        results.append(
+            {
+                "params": params,
+                "fun_best": optimize_res.fun_best,
+                "x": optimize_res.x.tolist(),
+                "nit": optimize_res.nit,
+                "nfev": optimize_res.nfev,
+                "success": optimize_res.success,
+            }
+        )
+
+        # update the json file with sorted results
+        results = sorted(results, key=lambda x: x["fun_best"])
+        with open(output_results_file, "w") as f:
+            json.dump(results, f)
+
+    print("Results of the grid search are: " + str(results))
 
 def merit_as_objective_function(x, function=None):
     """
@@ -1188,7 +1261,7 @@ def particle_swarm(
     Actual particle swarm optimisation function - does not accept change of layer order yet
     """
 
-    print("Bounds" + str(bounds))
+    # print("Bounds" + str(bounds))
 
     min_bound = [b[0] for b in bounds]
     max_bound = [b[1] for b in bounds]

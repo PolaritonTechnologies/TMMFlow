@@ -24,7 +24,13 @@ from scipy.optimize import (
     brute,
 )
 
-from optimization import dual_annealing, gradient_descent, gradient, particle_swarm
+from optimization import (
+    dual_annealing,
+    gradient_descent,
+    gradient,
+    particle_swarm,
+    grid_search,
+)
 
 
 def ignore(msg=None):
@@ -906,6 +912,18 @@ class FilterStack:
             elif optimization_method == "particle swarm":
                 # Particle swarm optimization
                 ret = particle_swarm(
+                    partial_merit_function,
+                    bounds=bounds,
+                    n_particles=additional_parameters[iterator]["particles"],
+                    c1=additional_parameters[iterator]["c1"],
+                    c2=additional_parameters[iterator]["c2"],
+                    w=additional_parameters[iterator]["w"],
+                    n_iter=additional_parameters[iterator]["iterations"],
+                    callback=self.scipy_callback,
+                )
+            elif optimization_method == "grid search particle swarm hyperparameter":
+                # Particle swarm optimization
+                grid_search(
                     partial_merit_function,
                     bounds=bounds,
                     n_particles=additional_parameters[iterator]["particles"],
