@@ -1,4 +1,4 @@
-// g++ -shared -o run_filter_stack.so run_filter_stack.cpp -fPIC -fopenmp
+// g++ -I/usr/include/eigen3 -shared -o run_filter_stack.so run_filter_stack.cpp -fPIC -fopenmp
 
 #include "FilterStack.h"
 #include <iostream>
