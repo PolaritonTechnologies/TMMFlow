@@ -94,10 +94,10 @@ database.db
 
 users table
 
-| id  | user    | pw  |
-| --- | ------- | --- |
-| 1   | julian  | xx  |
-| 2   | florian | xx  |
+| id  | user    | pw  | e-mail          | team                        | active |
+| --- | ------- | --- | --------------- | --------------------------- | ------ |
+| 1   | julian  | xx  | xx@uni-koeln.de | University of Cologne, HCNB | True   |
+| 2   | florian | xx  | xx@uni-koeln.de | University of Cologne, HCNB | True   |
 
 jobs table
 

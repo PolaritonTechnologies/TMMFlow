@@ -4,10 +4,13 @@ from flask.cli import with_appcontext
 import click
 from flask_login import UserMixin
 
-# Standard pyton functions
+# Standard python functions
 from datetime import datetime
 import json
 import os
+
+# Hash passwords for security
+import bcrypt
 
 # Import the SQLAlchemy instance
 from . import db
@@ -33,13 +36,30 @@ def init_db_command():
 
 # Define the database models using the module-level db instance
 class User(db.Model, UserMixin):
+    """
+    CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username TEXT,
+    pw TEXT,
+    email TEXT,
+    team TEXT,
+    active BOOLEAN
+    );
+    """
+
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(128))
+    pw = db.Column(db.String(128))
+    email = db.Column(db.String(80), unique=True, nullable=False)
+    team = db.Column(db.String(80), nullable=False)
+    active = db.Column(db.Boolean)
 
-    def check_password(self, password):
-        return password == self.password
+    # Function to verify a password
+    def verify_password(self, provided_password):
+        return bcrypt.checkpw(
+            provided_password.encode("utf-8"), self.pw.encode("utf-8")
+        )
 
 
 class Job(db.Model):
@@ -190,3 +210,12 @@ def get_all_user_projects(user=None):
             time_stamps.append(time_stamp)
 
     return unique_job_ids, filter_names, time_stamps
+
+
+# Function to hash a password
+def hash_password(password):
+    # Generate a salt
+    salt = bcrypt.gensalt()
+    # Hash the password with the salt
+    hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed_password
