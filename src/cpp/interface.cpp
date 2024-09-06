@@ -1,9 +1,8 @@
-// g++ -I/usr/include/eigen3 -shared -o run_filter_stack.so run_filter_stack.cpp -fPIC -fopenmp
+// Compilation command to run for the interface between python and C++ (See readme for dependencies installation)
+// g++ -I/usr/include/eigen3 -I/usr/include/nlohmann -I/usr/local/include -I./include -shared -o interface.so interface.cpp FilterStack.cpp core.cpp input.cpp -fPIC -fopenmp
 
 #include "FilterStack.h"
-#include <iostream>
 #include <cmath>
-#include <nlohmann/json.hpp>
 
 extern "C"
 {
@@ -24,9 +23,8 @@ extern "C"
 	}
 
 	double calculate_reflection_transmission_absorption(FilterStack *filter_stack, const char *type, const char *polarization, double wavelength, double theta_0, double phi_0)
-	{
-		double value = filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0);
-		return value;
+	{	
+		return filter_stack->calculate_reflection_transmission_absorption(type, polarization, wavelength, theta_0, phi_0);
 	}
 
 	char *calculate_reflection_transmission_absorption_para(FilterStack *filter_stack, const char *type, const char *polarization, double *wavelengths, size_t wavelengths_size, double *theta_0, size_t thetas_0_size, double *phis_0, size_t phis_0_size)
@@ -89,8 +87,7 @@ extern "C"
 		std::vector<char *> target_polarization_vector(target_polarization, target_polarization + target_size);
 		std::vector<char *> target_arithmetic_vector(target_arithmetic, target_arithmetic + target_size);
 
-		double merit = filter_stack->calculate_merit(target_value_vector, target_wavelength_vector, target_polar_angle_vector, target_azimuthal_angle_vector, target_weights_vector, target_condition_vector, target_tolerance_vector, target_type_vector, target_polarization_vector, target_arithmetic_vector);
-		return merit;
+		return filter_stack->calculate_merit(target_value_vector, target_wavelength_vector, target_polar_angle_vector, target_azimuthal_angle_vector, target_weights_vector, target_condition_vector, target_tolerance_vector, target_type_vector, target_polarization_vector, target_arithmetic_vector);
 	}
 
 	void change_material_thickness(FilterStack *filter_stack, double *d_list, size_t size_d_list)
