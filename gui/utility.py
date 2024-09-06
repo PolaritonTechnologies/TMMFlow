@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import re
 
 
 def allowed_file(filename):
@@ -19,6 +20,27 @@ def convert_numpy_to_list(data):
         return data
 
 
+def load_color_scheme_from_css(filepath):
+    color_scheme = {}
+    with open(filepath, "r") as file:
+        css_content = file.read()
+        # Find all CSS variables
+        matches = re.findall(r"--(.*?):\s*(.*?);", css_content)
+        for match in matches:
+            color_scheme[match[0].strip()] = match[1].strip()
+    return list(color_scheme.values())[8:]
+
+
+def generate_colors(n):
+    custom_colors = load_color_scheme_from_css("./gui/static/css/colorscheme.css")
+    if n > len(custom_colors):
+        raise ValueError(
+            "Number of colors requested exceeds the custom color list length."
+        )
+    return custom_colors[:n]
+
+
+"""
 def generate_colors(n):
     cmap = plt.cm.get_cmap("Dark2", n)  # Get the 'viridis' color map
     colors = [cmap(i) for i in range(cmap.N)]  # Generate colors
@@ -28,6 +50,7 @@ def generate_colors(n):
         for color in colors
     ]
     return hex_colors
+"""
 
 
 def get_available_materials(directory):

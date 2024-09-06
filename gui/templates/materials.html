@@ -116,6 +116,19 @@
 <script>
     var selectedMaterial;
     var materialsSelect = document.getElementById('materials');
+    var colorIndex = 0;
+    var colors = [
+        "#2a3d7e",
+        "e26d50",
+        "#8AB187",
+        "#8cc7e1",
+        "#DEBC43",
+        "#0c0a2e",
+        "#FF6F61",
+        "#2A9D8F",
+        "#E9C46A",
+        "#264653"
+    ];
 
     $(document).ready(function () {
         $('#materialClasses').select2({
@@ -148,11 +161,16 @@
                 x: data.x,
                 y: y,
                 mode: 'lines',
-                name: data.name[index]
+                name: data.name[index],
+                line: {
+                    color: colors[index]
+                }
             };
         });
 
         var layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
+            plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
             title: {
                 text: selectedMaterial,
                 font: {

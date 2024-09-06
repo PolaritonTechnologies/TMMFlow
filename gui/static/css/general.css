@@ -2,7 +2,7 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f4;
+    background-color: var(--light);
 }
 
 header {
@@ -13,7 +13,7 @@ header {
 }
 
 nav {
-    background-color: #ddd;
+    background-color: var(--dark);
     padding: 10px 0;
 }
 
@@ -135,7 +135,7 @@ tr {
 
 .active .nav-link {
     font-weight: bold;
-    color: #007bff !important;
+    color: var(--primary) !important;
 }
 .vertical-line {
     border-left: 1px solid lightgray; /* Match the style of the default <hr> line */

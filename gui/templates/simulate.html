@@ -163,6 +163,20 @@
 
 {% block scripts %}
 <script>
+    // Define a colormap to always plot the same angle target with the same color 
+    var colorIndex = 0;
+    var colors = [
+        "#2a3d7e",
+        "e26d50",
+        "#8AB187",
+        "#8cc7e1",
+        "#DEBC43",
+        "#0c0a2e",
+        "#FF6F61",
+        "#2A9D8F",
+        "#E9C46A",
+        "#264653"
+    ];
     function plotHeatmap(fig_json, layout, config) {
         var data = {
             x: fig_json.x,
@@ -217,6 +231,8 @@
 
     // Create a layout with autosize set to true, aspectmode set to cube, and x-axis and y-axis labels
     var layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
+        plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
         autosize: false,
         width: 800,
         height: 800,
@@ -267,7 +283,7 @@
     // Plotly.newPlot('heatmap', [dummyData], layout, config);
     window.onload = function () {
         var dataPresent = {{ default_values.dataPresent | tojson
-    }};
+    }}
 
     console.log("Data present: ", dataPresent);
     if (dataPresent) {
@@ -384,6 +400,7 @@
     // 
     // });
 
+
     var trace1 = {
         x: [],  // x data
         y: [],  // y data
@@ -394,6 +411,8 @@
     var data = [trace1];
 
     var layout_xy = {
+        paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
+        plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
         xaxis: {
             title: 'Wavelength (nm)',
             showgrid: false,
@@ -432,13 +451,18 @@
         if (plottedAngles[data.name]) {
             return;
         }
+        var colorIndex = Object.keys(plottedAngles).length % colors.length;
+        var color = colors[colorIndex];
 
         var newTrace = {
             x: data.x,  // new x data
             y: data.y,  // new y data
             mode: 'lines',
             type: 'scatter',
-            name: data.name
+            name: data.name,
+            line: {
+                color: color
+            }
         };
 
         Plotly.addTraces('DatavsWavelengthPlot', newTrace);

@@ -1809,10 +1809,22 @@
         var numTraces = graphDiv.data.length;
         Plotly.deleteTraces('target_graph', Array.from(Array(numTraces).keys()));
 
+
         // Define a colormap to always plot the same angle target with the same color 
         var colorMap = {};
         var colorIndex = 0;
-        var colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+        var colors = [
+            "#2a3d7e",
+            "e26d50",
+            "#8AB187",
+            "#8cc7e1",
+            "#DEBC43",
+            "#0c0a2e",
+            "#FF6F61",
+            "#2A9D8F",
+            "#E9C46A",
+            "#264653"
+        ];
 
         var table = document.getElementById("target");
         if (!table) {

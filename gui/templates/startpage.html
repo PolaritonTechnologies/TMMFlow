@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Matrix Method Optical Simulation Tool</title>
+    <!-- Include Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colorscheme.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        .hero-section {
+            background: url('./static/media/filter-showing-diffraction.jpg') no-repeat center center;
+            background-size: cover;
+            color: white;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .hero-section h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero-section p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .showcase-section {
+            padding: 4rem 0;
+        }
+
+        .try-out-btn {
+            font-size: 1.25rem;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .feature-row:nth-child(even) {
+            background-color: var(--dark);
+            color: white;
+        }
+
+        .feature-row:nth-child(odd) {
+            background-color: var(--light);
+            color: black;
+        }
+
+        .feature-row {
+            height: 100vh;
+            /* Set each row to 100% of the viewport height */
+            padding: 5%;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .feature-row img,
+        .feature-row video {
+            border-radius: 10px;
+        }
+
+        .feature-row.even .image-container {
+            justify-content: flex-start;
+            text-align: left;
+            /* Add this line */
+        }
+
+        .feature-row.odd .image-container {
+            justify-content: flex-end;
+            text-align: left;
+            /* Add this line */
+        }
+
+        .feature-row.even .text-container {
+            justify-content: flex-end;
+            padding: 5%;
+        }
+
+        .feature-row.odd .text-container {
+            justify-content: flex-start;
+        }
+
+        .image-container img {
+            display: block;
+            /* Ensure the image is a block element */
+            margin: 0;
+            /* Remove any default margin */
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <h1>Optimize Your Thin Film Stacks with Ease</h1>
+            <p>Experience the power of our Transfer Matrix Method (TMM) simulation tool for achieving new designs.</p>
+            <a href="{{ url_for('stack_bp.stack') }}" class="btn btn-primary try-out-btn">Try Out</a>
+        </div>
+    </section>
+
+    <!-- Showcase Section -->
+    <section class="showcase-section">
+        <div class="container col-md-12">
+            <div class="row feature-row even">
+                <div class="col-md-7 d-flex image-container">
+                    <img src="./static/media/filter-representation.PNG" alt="Screenshot 1" class="img-fluid">
+                </div>
+                <div class="col-md-5 d-flex align-items-center text-container">
+                    <div>
+                        <h5>Design your thin film device with real-time visual feedback and effortlessly track changes
+                            across multiple versions for optimal results.
+                        </h5>
+                    </div>
+                </div>
+            </div>
+            <div class="row feature-row odd">
+                <div class="col-md-5 d-flex align-items-center text-container">
+                    <div>
+                        <h5>
+                            Experience interactive plotting for transmission, reflection, and absorption with
+                            customizable
+                            polarizations.
+                            Easily select angles to zoom in for detailed analysis, maximizing insights effortlessly.
+                            Explore and understand your data deeply with our intuitive plotting capabilities.
+                        </h5>
+                    </div>
+                </div>
+                <div class="col-md-7 d-flex image-container">
+                    <img src="./static/media/Bild2.png" alt="Screenshot 2" class="img-fluid">
+                </div>
+            </div>
+            <div class="row feature-row even">
+                <div class="col-md-7 d-flex image-container">
+                    <img src="./static/media/optimization-routine.PNG" alt="Screenshot 3" class="img-fluid">
+                </div>
+                <div class="col-md-5 d-flex align-items-center text-container">
+                    <div>
+                        <h5>Optimize your design with state of the art global
+                            and local optimization algorithms such as simulated
+                            annealing or particle swarm to achieve the best possible design.</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="row feature-row odd">
+                <div class="col-md-5 d-flex align-items-center text-container">
+                    <div>
+                        <h5>
+                            Bring your own materials to the party and share them with your team to build up a .
+                        </h5>
+                    </div>
+                </div>
+                <div class="col-md-7 d-flex image-container">
+                    <img src="./static/media/materials.png" alt="Screenshot 2" class="img-fluid">
+                </div>
+            </div>
+            <div class="row feature-row even">
+                <div class="col-md-6 d-flex image-container">
+                    <video controls class="img-fluid">
+                        <source src="./static/media/screenshot.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                <div class="col-md-6 d-flex align-items-center text-container">
+                    <div>
+                        <h5>Watch our video for a hands on demonstration of modern thin film optimization.</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Try Out Section -->
+    <section id="try-out" class="text-center py-5 bg-light">
+        <div class="container">
+            <h2>Ready to Get Started?</h2>
+            <p>Click the button below to try out our Transfer Matrix Method Optical Simulation Tool.</p>
+            <a href="path/to/your/webapp" class="btn btn-primary try-out-btn">Try Out</a>
+        </div>
+    </section>
+
+    <!-- Include Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>

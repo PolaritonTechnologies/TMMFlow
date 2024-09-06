@@ -1,5 +1,5 @@
 # Flask related imports
-from flask import Flask, send_from_directory
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from redis import Redis
@@ -90,7 +90,11 @@ def create_app(test_config=None):
     app.register_blueprint(materials.materials_bp, url_prefix="/")
     app.register_blueprint(optimize.optimize_bp, url_prefix="/")
     app.register_blueprint(settings.settings_bp, url_prefix="/")
-    app.add_url_rule("/", endpoint="stack_bp.stack")
+
+    # app.add_url_rule("/", endpoint="stack_bp.stack")
+    @app.route("/")
+    def start_page():
+        return render_template("startpage.html")
 
     # app.config.from_object(rq_dashboard.default_settings)
     # rq_dashboard.web.setup_rq_connection(app)
