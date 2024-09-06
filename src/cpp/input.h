@@ -1,42 +1,21 @@
-#include <fstream>
-#include <iostream>
-#include <vector>
-#include <set>
+#pragma once
 #include <string>
-#include <cmath>
-#include <complex>
-#include <nlohmann/json.hpp>
-#include "Eigen/Dense"
 #include "spline.h"
+#include <filesystem>
+#include <fstream>
 
-using namespace Eigen;
-using json = nlohmann::json;
-
-std::filesystem::path getBasePath()
-{
-    auto currentPath = std::filesystem::current_path();
-    // Check if current execution is from /TMM/src
-    if (currentPath.filename() == "src")
-    {
-        return currentPath.parent_path(); // Move up to /TMM
-    }
-    // Otherwise, assume execution from /TMM or handle other cases as needed
-    return currentPath;
-}
-
-std::filesystem::path getMaterialsPath(const std::string &filename)
-{
-    auto basePath = getBasePath();
-    return basePath / "materials" / (filename + ".csv");
-}
+std::filesystem::path getBasePath();
+std::filesystem::path getMaterialsPath(const std::string &filename);
 
 class CSVParser
 {
 public:
+    CSVParser() = default;
+
+    // The CSVParser methods are defined here instead of cpp due to difficulties in linking the spline header
     std::vector<tk::spline> permittivityFromIndex(const tk::spline &real_index_spline, const tk::spline &imag_index_spline, const std::vector<double> &wavelength)
     {
         std::vector<double> real_values, imag_values;
-
         for (double w : wavelength)
         {
             double n = real_index_spline(w);
@@ -53,13 +32,11 @@ public:
         std::vector<tk::spline> permittivity_splines = {real_spline, imag_spline};
         return permittivity_splines;
     }
-
+    
     std::pair<std::vector<tk::spline>, bool> importIndexFromFile(const std::string &filename)
     {
         bool general_material;
 
-        // std::string fullfilename = filename + ".csv";
-        // std::filesystem::path fullpath = std::filesystem::current_path().parent_path() / "materials" / fullfilename;
         std::filesystem::path fullpath = getMaterialsPath(filename);
         std::ifstream file(fullpath);
 
@@ -236,11 +213,13 @@ public:
         tk::spline default_spline({0}, {0});
         std::vector<tk::spline> default_splines(1, default_spline);
         return std::make_pair(default_splines, false);
+
     }
 };
 
 struct CalculationInfo
 {
+public:
     std::string calculation_type;
     double polarAngleMin;
     double polarAngleMax;
@@ -258,10 +237,8 @@ struct CalculationInfo
     std::string polarization;
     std::string incidentMediumMaterial;
     std::string exitMediumMaterial;
-
     // Default constructor
     CalculationInfo() = default;
-
     CalculationInfo(
         std::string calculation_type,
         double polarAngleMin,
@@ -296,38 +273,5 @@ struct CalculationInfo
                                           exitMediumMaterial(exitMediumMaterial) {}
 };
 
-CalculationInfo loadCalculationInfo(const std::string &json_text)
-{
-
-    json calculation_order = json::parse(json_text);
-    std::vector<std::string> structure_materials = calculation_order["structure_materials"];
-    std::vector<bool> incoherent = calculation_order["incoherent"];
-    std::vector<double> structure_thicknesses = calculation_order["structure_thicknesses"];
-
-    CalculationInfo calculation_info(
-        calculation_order["calculation_type"],
-        calculation_order["polarAngleMin"],
-        calculation_order["polarAngleMax"],
-        calculation_order["polarAngleStep"],
-        calculation_order["azimAngleMin"],
-        calculation_order["azimAngleMax"],
-        calculation_order["azimAngleStep"],
-        calculation_order["wavelengthMin"],
-        calculation_order["wavelengthMax"],
-        calculation_order["wavelengthStep"],
-        calculation_order["polarization"],
-        structure_materials,
-        incoherent,
-        structure_thicknesses,
-        calculation_order["incident_medium"],
-        calculation_order["exit_medium"]);
-
-    return calculation_info;
-}
-
-std::vector<std::string> getUniqueMembers(const std::vector<std::string> &inputArray)
-{
-    std::set<std::string> uniqueSet(inputArray.begin(), inputArray.end());
-    std::vector<std::string> uniqueVector(uniqueSet.begin(), uniqueSet.end());
-    return uniqueVector;
-}
+CalculationInfo loadCalculationInfo(const std::string &json_text);
+std::vector<std::string> getUniqueMembers(const std::vector<std::string> &inputArray);
