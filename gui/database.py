@@ -325,3 +325,21 @@ def delete_material_from_db(material, team):
         db.session.rollback()
         print(f"Error deleting material: {e}")
         return False
+
+
+def add_material_to_db(material, team, material_class, material_data, username):
+    # Create a new material object
+    new_material = Material(
+        name=material,
+        material_class=material_class,
+        username=username,
+        team=team,
+        data=material_data,
+    )
+
+    # Add the new material to the database
+    db.session.add(new_material)
+
+    # Commit the changes
+    db.session.commit()
+    return True

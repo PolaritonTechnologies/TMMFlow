@@ -3,7 +3,7 @@
 <main class="container-custom">
     <div class="row align-items-center ">
         <div class="col-2 d-flex flex-column justify-content-center">
-            <p> Select a material</p>
+            <h6> Select a material</h6>
             <div style="margin-bottom: 2em;">
                 <select name="materials" id="materials" class="form-control">
                     {% for material_class, materials in grouped_materials.items() %}
@@ -22,9 +22,18 @@
                     data-target="#deleteModal">Delete Material</button>
                 <!-- Add horizontal line -->
                 <hr>
-                <p> Upload new material</p>
+                <h6> Upload new material</h6>
                 <button class="btn btn-primary form-control" id="uploadMaterialButton" data-toggle="modal"
                     data-target="#uploadModal">Upload</button>
+
+                <div class="row d-flex justify-content-center align-items-center" style="margin-top: 1em;">
+                    <div class="col-6 pr-1">
+                        <button class="btn btn-success form-control d-none" id="acceptUploadButton">Accept</button>
+                    </div>
+                    <div class="col-6 pl-1">
+                        <button class="btn btn-danger form-control d-none" id="rejectUploadButton">Reject</button>
+                    </div>
+                </div>
             </div>
             <!-- Delete Confirmation Modal -->
             <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel"
@@ -70,7 +79,9 @@
                                     <select name="materialClasses" id="materialClasses" class="form-control" required>
                                         <option value="" disabled selected>Select a material class</option>
                                         {% for material_class, materials in grouped_materials.items() %}
+                                        {% if material_class != 'default' %}
                                         <option value="{{ material_class }}">{{ material_class }}</option>
+                                        {% endif %}
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -95,12 +106,6 @@
             <!-- <p> Upload new material</p> -->
             <!-- <input type="file" id="fileUpload" style="display: none;" /> -->
             <!-- <button class="btn btn-primary" id="uploadButton">Upload</button> -->
-            <!-- <div class="row d-flex justify-content-center align-items-center"> -->
-            <!-- <button class="btn btn-success" id="acceptButton" -->
-            <!-- style="display: none; margin-top: 1em; margin-right: 1em;">Accept</button> -->
-            <!-- <button class="btn btn-danger" id="rejectButton" -->
-            <!-- style="display: none; margin-top: 1em; margin-left: 1em;">Reject</button> -->
-            <!-- </div> -->
         </div>
         <div class="col-8" id="plotDiv"></div>
     </div>
@@ -112,6 +117,15 @@
     var selectedMaterial;
     var materialsSelect = document.getElementById('materials');
 
+    $(document).ready(function () {
+        $('#materialClasses').select2({
+            theme: 'bootstrap',
+            tags: true,
+            placeholder: "Select or create a material class",
+            allowClear: true
+        });
+    });
+
     materialsSelect.addEventListener('change', function () {
         selectedMaterial = this.value;
         fetch('/get_material_data_ajax', {
@@ -122,65 +136,67 @@
             body: JSON.stringify({ material: selectedMaterial }),
         })
             .then(response => response.json())
-            .then(data => {
-                var traces = data.y.map(function (y, index) {
-                    return {
-                        x: data.x,
-                        y: y,
-                        mode: 'lines',
-                        name: data.name[index]
-                    };
-                });
-
-                var layout = {
-                    title: {
-                        text: selectedMaterial,
-                        font: {
-                            size: 18
-                        }
-                    },
-                    xaxis: {
-                        title: {
-                            text: 'Wavelength (nm)',
-                            font: {
-                                size: 18
-                            }
-                        }
-                    },
-                    yaxis: {
-                        title: {
-                            text: 'n, k',
-                            font: {
-                                size: 18
-                            }
-                        }
-                    },
-                    height: window.innerHeight * 0.7 // Set the height to 80% of the viewport height
-                };
-                var config = {
-                    modeBarButtonsToAdd: [{
-                        name: 'Log Scale',
-                        title: 'log',
-                        click: function (gd) {
-                            var update = { 'yaxis.type': 'log' };
-                            Plotly.relayout(gd, update);
-                        }
-                    }, {
-                        name: 'Linear Scale',
-                        title: 'lin',
-                        click: function (gd) {
-                            var update = { 'yaxis.type': 'linear' };
-                            Plotly.relayout(gd, update);
-                        }
-                    }]
-                };
-
-                Plotly.newPlot('plotDiv', traces, layout, config);
-            })
+            .then(data => { plotMaterialData(data, selectedMaterial) })
             .catch((error) => {
                 console.error('Error:', error);
             });
     });
+
+    function plotMaterialData(data, selectedMaterial) {
+        var traces = data.y.map(function (y, index) {
+            return {
+                x: data.x,
+                y: y,
+                mode: 'lines',
+                name: data.name[index]
+            };
+        });
+
+        var layout = {
+            title: {
+                text: selectedMaterial,
+                font: {
+                    size: 18
+                }
+            },
+            xaxis: {
+                title: {
+                    text: 'Wavelength (nm)',
+                    font: {
+                        size: 18
+                    }
+                }
+            },
+            yaxis: {
+                title: {
+                    text: 'n, k',
+                    font: {
+                        size: 18
+                    }
+                }
+            },
+            height: window.innerHeight * 0.7 // Set the height to 80% of the viewport height
+        };
+        var config = {
+            modeBarButtonsToAdd: [{
+                name: 'Log Scale',
+                title: 'log',
+                click: function (gd) {
+                    var update = { 'yaxis.type': 'log' };
+                    Plotly.relayout(gd, update);
+                }
+            }, {
+                name: 'Linear Scale',
+                title: 'lin',
+                click: function (gd) {
+                    var update = { 'yaxis.type': 'linear' };
+                    Plotly.relayout(gd, update);
+                }
+            }]
+        };
+
+        Plotly.newPlot('plotDiv', traces, layout, config);
+    }
 
     // Trigger the 'change' event manually
     var event = new Event('change');
@@ -257,6 +273,23 @@
         $('#confirmUploadButton').on('click', function () {
             const fileInput = document.getElementById('fileUpload');
             const file = fileInput.files[0];
+            const materialName = $('#materialName').val();
+            const materialClass = $('#materialClasses').val();
+
+            // Check that a material name and a class have been given as well as a file has been selected
+            if (!file) {
+                alert('Please select a file to upload');
+                return;
+            }
+            if (!materialName) {
+                alert('Please enter a material name');
+                return;
+            }
+            if (!materialClass || materialClass === 'default') {
+                alert('Please select a material class or create a new one that is not "default"');
+                return;
+            }
+
             if (file) {
                 uploadMaterial(file);
             }
@@ -277,8 +310,11 @@
             success: function (response) {
                 // Handle success response
                 console.log('Material uploaded successfully');
-                // Optionally, refresh the page or update the UI
-                location.reload();
+                plotMaterialData(response.data, response.filename);
+                // Now display two buttons to accept or reject the material underneath the upload button 
+                $('#acceptUploadButton').removeClass('d-none');
+                $('#rejectUploadButton').removeClass('d-none');
+
             },
             error: function (error) {
                 // Handle error response
@@ -286,6 +322,70 @@
             }
         });
     }
+    $('#rejectUploadButton').on('click', function () {
+        rejectMaterial();
+    });
+
+    $('#acceptUploadButton').on('click', function () {
+        acceptMaterial();
+    });
+    function rejectMaterial() {
+        // Get the currently selected material from the select2 dropdown
+        $('#acceptUploadButton').addClass('d-none');
+        $('#rejectUploadButton').addClass('d-none');
+        const selectedMaterial = $('#materials').val();
+        fetch('/get_material_data_ajax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ material: selectedMaterial }),
+        })
+            .then(response => response.json())
+            .then(data => { plotMaterialData(data, selectedMaterial) })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+    }
+
+    function acceptMaterial() {
+        // Get the data from the Plotly plot
+        const plotDiv = document.getElementById('plotDiv');
+        const plotData = plotDiv.data.map(trace => ({
+            x: trace.x,
+            y: trace.y,
+            name: trace.name,
+            mode: trace.mode
+        }));
+        const materialName = $('#materialName').val();
+        const materialClass = $('#materialClasses').val();
+
+
+
+        // Make an AJAX call to the Python function to accept the material
+        $.ajax({
+            url: '/accept_material',  // Adjust the URL to your Flask route
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                plotData: plotData,
+                materialName: materialName,
+                materialClass: materialClass
+            }),
+            success: function (response) {
+                console.log('Material accepted successfully');
+                // Optionally, hide the accept and reject buttons
+                $('#acceptUploadButton').addClass('d-none');
+                $('#rejectUploadButton').addClass('d-none');
+                // Reload the page to show the new material in the dropdown
+                location.reload();
+            },
+            error: function (error) {
+                console.error('Error accepting material:', error);
+            }
+        });
+    }
+
 
 </script>
 {% endblock %}

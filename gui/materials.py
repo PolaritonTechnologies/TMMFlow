@@ -14,6 +14,7 @@ from werkzeug.utils import secure_filename
 import os
 import shutil
 import pandas as pd
+import json
 
 # GUI python functions
 from .auth import login_required
@@ -23,6 +24,7 @@ from .database import (
     get_available_materials,
     get_material_data,
     delete_material_from_db,
+    add_material_to_db,
 )
 
 # Define the Blueprint
@@ -127,18 +129,19 @@ def upload_material():
         return jsonify({"status": "success", "data": data, "filename": filename}), 200
 
 
-@materials_bp.route("/accept", methods=["POST"])
-def accept_file():
-    filename = request.form.get("filename")
-    shutil.move(
-        os.path.join(app.config["UPLOAD_FOLDER"], filename),
-        os.path.join(app.config["MATERIAL_FOLDER"], filename),
+@materials_bp.route("/accept_material", methods=["POST"])
+def accept_material():
+    # Get the data from the request
+    data_1 = request.get_json()["plotData"][0]
+    data_2 = request.get_json()["plotData"][1]
+    data = json.dumps({"nm": data_1["x"], "n": data_1["y"], "k": data_2["y"]})
+
+    add_material_to_db(
+        request.get_json()["materialName"],
+        session["team"],
+        request.get_json()["materialClass"],
+        data,
+        session["user_id"],
     )
+
     return "File accepted", 200
-
-
-@materials_bp.route("/reject", methods=["POST"])
-def reject_file():
-    filename = request.form.get("filename")
-    os.remove(os.path.join(app.config["UPLOAD_FOLDER"], filename))
-    return "File rejected", 200
