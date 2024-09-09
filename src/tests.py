@@ -4,6 +4,7 @@
 from FilterStack import FilterStack
 import pandas as pd
 import numpy as np
+import json
 import os
 
 #########################
@@ -70,62 +71,75 @@ def convert_open_filter_datastructure(file_path, columns):
 #########################
 # Input parameters
 # json_file_path = os.path.join(
-    # os.path.dirname(os.getcwd()), "examples", "demo_test_with_backside.json"
+# os.path.dirname(os.getcwd()), "examples", "demo_test_with_backside.json"
 # )
-json_file_path = os.path.join(
-    os.path.dirname(os.getcwd()), "examples", "demo_test.json"
-)
 
-#########################
 
-# Create filter stack
-filter_stack = FilterStack(json_file_path)
+def execute_tests(json_path):
 
-# def test():
-# assert optimization.check_targets(cavity_optimisation())
-for target in ["t", "r"]:
-    for polarization in ["s", "p"]:
-        print("Target: " + target + ", Pol.: " + polarization)
-        filter_stack.calculate_ar_data(
-            polar_angles=[0, 15, 30, 45, 60, 75, 89],
-            save_data=True,
-            target_type=target,
-            polarization=polarization,
-        )
-        calculated_data_df = pd.read_csv(
-            os.path.join(os.getcwd(), "temp", "value.csv"), sep=","
-        )
-        calculated_data_df = calculated_data_df.rename(
-            columns={"Unnamed: 0": "wavelength"}
-        )
+    json_file_path = os.path.join(os.path.dirname(os.getcwd()), "examples", json_path)
 
-        # open_filter_df = pd.read_csv(
-        #     "../tests/" + polarization + "_" + target + ".csv", sep="\t"
-        # )
-        open_filter_df = pd.read_csv(
-            os.path.join(os.path.dirname(os.getcwd()), "tests")
-            + "/"
-            + polarization
-            + "_"
-            + target
-            + "_with_backside.csv",
-            sep="\t",
-        )
+    #########################
 
-        # complete_ease_df = pd.read_csv("../tests/" + polarization + "_" + target + "_CE.csv", sep = "\t")
+    with open(json_file_path, "r") as file:
+        filter_json = json.load(file)
 
-        # x = 1e-3
-        # calculated_data_df = calculated_data_df.where(calculated_data_df >= x, 0)
-        # open_filter_df = open_filter_df.where(open_filter_df >= x, 0)
-        temp_diff = abs(calculated_data_df - open_filter_df)
-        # temp_diff_ce_of = abs(complete_ease_df - open_filter_df)
-        # print(temp_diff)
-        # print(temp_diff_ce_of)
-        print("Maximum deviations: ")
-        print(temp_diff.max())
-        # print(temp_diff_ce_of.max())
+    # Create filter stack
+    filter_stack = FilterStack(my_filter_dict=filter_json)
 
-        # Plot this to get a feeling for where the inaccuracies are the worst
+    # def test():
+    # assert optimization.check_targets(cavity_optimisation())
+    for target in ["t", "r"]:
+        for polarization in ["s", "p"]:
+            print("Target: " + target + ", Pol.: " + polarization)
+            filter_stack.calculate_ar_data(
+                polar_angles=[0, 15, 30, 45, 60, 75, 89],
+                save_data=True,
+                target_type=target,
+                polarization=polarization,
+            )
+            calculated_data_df = pd.read_csv(
+                os.path.join(os.getcwd(), "temp", "value.csv"), sep=","
+            )
+            calculated_data_df = calculated_data_df.rename(
+                columns={"Unnamed: 0": "wavelength"}
+            )
 
-        # Testing with assert is not really helpful here
-        # pd.testing.assert_frame_equal(calculated_data_df, open_filter_df)
+            # To find the corresponding test file, one needs to remove json from the filename
+            cleaned_file_name = json_path.replace(".json", "")
+
+            open_filter_df = pd.read_csv(
+                os.path.join(os.path.dirname(os.getcwd()), "src/tests")
+                + "/"
+                + cleaned_file_name
+                + "_"
+                + polarization
+                + "_"
+                + target
+                + ".csv",
+                sep="\t",
+            )
+
+            # complete_ease_df = pd.read_csv("../tests/" + polarization + "_" + target + "_CE.csv", sep = "\t")
+
+            # x = 1e-3
+            # calculated_data_df = calculated_data_df.where(calculated_data_df >= x, 0)
+            # open_filter_df = open_filter_df.where(open_filter_df >= x, 0)
+            temp_diff = abs(calculated_data_df - open_filter_df)
+            # temp_diff_ce_of = abs(complete_ease_df - open_filter_df)
+            # print(temp_diff)
+            # print(temp_diff_ce_of)
+            print("Maximum deviations: ")
+            print(temp_diff.max())
+            # print(temp_diff_ce_of.max())
+
+            # Plot this to get a feeling for where the inaccuracies are the worst
+
+            # Testing with assert is not really helpful here
+            # pd.testing.assert_frame_equal(calculated_data_df, open_filter_df)
+
+
+tests = ["demo_test.json", "demo_test_with_backside.json"]
+
+for test in tests:
+    execute_tests(test)
