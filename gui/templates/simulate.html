@@ -41,7 +41,7 @@
 
         <div class="col-6">
 
-            <div style="position: relative;">
+            <div style="position: relative; margin-bottom: 5em;">
                 <div id="DatavsWavelengthPlot"></div>
                 <button id="resetPlot" class="btn btn-primary" style="position: absolute; top: 40px; right: 0;">Reset
                     Plot</button>
@@ -163,6 +163,8 @@
 
 {% block scripts %}
 <script>
+    // Define fontsize of plots
+    const font_size = 18;
     // Define a colormap to always plot the same angle target with the same color 
     var colorIndex = 0;
     var colors = [
@@ -178,12 +180,27 @@
         "#264653"
     ];
     function plotHeatmap(fig_json, layout, config) {
+        var modeDropdown = document.getElementById("mode");
+        var modeTitle = modeDropdown.options[modeDropdown.selectedIndex].text;
+
         var data = {
             x: fig_json.x,
             y: fig_json.y,
             z: fig_json.z,
             colorscale: 'Viridis',
             type: 'heatmap',
+            colorbar: {
+                title: {
+                    text: modeTitle,  // Add a label for the colorbar
+                    side: 'right',
+                },
+                titlefont: {
+                    size: font_size,
+                },
+                tickfont: {
+                    size: font_size  // Increase the font size of the colorbar tick labels
+                }
+            }
         }
         Plotly.newPlot("heatmap", [data], layout, config);
         var heatmap = document.getElementById('heatmap');
@@ -226,7 +243,13 @@
     var dummyData = {
         z: Array(100).fill().map(() => Array(100).fill(0)),
         type: 'heatmap',
-        colorscale: 'Viridis'
+        colorscale: 'Viridis',
+        colorbar: {
+            title: {
+                text: 'Intensity',  // Add a label for the colorbar
+                side: 'right'
+            },
+        }
     };
 
     // Create a layout with autosize set to true, aspectmode set to cube, and x-axis and y-axis labels
@@ -234,15 +257,29 @@
         paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
         plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
         autosize: false,
-        width: 800,
+        width: 900,
         height: 800,
-        margin: { l: 50, r: 50, b: 100, t: 100, pad: 4 },
-        xaxis: { title: "Angle (°)" },
+        margin: { l: 100, r: 50, b: 80, t: 100, pad: 4 },
+        xaxis: {
+            title: "Angle (°)",
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
+        },
         yaxis: {
             title: {
                 text: "Wavelength (nm)",
-                standoff: 100  // Adjust this value to move the title further to the left
-            }
+                standoff: 30,
+            },
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
         },
     };
     var config = {
@@ -415,13 +452,30 @@
         plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
         xaxis: {
             title: 'Wavelength (nm)',
-            showgrid: false,
-            zeroline: false
+            showgrid: true,
+            zeroline: false,
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
+            minor: {
+                ticklen: 6,
+            },
+            dtick: 20,
+
         },
         yaxis: {
             title: 'Intensity (a.u.)',
-            showline: false,
-            type: 'linear'  // set initial yaxis type to linear
+            showline: true,
+            type: 'linear',
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
         },
     };
     var config_xy = {
@@ -447,6 +501,9 @@
     var plottedAngles = {};
 
     function plotXY(data) {
+        var modeDropdown = document.getElementById("mode");
+        var modeTitle = modeDropdown.options[modeDropdown.selectedIndex].text;
+
         // Check if this angle has already been plotted
         if (plottedAngles[data.name]) {
             return;
@@ -461,8 +518,10 @@
             type: 'scatter',
             name: data.name,
             line: {
-                color: color
-            }
+                color: color,
+                width: 3
+            },
+
         };
 
         Plotly.addTraces('DatavsWavelengthPlot', newTrace);

@@ -654,6 +654,9 @@
 {% block scripts %}
 
 <script>
+    // Define fontsize of plots
+    const font_size = 18;
+
     $('#uploadForm').on('submit', function (e) {
         e.preventDefault();
 
@@ -1753,12 +1756,24 @@
         xaxis: {
             title: 'Wavelength (nm)',
             // showgrid: true,
-            zeroline: true
+            zeroline: true,
+            titlefont: {
+                size: font_size,
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the colorbar tick labels
+            }
         },
         yaxis: {
             title: 'Intensity (%)',
             type: 'lin',
-            showline: true
+            showline: true,
+            titlefont: {
+                size: font_size,
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the colorbar tick labels
+            }
         },
         hovermode: 'closest',
         plot_bgcolor: 'rgb(223, 232, 243)'

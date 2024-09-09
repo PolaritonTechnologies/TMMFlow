@@ -114,6 +114,10 @@
 
 {% block scripts %}
 <script>
+    // Define fontsize of plots
+    const font_size = 18;
+
+    // Define colors
     var selectedMaterial;
     var materialsSelect = document.getElementById('materials');
     var colorIndex = 0;
@@ -163,7 +167,8 @@
                 mode: 'lines',
                 name: data.name[index],
                 line: {
-                    color: colors[index]
+                    color: colors[index],
+                    width: 3
                 }
             };
         });
@@ -174,23 +179,29 @@
             title: {
                 text: selectedMaterial,
                 font: {
-                    size: 18
+                    size: font_size
                 }
             },
             xaxis: {
                 title: {
                     text: 'Wavelength (nm)',
-                    font: {
-                        size: 18
-                    }
+                },
+                titlefont: {
+                    size: font_size,
+                },
+                tickfont: {
+                    size: font_size  // Increase the font size of the colorbar tick labels
                 }
             },
             yaxis: {
                 title: {
                     text: 'n, k',
-                    font: {
-                        size: 18
-                    }
+                },
+                titlefont: {
+                    size: font_size,
+                },
+                tickfont: {
+                    size: font_size  // Increase the font size of the colorbar tick labels
                 }
             },
             height: window.innerHeight * 0.7 // Set the height to 80% of the viewport height

@@ -602,7 +602,7 @@ def reset_filter():
     db.session.commit()
 
     # Reload page
-    return redirect("/")
+    return redirect(url_for("stack_bp.stack"))
 
 
 @stack_bp.route("/select_version", methods=["POST"])
@@ -632,7 +632,7 @@ def select_version():
     db.session.commit()
 
     # Reload page
-    return redirect("/")
+    return redirect(url_for("stack_bp.stack"))
 
 
 @stack_bp.route("/start_new_design", methods=["POST"])

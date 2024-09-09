@@ -154,6 +154,8 @@
 
 {% block scripts%}
 <script>
+    // Define fontsize of plots
+    const font_size = 18;
 
     // Create a dummy graph
     var trace = {
@@ -163,7 +165,7 @@
         type: 'scatter',
         line: {
             color: 'rgb(0, 0, 0)',
-            width: 2
+            width: 3
         }
     };
 
@@ -173,12 +175,25 @@
         xaxis: {
             title: 'Iteration',
             showgrid: true,
-            zeroline: true
+            zeroline: true,
+            titlefont: {
+                size: font_size,
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the colorbar tick labels
+            }
         },
         yaxis: {
             title: 'Merit',
             type: 'log',
-            showline: true
+            showline: true,
+            titlefont: {
+                size: font_size,
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the colorbar tick labels
+            }
+
         },
         hovermode: 'closest',
         plot_bgcolor: 'rgb(223, 232, 243)'
