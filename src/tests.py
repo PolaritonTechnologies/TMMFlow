@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import json
 import os
+import time
 
 #########################
 # Convert data exported from openFilters for comparison to our standard
@@ -75,17 +76,26 @@ def convert_open_filter_datastructure(file_path, columns):
 # )
 
 
-def execute_tests(json_path):
+def execute_tests(json_path, verbosity="loud"):
 
     json_file_path = os.path.join(os.path.dirname(os.getcwd()), "examples", json_path)
 
     #########################
+
+    if verbosity == "quiet":
+        # redirect print to nothing
+        import sys
+
+        sys.stdout = open(os.devnull, "w")
 
     with open(json_file_path, "r") as file:
         filter_json = json.load(file)
 
     # Create filter stack
     filter_stack = FilterStack(my_filter_dict=filter_json)
+
+    # Store the maximum deviations to return them later
+    max_deviations_test = []
 
     # def test():
     # assert optimization.check_targets(cavity_optimisation())
@@ -163,15 +173,46 @@ def execute_tests(json_path):
             # print(temp_diff_ce_of)
             print("Maximum deviations: ")
             print(temp_diff.max())
-            # print(temp_diff_ce_of.max())
+            # among the values of temp_diff.max() we need to find the maximum value
+            max_deviations_test.append(temp_diff.max().max())
 
-            # Plot this to get a feeling for where the inaccuracies are the worst
+    if verbosity == "quiet":
+        # redirect print back to stdout
+        sys.stdout = sys.__stdout__
 
-            # Testing with assert is not really helpful here
-            # pd.testing.assert_frame_equal(calculated_data_df, open_filter_df)
+    return max_deviations_test
 
 
 tests = ["demo_test.json", "demo_test_with_backside.json"]
 
+max_deviations = []
+verbosity = "quiet"
+
+if verbosity == "loud":
+    print("Running tests...")
+else:
+    print("Running tests quietly...")
+
+# start the timer
+start = time.time()
+
 for test in tests:
-    execute_tests(test)
+    max_deviations.append(execute_tests(test, verbosity="quiet"))
+
+# find the maximum among the maximum deviations
+max_dev_it = max(max_deviations)
+# find the max inside the max dev list
+max_dev = max(max_dev_it)
+
+max_acceptable = 0.003
+print("Maximum deviation: " + str(max_dev))
+print("Deviation Acceptable: " + str(max_acceptable))
+
+if max_dev > max_acceptable:
+    print("Test failed")
+else:
+    print("Test passed")
+
+# end the timer and display the duration
+end = time.time()
+print("Tests duration: " + str(end - start) + "s")
