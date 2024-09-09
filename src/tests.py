@@ -5,12 +5,8 @@ import time
 import json
 
 
-def execute_test():
+def execute_test(json_path, test_csv):
 
-    # Updated tests.py 05/09/2024
-    json_path = "tests/TestStructure.json"
-
-    # Read the JSON file
     with open(json_path, "r") as file:
         filter_json = json.load(file)
 
@@ -23,12 +19,24 @@ def execute_test():
     # Target type is a string that is either "r" or "t"
     # Polarization is a string that is either "s" or "p"
 
-    wavelength = np.arange(400, 1200, 1)
-    polar_angles = np.arange(0, 90, 1)
+    wavelength = np.arange(
+        filter_json["wavelengthMin"],
+        filter_json["wavelengthMax"] + filter_json["wavelengthStep"],
+        filter_json["wavelengthStep"],
+    )
+    polar_angles = np.arange(
+        filter_json["polarAngleMin"],
+        filter_json["polarAngleMax"] + filter_json["polarAngleStep"],
+        filter_json["polarAngleStep"],
+    )
     # azimuthal_angles = np.arange(0, 360, 60)
-    azimuthal_angles = np.arange(0, 1, 1)
-    target_type = "r"
-    polarization = "s"
+    azimuthal_angles = np.arange(
+        filter_json["azimAngleMin"],
+        filter_json["azimAngleMax"] + filter_json["azimAngleStep"],
+        filter_json["azimAngleStep"],
+    )
+    target_type = filter_json["calculation_type"]
+    polarization = filter_json["polarization"]
 
     # Start a timer to evaluate how fast the calculation is executed using time library
     print("Starting test timer...")
@@ -42,65 +50,59 @@ def execute_test():
         target_type=target_type,
         polarization=polarization,
         save_data=True,
-        save_to_test=True,
+        save_to_test=False,
     )
+    calculated_data = pd.DataFrame(np.array(filter_stack.stored_data)[0])
 
-    # Stop the timer and output the duration inside the file test_performance.json where the first key is reference_test and the second is this_test
+    # Stop the timer and print the duration of the simulation
     end = time.time()
     duration = end - start
     print("Duration: ", duration, " seconds")
 
-    # Before updating performance dictionary, we need to know that the test is passed in order to do so we compare test_to_compare.csv to this_test.csv
-    # If this_test.csv does not exist then output that the reference test did not exist and return false
-    # If this_test.csv does exist, compare the two files
-    # If the two files are the same, output that the test passed and return true
-    # If the two files are different, output that the test failed and return false
-
-    # Check if this_test.csv exists
+    # Check if the reference exists and load it in from file
     try:
-        with open("tests/this_test.csv", "r") as file:
+        with open(test_csv, "r") as file:
             # load it with pandas
-            this_test = pd.read_csv(file)
+            test_reference = pd.read_csv(file)
     except FileNotFoundError:
-        print("Reference test does not exist, created with this execution")
+        print("Reference test does not exist: Please create one")
+
         return False
 
-    # Check if this_test.csv is the same as test_to_compare.csv
-    with open("tests/test_reference.csv", "r") as file:
-        test_to_compare = pd.read_csv(file)
-
-    # Check if the two dataframes are the same with a certain threshold
-
-    # Assuming this_test and test_to_compare are your DataFrames
-    # Calculate the percentage of matching elements
+    # Now actually compare the just calculated data with the reference data
     similarity_threshold = 0.995
-    matching_elements = (this_test == test_to_compare).sum().sum()
-    total_elements = this_test.size
+    matching_elements = (test_reference == calculated_data).sum().sum()
+    total_elements = calculated_data.size
     similarity_percentage = matching_elements / total_elements
+
+    print("Similarity percentage: ", similarity_percentage)
 
     if similarity_percentage < similarity_threshold:
         return False
-
-    # If the test passed, update the performance dictionary
-    # If test_performance.json does not exist, create it and set the reference_test to the duration of this test
-    try:
-        with open("tests/test_performance.json", "r") as file:
-            performance_dict = json.load(file)
-    except FileNotFoundError:
-        performance_dict = {"reference_test": duration}
-    # If test_performance.json exists, set the this_test key to the duration of this test
-    performance_dict["this_test"] = duration
-
-    # Write the updated performance dictionary to test_performance.json
-    with open("tests/test_performance.json", "w") as file:
-        json.dump(performance_dict, file)
-    return True
+    else:
+        return True
 
 
 if __name__ == "__main__":
-    test_result = execute_test()
+    # Updated tests.py 05/09/2024
+    json_paths = [
+        "./src/tests/TestStructure.json",
+        # "tests/best-39layers-AlPcCl-MgF2-860nm-885nm.json",
+    ]
 
-    if test_result:
-        print("Test passed")
-    else:
-        print("!!! Test failed !!!")
+    # Compare the performance of the current test to the reference test (csv file)
+    test_csvs = [
+        "./src/tests/test_reference.csv",
+        # "tests/best-39layers-AlPcCl-MgF2-860nm-885nm_reference.csv",
+    ]
+
+    # Read the JSON file
+    for i in range(np.size(json_paths)):
+        print("Running test ", i + 1, " of ", np.size(json_paths))
+
+        test_result = execute_test(json_paths[i], test_csvs[i])
+
+        if test_result:
+            print("Test passed")
+        else:
+            print("!!! Test failed !!!")

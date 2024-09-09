@@ -648,8 +648,8 @@
         true,
         true
     ],
-    "wavelengthMax": 1000.0,
-    "wavelengthMin": 800.0,
+    "wavelengthMax": 1199.0,
+    "wavelengthMin": 400.0,
     "wavelengthStep": 1.0,
     "wavelength_steps": [
         1.0,
