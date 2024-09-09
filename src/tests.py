@@ -90,7 +90,7 @@ def execute_tests(json_path):
     # def test():
     # assert optimization.check_targets(cavity_optimisation())
     for target in ["t", "r"]:
-        for polarization in ["s", "p"]:
+        for polarization in ["s", "p", ""]:
             print("Target: " + target + ", Pol.: " + polarization)
             filter_stack.calculate_ar_data(
                 polar_angles=[0, 15, 30, 45, 60, 75, 89],
@@ -108,17 +108,49 @@ def execute_tests(json_path):
             # To find the corresponding test file, one needs to remove json from the filename
             cleaned_file_name = json_path.replace(".json", "")
 
-            open_filter_df = pd.read_csv(
-                os.path.join(os.path.dirname(os.getcwd()), "src/tests")
-                + "/"
-                + cleaned_file_name
-                + "_"
-                + polarization
-                + "_"
-                + target
-                + ".csv",
-                sep="\t",
-            )
+            if polarization != "":
+
+                open_filter_df = pd.read_csv(
+                    os.path.join(os.path.dirname(os.getcwd()), "src/tests")
+                    + "/"
+                    + cleaned_file_name
+                    + "_"
+                    + polarization
+                    + "_"
+                    + target
+                    + ".csv",
+                    sep="\t",
+                )
+
+            else:
+
+                open_filter_df_s = pd.read_csv(
+                    os.path.join(os.path.dirname(os.getcwd()), "src/tests")
+                    + "/"
+                    + cleaned_file_name
+                    + "_"
+                    + "s"
+                    + "_"
+                    + target
+                    + ".csv",
+                    sep="\t",
+                )
+
+                open_filter_df_p = pd.read_csv(
+                    os.path.join(os.path.dirname(os.getcwd()), "src/tests")
+                    + "/"
+                    + cleaned_file_name
+                    + "_"
+                    + "p"
+                    + "_"
+                    + target
+                    + ".csv",
+                    sep="\t",
+                )
+
+                # Combine the two dataframes with doing a sum of the columns with a factor 0.5 for each term
+                open_filter_df = open_filter_df_s.add(open_filter_df_p, fill_value=0)
+                open_filter_df = open_filter_df * 0.5
 
             # complete_ease_df = pd.read_csv("../tests/" + polarization + "_" + target + "_CE.csv", sep = "\t")
 
