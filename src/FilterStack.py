@@ -310,7 +310,7 @@ class FilterStack:
         # Link C++ functions and create filter
         lib = ctypes.CDLL(
             os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "./run_filter_stack.so"
+                os.path.dirname(os.path.realpath(__file__)), "./cpp/interface.so"
             )
         )
 
