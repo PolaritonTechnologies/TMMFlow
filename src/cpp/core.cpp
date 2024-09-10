@@ -6,7 +6,7 @@ using namespace Eigen;
 //Troparevsky et al. Optics Express Vol. 18, Issue 24, pp. 24715-24721 (2010)
 //Formalism by Al-Ghezi et al. Optics Express 35770 (2020)
 //Reflectivity and Transmissivity coefficients in "Generalized matrix method for calculation of Internal light energy flux in mixed coherent and incoherent multilayers" by Emanuele Centurioni (2005)
-Matrix2cd coherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::vector<double> &d_list, const char* &polarization, const double &wavelength, const double &theta_0, const double &phi_0, const std::complex<double> &n_0)
+Matrix2cd coherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::vector<double> &d_list, const char &polarization, const double &wavelength, const double &theta_0, const std::complex<double> &n_0)
 { 
     std::complex<double> n_exit = std::sqrt(e_list_3x3[0](0, 0));
     std::complex<double> n_inc = std::sqrt(e_list_3x3[e_list_3x3.size()-1](0, 0));
@@ -24,7 +24,7 @@ Matrix2cd coherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::ve
     double transmissivity_coherent;  
     for (int i = 1; i < d_list.size() ; ++i){
         propa = Matrix2cd::Identity();
-        if (strcmp(polarization, "s") == 0){
+        if (polarization == 's'){
             // Calculate kz value according to Berreman formalism - s polarization
             kz_i = std::sqrt(4.0 * M_PI * M_PI * e_list_3x3[i](1, 1)/(wavelength*wavelength) - (kx * kx));
             kz_im1 = std::sqrt(4.0 * M_PI * M_PI * e_list_3x3[i-1](1, 1)/(wavelength*wavelength) - (kx * kx));
@@ -33,7 +33,7 @@ Matrix2cd coherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::ve
             dynamical(0,0) = std::complex<double>(1,0) + (kz_im1/kz_i);    
             dynamical(0,1) = std::complex<double>(1,0) - (kz_im1/kz_i);
         }
-        if (strcmp(polarization, "p") == 0){
+        if (polarization == 'p'){
             // Calculate kz value according to Berreman formalism
             kz_i = std::sqrt(4.0 * M_PI * M_PI * e_list_3x3[i](1, 1)/(wavelength*wavelength) - ((kx * kx) * e_list_3x3[i](1, 1))/(e_list_3x3[i](2, 2)));
             kz_im1 = std::sqrt(4.0 * M_PI * M_PI * e_list_3x3[i-1](1, 1)/(wavelength*wavelength) - ((kx * kx) * e_list_3x3[i-1](1, 1))/(e_list_3x3[i-1](2, 2)));
@@ -52,10 +52,10 @@ Matrix2cd coherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::ve
     }
     std::complex<double> reflection_coherent_coeff = (total_Matrix(1,0)/total_Matrix(0,0)); 
     std::complex<double> transmission_coherent_coeff =  pow(n_inc,2)/pow(n_exit,2) * std::complex<double>(1,0) / total_Matrix(0,0);    
-    if (strcmp(polarization, "s") == 0){ 
+    if (polarization == 's'){
     transmissivity_coherent = ((n_exit*std::sqrt(1-((n_0.real()*n_0.real())/(n_exit.real()*n_exit.real())*sin(theta_0)*sin(theta_0)))).real())/(std::sqrt(n_0.real()*(1-sin(theta_0)*sin(theta_0)))) * std::norm(transmission_coherent_coeff);
     }
-    if (strcmp(polarization, "p") == 0){
+    if (polarization == 'p'){
     transmissivity_coherent = ((std::conj(n_exit)*std::sqrt(1-((n_0.real()*n_0.real())/(n_exit.real()*n_exit.real())*sin(theta_0)*sin(theta_0)))).real())/(std::sqrt(n_0.real()*(1-sin(theta_0)*sin(theta_0)))) * std::norm(transmission_coherent_coeff);
     }      
     std::complex<double> reflection_coeff_reverse = -(total_Matrix(0,1)/total_Matrix(0,0)); 
@@ -71,7 +71,7 @@ Matrix2cd coherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::ve
     return coherent_as_incoherent;
 };
 
-Matrix2cd incoherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::vector<double> &d_list, const char* &polarization, const double &wavelength, const double &theta_0, const double &phi_0, const double &n_0, const bool &closing_layer)
+Matrix2cd incoherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::vector<double> &d_list, const char &polarization, const double &wavelength, const double &theta_0, const double &n_0, const bool &closing_layer)
 {
     Matrix2cd interface = Matrix2cd::Identity();
     Matrix2cd propa = Matrix2cd::Identity();
@@ -90,7 +90,7 @@ Matrix2cd incoherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::
     double kz_exit;
     double k_inc;
     double k_exit;
-    if (strcmp(polarization, "s") == 0)
+    if (polarization == 's')
     {
         kz_inc = std::sqrt(4.0 * M_PI * M_PI * e_list_3x3[1](1, 1).real()/(wavelength*wavelength) - (kx * kx));
         kz_exit = std::sqrt(4.0 * M_PI * M_PI * e_list_3x3[0](1, 1).real()/(wavelength*wavelength) - (kx * kx));
@@ -100,7 +100,7 @@ Matrix2cd incoherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::
         t_backward = 2 * kz_exit / (kz_inc + kz_exit);
     }
 
-    if (strcmp(polarization, "p") == 0)
+    if (polarization == 'p')
     {
         k_inc = std::sqrt(e_list_3x3[1](1, 1).real()) * 2 * M_PI / wavelength;
         k_exit = std::sqrt(e_list_3x3[0](1, 1).real()) * 2 * M_PI / wavelength;
@@ -126,7 +126,7 @@ Matrix2cd incoherent_block(const std::vector<Matrix3cd> &e_list_3x3, const std::
     return propa * pre_factor_substrate * interface;
 };
 
-std::tuple<double, double> calculate_rt(const std::vector<Matrix3cd> &e_list_3x3, const std::vector<double> &d_list, const std::vector<bool> &incoherent, const char* &polarization, const double &wavelength, const double &theta_0, const double &phi_0)
+std::tuple<double, double> calculate_rt(const std::vector<Matrix3cd> &e_list_3x3, const std::vector<double> &d_list, const std::vector<bool> &incoherent, const char &polarization, const double &wavelength, const double &theta_0)
 { 
     //Formalism from "Generalized matrix method for calculation of Internal light energy flux in mixed coherent and incoherent multilayers" by Emanuele Centurioni (2005)
     std::complex<double> n_exit_medium = std::sqrt(e_list_3x3[0](0, 0));
@@ -162,7 +162,7 @@ std::tuple<double, double> calculate_rt(const std::vector<Matrix3cd> &e_list_3x3
     for (int i = 0; i < calculation_blocks.size(); i++){
         if (std::get<2>(calculation_blocks[i]) == false)
         {
-            general_Matrix =  coherent_block(std::get<0>(calculation_blocks[i]), std::get<1>(calculation_blocks[i]), polarization, wavelength, theta_0, phi_0, n_0.real()) * general_Matrix;
+            general_Matrix = coherent_block(std::get<0>(calculation_blocks[i]), std::get<1>(calculation_blocks[i]), polarization, wavelength, theta_0, n_0.real()) * general_Matrix;
         }
         if (std::get<2>(calculation_blocks[i]) == true)
         {
@@ -173,25 +173,35 @@ std::tuple<double, double> calculate_rt(const std::vector<Matrix3cd> &e_list_3x3
             else{
                 closing_layer = false;
             }
-            general_Matrix = incoherent_block(std::get<0>(calculation_blocks[i]), std::get<1>(calculation_blocks[i]), polarization, wavelength, theta_0, phi_0, n_0.real(), closing_layer) * general_Matrix;
+            general_Matrix = incoherent_block(std::get<0>(calculation_blocks[i]), std::get<1>(calculation_blocks[i]), polarization, wavelength, theta_0, n_0.real(), closing_layer) * general_Matrix;
         }
     }
     std::complex<double> transmission_coeff = pow(n_0,2)/pow(n_exit_medium,2) * std::complex<double>(1,0) / general_Matrix(0,0);
     double transmissivity;
-    if (strcmp(polarization, "s") == 0){
+    if (polarization == 's'){
         transmissivity = ((n_exit_medium*std::sqrt(1-((n_0.real()*n_0.real())/(n_exit_medium.real()*n_exit_medium.real())*sin(theta_0)*sin(theta_0)))).real())/(n_0.real()*std::sqrt((1-sin(theta_0)*sin(theta_0)))) * transmission_coeff.real();
     }
-    if (strcmp(polarization, "p") == 0){
+    if (polarization == 'p'){
         transmissivity = ((std::conj(n_exit_medium)*std::sqrt(1-((n_0.real()*n_0.real())/(n_exit_medium.real()*n_exit_medium.real())*sin(theta_0)*sin(theta_0)))).real())/(n_0.real()*std::sqrt((1-sin(theta_0)*sin(theta_0)))) * transmission_coeff.real();
     }
     return {((general_Matrix(1,0)/general_Matrix(0,0))).real(), transmissivity};      
 };
 
-std::tuple<double, double> calculate_rt_unpolarized(const std::vector<Matrix3cd> &e_list_3x3, const std::vector<double> &d_list, const std::vector<bool> &incoherent, const double &wavelength, const double &theta_0, const double &phi_0)
+std::tuple<double, double> calculate_rt_azim_pola(const std::vector<Matrix3cd> &e_list_3x3, const std::vector<double> &d_list, const std::vector<bool> &incoherent, const double &wavelength, const double &theta_0, const double &phi_0, const double &s_polarization_percentage)
 {
-    const char* temp_s = "s";
-    const char* temp_p = "p";
-    auto[reflectivity_s, transmissivity_s] = calculate_rt(e_list_3x3, d_list, incoherent, temp_s, wavelength, theta_0, phi_0);
-    auto[reflectivity_p, transmissivity_p] = calculate_rt(e_list_3x3, d_list, incoherent, temp_p, wavelength, theta_0, phi_0);
-    return {0.5 * (reflectivity_s + reflectivity_p), 0.5 * (transmissivity_p + transmissivity_s)};
+    const char temp_s = 's';
+    const char temp_p = 'p';
+    std::tuple<double, double> s_pol = calculate_rt(e_list_3x3, d_list, incoherent, temp_s, wavelength, theta_0);
+    std::tuple<double, double> p_pol = calculate_rt(e_list_3x3, d_list, incoherent, temp_p, wavelength, theta_0);
+    //Azimuthal angle 
+    if (phi_0 == 0){
+        return {s_polarization_percentage * std::get<0>(s_pol) +  (1-s_polarization_percentage) * std::get<0>(p_pol), s_polarization_percentage * std::get<1>(s_pol) + (1-s_polarization_percentage) * std::get<1>(p_pol)};
+    }
+    else{
+        double cos_phi_squared = cos(phi_0) * cos(phi_0);
+        double sin_phi_squared = sin(phi_0) * sin(phi_0);
+        // The transmissivity and reflectivity are rotated according to the azimuthal angle
+        // at theta 0 degrees, s- matches the y- and p- matches the x-axis
+        return {cos_phi_squared * s_polarization_percentage * std::get<0>(s_pol) + sin_phi_squared * (1-s_polarization_percentage) * std::get<0>(p_pol), cos_phi_squared * s_polarization_percentage * std::get<1>(s_pol) + sin_phi_squared * (1-s_polarization_percentage) * std::get<1>(p_pol)};
+    }
 };

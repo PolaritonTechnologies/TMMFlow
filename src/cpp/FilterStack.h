@@ -32,9 +32,9 @@ public:
     bool general_materials_in_stack = true;
 
     // Public methods
-    double calculate_reflection_transmission_absorption(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0);
-    std::vector<std::vector<std::vector<double>>> calculate_reflection_transmission_absorption_para(const char *type, const char *polarization, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0);
-    double calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector, std::vector<char *> target_arithmetic);
+    double calculate_reflection_transmission_absorption(const char *type, double s_polarization_percentage, double wavelength, double theta_0, double phi_0);
+    std::vector<std::vector<std::vector<double>>> calculate_reflection_transmission_absorption_para(const char *type, const double s_polarization_percentage, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0);
+    double calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<double> target_polarization_vector, std::vector<char *> target_arithmetic);
     bool check_general_materials();
     void change_material_order(std::vector<int> new_material_order);
     void change_material_thickness(std::vector<double> material_thickness);
@@ -46,7 +46,6 @@ public:
     void reset_filter();
     
 private:
-
     // Private methods
     std::pair<std::map<std::string, std::vector<tk::spline>>, bool> assemble_materials(const std::string &json_text);
     std::vector<Matrix3cd> assemble_e_list_3x3(std::map<std::string, std::vector<tk::spline>> material_splines, double wavelength);

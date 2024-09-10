@@ -1,11 +1,8 @@
-#include <omp.h>
 #include <cstring>
 #include <omp.h>
 #include <sstream>
 #include <set>
 #include <filesystem>
-#include "input.h"
-#include "core.h"
 #include "FilterStack.h"
 
 FilterStack::FilterStack(const char *json_text)
@@ -26,7 +23,7 @@ FilterStack::FilterStack(const char *json_text)
     initialise_e_list_3x3(material_splines, 250, 1200, 0.1);
 }
 
-std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_transmission_absorption_para(const char *type, const char *polarization, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0)
+std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_transmission_absorption_para(const char *type, const double s_polarization_percentage, std::vector<double> wavelengths, std::vector<double> thetas_0, std::vector<double> phis_0)
 {
     std::vector<std::vector<std::vector<double>>> result(phis_0.size(), std::vector<std::vector<double>>(thetas_0.size(), std::vector<double>(wavelengths.size())));
 
@@ -38,9 +35,9 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
     incoherent.insert(incoherent.begin(), false);
     // Add 0 to the end and false - incident medium
     d_list.push_back(0.0);
-    incoherent.push_back(false);
+    incoherent.push_back(false);  
 
-#pragma omp parallel for collapse(3)
+    #pragma omp parallel for collapse(3)
     for (int p = 0; p < phis_0.size(); p++)
     {
         for (int n = 0; n < thetas_0.size(); n++)
@@ -48,16 +45,20 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
             for (int i = 0; i < wavelengths.size(); i++)
             {
                 double reflectivity, transmissivity;
-
-                if (strcmp(polarization, "") == 0)
+                if ((s_polarization_percentage != 100 && s_polarization_percentage != 100) || phis_0[p] != 0)
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, incoherent, wavelengths[i], thetas_0[n], phis_0[p]);
+                    std::tie(reflectivity, transmissivity) = calculate_rt_azim_pola(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, incoherent, wavelengths[i], thetas_0[n], phis_0[p], s_polarization_percentage);
                 }
                 else
                 {
-                    std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, incoherent, polarization, wavelengths[i], thetas_0[n], phis_0[p]);
+                    if (s_polarization_percentage == 100) {
+                        const char temp_s  = 's';
+                        std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, incoherent, temp_s, wavelengths[i], thetas_0[n]);
+                    } else {
+                        const char temp_p  = 'p';
+                        std::tie(reflectivity, transmissivity) = calculate_rt(assemble_e_list_3x3(material_splines, wavelengths[i]), d_list, incoherent, temp_p, wavelengths[i], thetas_0[n]);
+                    }
                 }
-
                 if (strcmp(type, "t") == 0)
                 {
                     result[p][n][i] = transmissivity;
@@ -83,7 +84,7 @@ std::vector<std::vector<std::vector<double>>> FilterStack::calculate_reflection_
     return result;
 }
 
-double FilterStack::calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<char *> target_polarization_vector, std::vector<char *> target_arithmetic)
+double FilterStack::calculate_merit(std::vector<double> target_value_vector, std::vector<double> target_wavelength_vector, std::vector<double> target_polar_angle_vector, std::vector<double> target_azimuthal_angle_vector, std::vector<double> target_weights_vector, std::vector<char *> target_condition_vector, std::vector<double> target_tolerance_vector, std::vector<char *> target_type_vector, std::vector<double> target_polarization_vector, std::vector<char *> target_arithmetic)
 {
     std::vector<double> target_calculated_values;
 
@@ -92,7 +93,7 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
     // Preallocate the vector
     target_calculated_values.resize(target_value_vector.size());
 
-#pragma omp parallel for
+    #pragma omp parallel for
     for (size_t i = 0; i < target_value_vector.size(); i++)
     {
         // Calculate actual value
@@ -105,18 +106,13 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
     for (size_t i = 0; i < target_value_vector.size(); i++)
     {
         double target_calculated = target_calculated_values[i];
-        // std::cout << target_calculated_values[0] << std::endl;
-        // std::cout << target_calculated_values[1] << std::endl;
 
         // Perform arithmetic operation if target_arithmetic is not empty
         if (target_arithmetic[i][0] != '\0')
         {
             std::string str(target_arithmetic[i]);
-            // std::cout << str << std::endl;
             size_t pos = 0;
             double target_calculated = target_calculated_values[std::stoi(str) - 1];
-            // std::cout << std::stoi(str) - 1 << std::endl;
-            // std::cout << target_calculated << std::endl;
             char operation;
 
             while ((pos = str.find_first_of("+-*/", pos)) != std::string::npos)
@@ -125,9 +121,6 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
                 str = str.substr(pos + 1);
                 pos = 0;
                 int index = std::stoi(str.substr(0, str.find_first_of("+-*/", pos))) - 1;
-                // std::cout << index << std::endl;
-                // std::cout << operation << std::endl;
-                // std::cout << pos << std::endl;
 
                 switch (operation)
                 {
@@ -145,7 +138,6 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
                     break;
                 }
             }
-            // std::cout << target_calculated << std::endl;
         }
         else
         {
@@ -169,13 +161,11 @@ double FilterStack::calculate_merit(std::vector<double> target_value_vector, std
         {
             merit += pow((target_calculated - target_value_vector[i]) / target_tolerance_vector[i], 2) * target_weights_vector[i];
         }
-        // std::cout << merit << std::endl;
     }
-
     return merit;
 }
 
-double FilterStack::calculate_reflection_transmission_absorption(const char *type, const char *polarization, double wavelength, double theta_0, double phi_0)
+double FilterStack::calculate_reflection_transmission_absorption(const char *type, const double s_polarization_percentage, double wavelength, double theta_0, double phi_0)
 {
     std::vector<double> d_list = calculation_order.structure_thicknesses;
     std::vector<bool> incoherent = calculation_order.incoherent;
@@ -186,29 +176,19 @@ double FilterStack::calculate_reflection_transmission_absorption(const char *typ
     // Add 0 to the end and false - incident medium
     d_list.push_back(0.0);
     incoherent.push_back(false);
-    // for (bool value : incoherent)
-    // {
-    //     std::cout << value << " ";
-    // }
-    // std::cout << std::endl;
-
-    // Add 0 to the beginning - substrate
-    // d_list.insert(d_list.begin(), 0.0);
-    // Add 0 to the end - incident medium
-    // d_list.push_back(0.0);
 
     theta_0 = theta_0 * M_PI / 180.0;
 
     double wavelength_key = static_cast<int>(wavelength * 10);
     double reflectivity, transmissivity;
 
-    if (strcmp(polarization, "") == 0)
+    if ((s_polarization_percentage != 100 && s_polarization_percentage != 0) or phi_0 != 0)
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt_unpolarized(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, incoherent, wavelength, theta_0, phi_0);
+        std::tie(reflectivity, transmissivity) = calculate_rt_azim_pola(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, incoherent, wavelength, theta_0, phi_0, s_polarization_percentage);
     }
     else
     {
-        std::tie(reflectivity, transmissivity) = calculate_rt(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, incoherent, polarization, wavelength, theta_0, phi_0);
+        std::tie(reflectivity, transmissivity) = calculate_rt(dict_optim_assembled_e_list_3x3[wavelength_key], d_list, incoherent, s_polarization_percentage, wavelength, theta_0);
     }
 
     if (strcmp(type, "t") == 0)

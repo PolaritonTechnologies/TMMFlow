@@ -23,6 +23,14 @@
  *
  */
 
+#pragma once
+
+// not ideal but disable unused-function warnings
+// (we get them because we have implementations in the header file,
+// and this is because we want to be able to quickly separate them
+// into a cpp file if necessary)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 
 #ifndef TK_SPLINE_H
 #define TK_SPLINE_H
