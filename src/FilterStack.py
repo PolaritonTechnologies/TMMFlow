@@ -679,14 +679,31 @@ class FilterStack:
             self.target_wavelength,
             int(np.size(self.target_wavelength)),
         )
+
+        # Checks on self.target_polarization - conversion to doubles
+        converted_polarizations = []
+        for polarization in self.target_polarization:
+            if polarization == "s":
+                converted_polarizations.append(1.0)
+            elif polarization == "p":
+                converted_polarizations.append(0.0)
+            elif polarization == "":
+                converted_polarizations.append(0.5)
+            elif isinstance(polarization, (int, float)) and 0 <= polarization <= 1:
+                # Lastly check if polarization is numeric and between [0, 1]
+                pass
+            else:
+                raise ValueError(
+                    "Polarization must be either '', 's', 'p', or given as s-polarization as a number between 0 and 1"
+                )
+        self.target_polarization = np.array(converted_polarizations)
+        
         merit = lib.calculate_merit(
             my_filter,
             (ctypes.c_char_p * len(self.target_type.tolist()))(
                 *[s.encode("utf-8") for s in self.target_type.tolist()]
             ),
-            (ctypes.c_char_p * len(self.target_polarization.tolist()))(
-                *[s.encode("utf-8") for s in self.target_polarization.tolist()]
-            ),
+            self.target_polarization,
             self.target_value,
             self.target_wavelength,
             self.target_polar_angle,
@@ -1060,15 +1077,31 @@ class FilterStack:
                 my_filter, self.layer_order, int(np.size(self.layer_order))
             )
 
+        # Checks on self.target_polarization - conversion to doubles
+        converted_polarizations = []
+        for polarization in self.target_polarization:
+            if polarization == "s":
+                converted_polarizations.append(1.0)
+            elif polarization == "p":
+                converted_polarizations.append(0.0)
+            elif polarization == "":
+                converted_polarizations.append(0.5)
+            elif isinstance(polarization, (int, float)) and 0 <= polarization <= 1:
+                # Lastly check if polarization is numeric and between [0, 1]
+                pass
+            else:
+                raise ValueError(
+                    "Polarization must be either '', 's', 'p', or given as s-polarization as a number between 0 and 1"
+                )
+        self.target_polarization = np.array(converted_polarizations)
+
         # Calculate merit
         merit = lib.calculate_merit(
             my_filter,
             (ctypes.c_char_p * len(self.target_type.tolist()))(
                 *[s.encode("utf-8") for s in self.target_type.tolist()]
             ),
-            (ctypes.c_char_p * len(self.target_polarization.tolist()))(
-                *[s.encode("utf-8") for s in self.target_polarization.tolist()]
-            ),
+            self.target_polarization,
             self.target_value,
             self.target_wavelength,
             self.target_polar_angle,
