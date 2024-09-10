@@ -48,7 +48,7 @@
             </div>
             <div class="row d-flex align-items-center justify-content-center">
                 <div class="form-group mx-3">
-                    <label for="mode">Mode:</label>
+                    <label for="mode" style="font-weight:bold;">Mode:</label>
                     <select id="mode" class="form-control">
                         <option value="r" {% if default_values.mode=="r" %}selected{% endif %}>
                             Reflection</option>
@@ -57,18 +57,36 @@
                     </select>
                 </div>
                 <div class="form-group mx-3">
-                    <label for="polarization">Polarization:</label>
-                    <select id="polarization" class="form-control">
-                        <option value="s" {% if default_values.polarization=="s" %}selected{% endif %}>
-                            s</option>
-                        <option value="p" {% if default_values.polarization=="p" %}selected{% endif %}>p</option>
-                        <option value="None" {% if default_values.polarization=="" %}selected{% endif %}>None
-                        </option>
-                    </select>
+                    <label for="polarization" style="font-weight:bold;">Polarization:</label>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-row align-items-center">
+                                <div class="col-auto">
+                                    <label for="polarization">s:</label>
+                                </div>
+                                <div class="col">
+                                    <input type="number" id="polarization" class="form-control" min="0" max="1"
+                                        step="0.01" value="{{ default_values.polarization }}"
+                                        oninput="updatePolarization('polarization')">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-row align-items-center">
+                                <div class="col-auto">
+                                    <label for="p-polarization">p:</label>
+                                </div>
+                                <div class="col">
+                                    <input type="number" id="p-polarization" class="form-control" min="0" max="1"
+                                        step="0.01" oninput="updatePolarization('p-polarization')">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group mx-3">
-                    <label for="azimuthalAngle">Azimuthal Angle:</label>
+                    <label for="azimuthalAngle" style="font-weight:bold;">Azimuthal Angle:</label>
                     <input type="number" id="azimuthalAngle" class="form-control" min="0" max="90" step="any"
                         value="{{ default_values.azimuthalAngle }}">
                 </div>
@@ -76,19 +94,19 @@
 
             <div class="row d-flex align-items-center justify-content-center">
                 <div class="form-group mx-3">
-                    <label for="startAngle">Starting Angle:</label>
+                    <label for="startAngle" style="font-weight:bold;">Starting Angle:</label>
                     <input type="number" id="startAngle" class="form-control" min="0" max="90" step="any"
                         value="{{ default_values.startAngle }}">
                 </div>
 
                 <div class="form-group mx-3">
-                    <label for="endAngle">End Angle:</label>
+                    <label for="endAngle" style="font-weight:bold;">End Angle:</label>
                     <input type="number" id="endAngle" class="form-control" min="0" max="90" step="any"
                         value="{{ default_values.endAngle }}">
                 </div>
 
                 <div class="form-group mx-3">
-                    <label for="stepAngle">Angle step:</label>
+                    <label for="stepAngle" style="font-weight:bold;">Angle step:</label>
                     <input type="number" id="stepAngle" class="form-control" min="0" max="90" step="any"
                         value="{{ default_values.stepAngle }}">
                 </div>
@@ -97,19 +115,19 @@
 
             <div class="row d-flex align-items-center justify-content-center">
                 <div class="form-group mx-3">
-                    <label for="startWavelength">Starting Wavelength:</label>
+                    <label for="startWavelength" style="font-weight:bold;">Starting Wavelength:</label>
                     <input type="number" id="startWavelength" class="form-control" min="10" max="10000" step="any"
                         value="{{ default_values.startWavelength }}">
                 </div>
 
                 <div class="form-group mx-3">
-                    <label for="endWavelength">End Wavelength:</label>
+                    <label for="endWavelength" style="font-weight:bold;">End Wavelength:</label>
                     <input type="number" id="endWavelength" class="form-control" min="10" max="10000" step="any"
                         value="{{ default_values.endWavelength }}">
                 </div>
 
                 <div class="form-group mx-3">
-                    <label for="stepWavelength">Wavelength Step:</label>
+                    <label for="stepWavelength" style="font-weight:bold;">Wavelength Step:</label>
                     <input type="number" id="stepWavelength" class="form-control" min="0" max="10000" step="any"
                         value="{{ default_values.stepWavelength }}">
                 </div>
@@ -367,6 +385,11 @@
     else {
         Plotly.newPlot('heatmap', [dummyData], layout, config);
     }
+
+    // Update the polarization value on window load based on the initial value of the s polarization
+    const sInput = document.getElementById('polarization');
+    const pInput = document.getElementById('p-polarization');
+    pInput.value = (1 - parseFloat(sInput.value)).toFixed(2);
     };
 
     document.getElementById("calculateButton").addEventListener("click", function () {
@@ -544,5 +567,15 @@
             window.location.href = '/download_data?fileEnding=' + fileEnding;
         }
     });
+    function updatePolarization(inputId) {
+        const sInput = document.getElementById('polarization');
+        const pInput = document.getElementById('p-polarization');
+
+        if (inputId === 'polarization') {
+            pInput.value = (1 - parseFloat(sInput.value)).toFixed(2);
+        } else {
+            sInput.value = (1 - parseFloat(pInput.value)).toFixed(2);
+        }
+    }
 </script>
 {% endblock %}

@@ -76,7 +76,7 @@ def calculate_and_plot_ajax():
     )
 
     target_type = data["mode"]
-    polarization = "" if data["polarization"] == "None" else data["polarization"]
+    polarization = float(data["polarization"])
 
     my_filter.calculate_ar_data(
         wavelengths,
@@ -156,8 +156,8 @@ def plot_xy_ajax():
         "name": str(request_data["x"])
         + "°, "
         + str(request_data["mode"])
-        + ", "
-        + str(request_data["polarization"]),
+        + ", s-pol: "
+        + str(request_data["polarization"] * 100) + "%",
     }
 
     return jsonify(plot_data)

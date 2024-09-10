@@ -332,7 +332,7 @@ class FilterStack:
         lib.calculate_reflection_transmission_absorption_para.argtypes = [
             c_string_array,
             ctypes.c_char_p,
-            ctypes.c_char_p,
+            ctypes.c_float, # polarization
             c_double_array,
             ctypes.c_size_t,
             c_double_array,
@@ -1502,6 +1502,8 @@ class FilterStack:
 
         return stored_values
 
+    """
+    # Not used at the moment!
     def calculate_one_angle(
         self,
         minimum_wavelength,
@@ -1513,9 +1515,7 @@ class FilterStack:
         azimuthal_angle,
         # is_general_core,
     ):
-        """
-        Function to only get the results for one particular angle given a wavelength range
-        """
+        # Function to only get the results for one particular angle given a wavelength range
 
         my_filter, lib = self.create_filter_in_cpp()
 
@@ -1523,10 +1523,22 @@ class FilterStack:
             minimum_wavelength, maximum_wavelength + 1, wavelength_step
         )
 
+        if polarization == "s":
+            polarization = 1.0
+        elif polarization == "p":
+            polarization = 0.0
+        elif polarization == "":
+            polarization = 0.5
+        elif isinstance(polarization, (int, float)) and 0 <= polarization <= 1:
+            # Lastly check if polarization is numeric and between [0, 1]
+            pass
+        else:
+            raise ValueError("Polarization must be either '', 's', 'p', or given as s-polarization as a number between 0 and 1")
+
         result_string = lib.calculate_reflection_transmission_absorption_para(
             my_filter,
             target_type.encode("utf-8"),
-            polarization.encode("utf-8"),
+            polarization.astype(float),
             np.ascontiguousarray(wavelengths).astype(np.float64),
             int(np.size(wavelengths)),
             np.ascontiguousarray(polar_angle).astype(np.float64),
@@ -1540,6 +1552,7 @@ class FilterStack:
             np.array(result_string.decode("utf-8").split("--"), dtype=np.float64),
             index=np.ascontiguousarray(wavelengths).astype(np.float64),
         )
+    """
 
     def calculate_ar_data(
         self,
@@ -1594,13 +1607,25 @@ class FilterStack:
 
         if polarization is None:
             polarization = self.filter_definition["polarization"]
+        
+        if polarization == "s":
+            polarization = 1.0
+        elif polarization == "p":
+            polarization = 0.0
+        elif polarization == "":
+            polarization = 0.5
+        elif isinstance(polarization, (int, float)) and 0 <= polarization <= 1:
+            # Lastly check if polarization is numeric and between [0, 1]
+            pass
+        else:
+            raise ValueError("Polarization must be either '', 's', 'p', or given as s-polarization as a number between 0 and 1")
 
         initial_time = time.time()
 
         result_string = lib.calculate_reflection_transmission_absorption_para(
             my_filter,
             target_type.encode("utf-8"),
-            polarization.encode("utf-8"),
+            polarization.astype(float),
             np.ascontiguousarray(wavelength).astype(np.float64),
             int(np.size(wavelength)),
             np.ascontiguousarray(polar_angles).astype(np.float64),

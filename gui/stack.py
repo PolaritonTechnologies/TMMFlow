@@ -401,7 +401,7 @@ def save_json():
     # doing it right now.
     data_to_json = {}
     data_to_json["calculation_type"] = data[0].get("1").get("values")[0]
-    data_to_json["polarization"] = data[1].get("1").get("values")[0]
+    data_to_json["polarization"] = float(data[1].get("1").get("values")[0])
     data_to_json["wavelengthMin"] = float(data[2].get("1").get("values")[0])
     data_to_json["wavelengthMax"] = float(data[2].get("2").get("values")[0])
     data_to_json["wavelengthStep"] = float(data[2].get("3").get("values")[0])

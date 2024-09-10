@@ -231,13 +231,35 @@
                 </td>
             </tr>
             <tr>
-                <td><label for="polarization">Polarization:</label></td>
                 <td>
-                    <select id="polarization" name="polarization" class="form-control">
-                        <option value="s" {% if default_values.polarization=='s' %}selected{% endif %}>s</option>
-                        <option value="p" {% if default_values.polarization=='p' %}selected{% endif %}>p</option>
-                        <option value="" {% if default_values.polarization=='' %}selected{% endif %}>None</option>
-                    </select>
+                    <label for="polarization">Polarization:</label>
+                </td>
+                <td>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-row align-items-center">
+                                <div class="col-auto">
+                                    <label for="polarization">s:</label>
+                                </div>
+                                <div class="col">
+                                    <input type="number" id="polarization" class="form-control" min="0" max="1"
+                                        step="0.01" value="{{ default_values.polarization }}"
+                                        oninput="updatePolarization('polarization')">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-row align-items-center">
+                                <div class="col-auto">
+                                    <label for="p-polarization">p:</label>
+                                </div>
+                                <div class="col">
+                                    <input type="number" id="p-polarization" class="form-control" min="0" max="1"
+                                        step="0.01" oninput="updatePolarization('p-polarization')">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </td>
             </tr>
             <tr>
@@ -1753,6 +1775,8 @@
     };
 
     var layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
+        plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
         xaxis: {
             title: 'Wavelength (nm)',
             // showgrid: true,
@@ -1957,6 +1981,21 @@
                 Plotly.restyle('target_graph', { visible: visibilityMap[trace.legendgroup] }, [index]);
             }
         });
+    }
+    function updatePolarization(inputId) {
+        const sInput = document.getElementById('polarization');
+        const pInput = document.getElementById('p-polarization');
+
+        if (inputId === 'polarization') {
+            pInput.value = (1 - parseFloat(sInput.value)).toFixed(2);
+        } else {
+            sInput.value = (1 - parseFloat(pInput.value)).toFixed(2);
+        }
+    }
+    window.onload = function () {
+        const sInput = document.getElementById('polarization');
+        const pInput = document.getElementById('p-polarization');
+        pInput.value = (1 - parseFloat(sInput.value)).toFixed(2);
     }
 
 
