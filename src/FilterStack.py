@@ -332,7 +332,7 @@ class FilterStack:
         lib.calculate_reflection_transmission_absorption_para.argtypes = [
             c_string_array,
             ctypes.c_char_p,
-            ctypes.c_float, # polarization
+            ctypes.c_float,  # polarization
             c_double_array,
             ctypes.c_size_t,
             c_double_array,
@@ -1607,7 +1607,7 @@ class FilterStack:
 
         if polarization is None:
             polarization = self.filter_definition["polarization"]
-        
+
         if polarization == "s":
             polarization = 1.0
         elif polarization == "p":
@@ -1618,14 +1618,16 @@ class FilterStack:
             # Lastly check if polarization is numeric and between [0, 1]
             pass
         else:
-            raise ValueError("Polarization must be either '', 's', 'p', or given as s-polarization as a number between 0 and 1")
+            raise ValueError(
+                "Polarization must be either '', 's', 'p', or given as s-polarization as a number between 0 and 1"
+            )
 
         initial_time = time.time()
 
         result_string = lib.calculate_reflection_transmission_absorption_para(
             my_filter,
             target_type.encode("utf-8"),
-            polarization.astype(float),
+            float(polarization),
             np.ascontiguousarray(wavelength).astype(np.float64),
             int(np.size(wavelength)),
             np.ascontiguousarray(polar_angles).astype(np.float64),
