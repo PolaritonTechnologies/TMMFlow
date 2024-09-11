@@ -234,7 +234,7 @@ public:
     std::vector<bool> incoherent;
     std::vector<double> structure_thicknesses;
     std::vector<double> azimuthalAngles;
-    std::string polarization;
+    double polarization;
     std::string incidentMediumMaterial;
     std::string exitMediumMaterial;
     // Default constructor
@@ -250,7 +250,7 @@ public:
         double wavelengthMin,
         double wavelengthMax,
         double wavelengthStep,
-        std::string polarization,
+        double polarization,
         std::vector<std::string> structure_materials,
         std::vector<bool> incoherent,
         std::vector<double> structure_thicknesses,
