@@ -191,8 +191,19 @@ std::tuple<double, double> calculate_rt_azim_pola(const std::vector<Matrix3cd> &
 {
     const char temp_s = 's';
     const char temp_p = 'p';
+
     std::tuple<double, double> s_pol = calculate_rt(e_list_3x3, d_list, incoherent, temp_s, wavelength, theta_0);
-    std::tuple<double, double> p_pol = calculate_rt(e_list_3x3, d_list, incoherent, temp_p, wavelength, theta_0);
+
+    // Create a modified e_list_3x3 for p-polarization where the 0,0 diagonal term and 1,1 diagonal term are swapped - this is not
+    // computationally efficient but necessary without other flags on the tensor.
+
+    std::vector<Matrix3cd> e_list_3x3_swapped = e_list_3x3;
+    for (auto &matrix : e_list_3x3_swapped) {
+        std::swap(matrix(0, 0), matrix(1, 1));
+    }
+    // Calculate p-polarization with the modified e_list_3x3
+    std::tuple<double, double> p_pol = calculate_rt(e_list_3x3_swapped, d_list, incoherent, temp_p, wavelength, theta_0);
+
     //Azimuthal angle 
     if (phi_0 == 0){
         return {s_polarization_percentage * std::get<0>(s_pol) +  (1-s_polarization_percentage) * std::get<0>(p_pol), s_polarization_percentage * std::get<1>(s_pol) + (1-s_polarization_percentage) * std::get<1>(p_pol)};

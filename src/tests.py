@@ -8,11 +8,11 @@ import json
 import os
 import time
 
+
 #########################
 # Convert data exported from openFilters for comparison to our standard
 # dataframe format
-
-
+#########################
 def convert_open_filter_datastructure(file_path, columns):
     """
     Convert the weird open filter file format to something comparable to our
@@ -62,23 +62,11 @@ def convert_open_filter_datastructure(file_path, columns):
     )
 
 
-# convert_open_filter_datastructure("../tests/a_p_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
-# convert_open_filter_datastructure("../tests/a_s_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
-# convert_open_filter_datastructure("../tests/t_p_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
-# convert_open_filter_datastructure("../tests/t_s_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
-# convert_open_filter_datastructure("../tests/r_p_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
-# convert_open_filter_datastructure("../tests/r_s_flat_top.csv", ['wavelength', 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 89.0])
+def execute_tests(test_dic, verbosity="loud"):
 
-#########################
-# Input parameters
-# json_file_path = os.path.join(
-# os.path.dirname(os.getcwd()), "examples", "demo_test_with_backside.json"
-# )
-
-
-def execute_tests(json_path, verbosity="loud"):
-
-    json_file_path = os.path.join(os.path.dirname(os.getcwd()), "examples", json_path)
+    json_file_path = os.path.join(
+        os.path.dirname(os.getcwd()), "examples", test_dic["json_path"]
+    )
 
     #########################
 
@@ -97,96 +85,147 @@ def execute_tests(json_path, verbosity="loud"):
     # Store the maximum deviations to return them later
     max_deviations_test = []
 
-    # def test():
-    # assert optimization.check_targets(cavity_optimisation())
-    for target in ["t", "r"]:
-        for polarization in ["s", "p", ""]:
-            print("Target: " + target + ", Pol.: " + polarization)
-            filter_stack.calculate_ar_data(
-                polar_angles=[0, 15, 30, 45, 60, 75, 89],
-                save_data=True,
-                target_type=target,
-                polarization=polarization,
-            )
-            calculated_data_df = pd.read_csv(
-                os.path.join(os.getcwd(), "temp", "value.csv"), sep=","
-            )
-            calculated_data_df = calculated_data_df.rename(
-                columns={"Unnamed: 0": "wavelength"}
-            )
+    for azimuthal_angle in test_dic["azimuthal_angles"]:
 
-            # To find the corresponding test file, one needs to remove json from the filename
-            cleaned_file_name = json_path.replace(".json", "")
+        for target in test_dic["calculation_types"]:
 
-            if polarization != "":
+            for polarization in test_dic["polarizations"]:
 
-                open_filter_df = pd.read_csv(
-                    os.path.join(os.path.dirname(os.getcwd()), "src/tests")
-                    + "/"
-                    + cleaned_file_name
-                    + "_"
+                print(
+                    "Target: "
+                    + target
+                    + ", Pol.: "
                     + polarization
-                    + "_"
-                    + target
-                    + ".csv",
-                    sep="\t",
+                    + ", Az.: "
+                    + str(azimuthal_angle)
                 )
 
-            else:
-
-                open_filter_df_s = pd.read_csv(
-                    os.path.join(os.path.dirname(os.getcwd()), "src/tests")
-                    + "/"
-                    + cleaned_file_name
-                    + "_"
-                    + "s"
-                    + "_"
-                    + target
-                    + ".csv",
-                    sep="\t",
+                filter_stack.calculate_ar_data(
+                    polar_angles=test_dic["polar_angles"],
+                    save_data=True,
+                    target_type=target,
+                    polarization=polarization,
                 )
 
-                open_filter_df_p = pd.read_csv(
-                    os.path.join(os.path.dirname(os.getcwd()), "src/tests")
-                    + "/"
-                    + cleaned_file_name
-                    + "_"
-                    + "p"
-                    + "_"
-                    + target
-                    + ".csv",
-                    sep="\t",
+                calculated_data_df = pd.read_csv(
+                    os.path.join(os.getcwd(), "temp", "value.csv"), sep=","
                 )
 
-                # Combine the two dataframes with doing a sum of the columns with a factor 0.5 for each term
-                open_filter_df = open_filter_df_s.add(open_filter_df_p, fill_value=0)
-                open_filter_df = open_filter_df * 0.5
+                calculated_data_df = calculated_data_df.rename(
+                    columns={"Unnamed: 0": "wavelength"}
+                )
 
-            # complete_ease_df = pd.read_csv("../tests/" + polarization + "_" + target + "_CE.csv", sep = "\t")
+                # To find the corresponding test file, one needs to remove json from the filename
+                cleaned_file_name = test_dic["json_path"].replace(".json", "")
 
-            # x = 1e-3
-            # calculated_data_df = calculated_data_df.where(calculated_data_df >= x, 0)
-            # open_filter_df = open_filter_df.where(open_filter_df >= x, 0)
-            temp_diff = abs(calculated_data_df - open_filter_df)
-            # temp_diff_ce_of = abs(complete_ease_df - open_filter_df)
-            # print(temp_diff)
-            # print(temp_diff_ce_of)
-            print("Maximum deviations: ")
-            print(temp_diff.max())
-            # among the values of temp_diff.max() we need to find the maximum value
-            max_deviations_test.append(temp_diff.max().max())
+                if polarization != "":
 
-    if verbosity == "quiet":
-        # redirect print back to stdout
-        sys.stdout = sys.__stdout__
+                    if test_dic["azimuthal_angles"] == [0]:
 
-    return max_deviations_test
+                        open_filter_df = pd.read_csv(
+                            os.path.join(os.path.dirname(os.getcwd()), "src/tests")
+                            + "/"
+                            + cleaned_file_name
+                            + "_"
+                            + polarization
+                            + "_"
+                            + target
+                            + ".csv",
+                            sep="\t",
+                        )
+
+                    else:
+
+                        open_filter_df = pd.read_csv(
+                            os.path.join(os.path.dirname(os.getcwd()), "src/tests")
+                            + "/"
+                            + cleaned_file_name
+                            + "_"
+                            + str(azimuthal_angle)
+                            + "deg"
+                            + "_"
+                            + polarization
+                            + "_"
+                            + target
+                            + ".csv",
+                            sep="\t",
+                        )
+
+                else:
+
+                    open_filter_df_s = pd.read_csv(
+                        os.path.join(os.path.dirname(os.getcwd()), "src/tests")
+                        + "/"
+                        + cleaned_file_name
+                        + "_"
+                        + "s"
+                        + "_"
+                        + target
+                        + ".csv",
+                        sep="\t",
+                    )
+
+                    open_filter_df_p = pd.read_csv(
+                        os.path.join(os.path.dirname(os.getcwd()), "src/tests")
+                        + "/"
+                        + cleaned_file_name
+                        + "_"
+                        + "p"
+                        + "_"
+                        + target
+                        + ".csv",
+                        sep="\t",
+                    )
+
+                    # Combine the two dataframes with doing a sum of the columns with a factor 0.5 for each term
+                    open_filter_df = open_filter_df_s.add(
+                        open_filter_df_p, fill_value=0
+                    )
+                    open_filter_df = open_filter_df * 0.5
+
+                temp_diff = abs(calculated_data_df - open_filter_df)
+                print("Maximum deviations: ")
+                print(temp_diff.max())
+                # among the values of temp_diff.max() we need to find the maximum value
+                max_deviations_test.append(temp_diff.max().max())
+
+        if verbosity == "quiet":
+            # redirect print back to stdout
+            sys.stdout = sys.__stdout__
+
+        return max_deviations_test
 
 
-tests = ["demo_test.json", "demo_test_with_backside.json"]
+test_dic_demo_test = {
+    "json_path": "demo_test.json",
+    "polar_angles": [0, 15, 30, 45, 60, 75, 89],
+    "azimuthal_angles": [0],
+    "calculation_types": ["t", "r"],
+    "polarizations": ["s", "p", ""],
+}
+
+test_dic_demo_test_with_backside = {
+    "json_path": "demo_test_with_backside.json",
+    "polar_angles": [0, 15, 30, 45, 60, 75, 89],
+    "azimuthal_angles": [0],
+    "calculation_types": ["t", "r"],
+    "polarizations": ["s", "p", ""],
+}
+
+test_dic_pfo_aligned = {
+    "json_path": "demo_test_pfo_aligned.json",
+    "polar_angles": [0, 10, 20, 30, 40, 50, 60, 70],
+    "azimuthal_angles": [0, 15, 30, 45, 60, 75, 90],
+    "calculation_types": ["r"],
+    "polarizations": ["s", "p"],
+}
+
+# test_dics = [test_dic_demo_test, test_dic_demo_test_with_backside, test_dic_pfo_aligned]
+test_dics = [test_dic_demo_test]
+# test_dics = [test_dic_pfo_aligned]
 
 max_deviations = []
-verbosity = "quiet"
+verbosity = "loud"
 
 if verbosity == "loud":
     print("Running tests...")
@@ -196,8 +235,8 @@ else:
 # start the timer
 start = time.time()
 
-for test in tests:
-    max_deviations.append(execute_tests(test, verbosity="quiet"))
+for test in test_dics:
+    max_deviations.append(execute_tests(test, verbosity=verbosity))
 
 # find the maximum among the maximum deviations
 max_dev_it = max(max_deviations)
