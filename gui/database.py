@@ -75,6 +75,7 @@ class Job(db.Model):
     steps = db.Column(db.Integer, nullable=True)
     initial_merit = db.Column(db.Float, nullable=True)
     current_merit = db.Column(db.Float, nullable=True)
+    description = db.Column(db.Text, nullable=True)
 
 
 class Material(db.Model):

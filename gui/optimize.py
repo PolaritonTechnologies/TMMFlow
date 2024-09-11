@@ -119,6 +119,7 @@ def start_optimization():
         optimization_method=json.dumps(request.json["optimizationMethod"]),
         initial_merit=initial_merit,
         current_json=json.dumps(latest_design),
+        description="Optimization with " + str(request.json["optimizationMethod"]),
     )
     db.session.add(optimization)
     db.session.commit()

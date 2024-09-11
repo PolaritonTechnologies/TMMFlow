@@ -176,10 +176,6 @@
                 {% endfor %}
                 {% endif %}
             </div>
-            <!-- <form action="{{ url_for('stack_bp.reset_filter') }}" method="post" enctype="multipart/form-data" -->
-            <!-- class="ml-3 d-flex align-items-end" style="margin-top:2em;"> -->
-            <!-- <button type="submit" class="btn btn-danger" value="resetFilter">Reset Filter</button> -->
-            <!-- </form> -->
             <div class="vertical-line"></div>
 
         </div>
@@ -1279,6 +1275,17 @@
             max_azimuthal_angle.title = "";  // Reset info box
             azimuthal_angle_step.style.borderColor = "";  // Reset border color if input is valid
             azimuthal_angle_step.title = "";  // Reset info box
+        }
+
+        // Polarization
+        var polarization = document.getElementById("polarization");
+        if (polarization.value === "") {
+            errorMessages.push("Polarization must be filled");
+            polarization.style.borderColor = "red";  // Mark the input field in red
+            polarization.title = "This field cannot be empty";  // Show info box
+        } else {
+            polarization.style.borderColor = "";  // Reset border color if input is valid
+            polarization.title = "";  // Reset info box
         }
 
         var table = document.getElementById("layers");

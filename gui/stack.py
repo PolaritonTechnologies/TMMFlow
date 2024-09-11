@@ -31,10 +31,10 @@ from .database import (
     select_optimization_by_datetime,
     get_all_user_projects,
     select_job_by_datetime_and_name,
+    get_available_materials,
 )
 from . import db
 from .utility import (
-    get_available_materials,
     get_available_templates,
     allowed_file,
     generate_colors,
@@ -93,13 +93,18 @@ def stack():
     current_structure = json.loads(optimization.current_json)
 
     # Specify the directory you want to search
-    material_list = get_available_materials(app.config["MATERIAL_FOLDER"])
+    material_list, material_classes = get_available_materials(session["team"])
     template_list = get_available_templates(app.config["TEMPLATE_FOLDER"])
 
     # Get all versions of current filter design
     filter_versions = get_all_filter_versions(job_id)
     filter_versions_time_stamps = [
         filter_version.time_stamp.strftime("%Y-%m-%d %H:%M:%S")
+        + (
+            " | " + str(filter_version.description)
+            if filter_version.description is not None
+            else ""
+        )
         for filter_version in filter_versions
     ]
 
@@ -178,7 +183,7 @@ def check_uploaded_filter(filter_definition_json):
         ]
     )
 
-    available_materials = get_available_materials(app.config["MATERIAL_FOLDER"])
+    available_materials, material_classes = get_available_materials(session["team"])
 
     material_available = [
         material in available_materials for material in list_of_materials_in_stack
@@ -533,6 +538,7 @@ def save_json():
         optimization_method="None",
         current_json=json.dumps(data_to_json),
         time_stamp=datetime.now(),
+        description="Updated filter definition",
     )
     db.session.add(optimization)
     db.session.commit()
@@ -581,6 +587,7 @@ def download_file():
         return send_file(path_to_file, as_attachment=True)
 
 
+"""
 @stack_bp.route("/reset_filter", methods=["POST"])
 def reset_filter():
     # Copy the first database entry for the given key to a new optimization entry (the newest)
@@ -603,12 +610,13 @@ def reset_filter():
 
     # Reload page
     return redirect(url_for("stack_bp.stack"))
+"""
 
 
 @stack_bp.route("/select_version", methods=["POST"])
 def select_version():
     selected_version = datetime.strptime(
-        request.form.get("version"), "%Y-%m-%d %H:%M:%S"
+        request.form.get("version").split("|")[0], "%Y-%m-%d %H:%M:%S"
     )
 
     # Retrieve the optimization entry for the selected version
@@ -625,6 +633,7 @@ def select_version():
         optimization_method="None",
         current_json=json.dumps(initial_json),
         time_stamp=datetime.now(),
+        description="Loaded from v. " + request.form.get("version").split("|")[0],
     )
 
     # Commit the new optimization to the database
