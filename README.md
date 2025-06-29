@@ -119,9 +119,9 @@ jobs table
 
 | opt_id | job_id | time_stamp                | username | filter_name    | optimization_method | initial_json | current_data | steps | initial_merit | current_merit | description                     |
 | ------ | ------ | ------------------------- | -------- | -------------- | ------------------- | ------------ | ------------ | ----- | ------------- | ------------- | ------------------------------- |
-| 1      | 1      | 2024-07-09 09:28:19.12327 | julian   | test           | None                | {dict}       |              |       |               |               |                                 |
-| 2      | 1      | 2024-07-09 09:28:19.12327 | julian   | test           | Nelder-Mead         | {dict}       | {dict}       | 13240 | 13000         | 500           | Optimization with [Nelder-Mead] |
-| 3      | 2      | 2024-07-09 09:30:10.12327 | julian   | bandpass_660nm | None                | {dict}       |              |       |               |               |                                 |
+| 1      | 1      | 2024-07-09 09:28:19.12327 | florian  | test           | None                | {dict}       |              |       |               |               |                                 |
+| 2      | 1      | 2024-07-09 09:28:19.12327 | florian   | test           | Nelder-Mead         | {dict}       | {dict}       | 13240 | 13000         | 500           | Optimization with [Nelder-Mead] |
+| 3      | 2      | 2024-07-09 09:30:10.12327 | florian   | bandpass_660nm | None                | {dict}       |              |       |               |               |                                 |
 
 - The username is the 1:n connector between the user table and the jobs table.
 
@@ -129,7 +129,7 @@ materials table
 
 | id  | name   | creation_time             | username | team          | material_class | data   |
 | --- | ------ | ------------------------- | -------- | ------------- | -------------- | ------ |
-| 1   | Ag     | 2024-07-09 09:28:19.12327 | julian   | HCNB, Cologne | default        | {dict} |
+| 1   | Ag     | 2024-07-09 09:28:19.12327 | florian   | HCNB, Cologne | default        | {dict} |
 
 ### GUI - Main Interaction
 
