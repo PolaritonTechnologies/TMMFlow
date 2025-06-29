@@ -1,0 +1,745 @@
+{% extends "base.html" %}
+{% block content %}
+<main>
+    <!-- Overlay -->
+    <div id="loading"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999;">
+        <!-- Centered Spinner -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    </div>
+    <div class="row align-items-center">
+
+        <div class="col-lg-6 col-12">
+            <!-- <div id="loading" class="spinner-border text-primary" role="status"
+                style="position: absolute; display: none;">
+                <span class="sr-only">Loading...</span>
+            </div> -->
+            <div class="text-center mb-4 shadowed-box">
+                <div style="display: flex;">
+                    <h6><strong>Summary:</strong></h6>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <div style="margin-right: 1%;">Integrated:</div>
+                    <div class="display-6 text-primary" id="integrated_spectrum" style="margin-right: 1%;"> - %nm,
+                    </div>
+                    <div style="margin-right: 1%;">Integrated Passband:</div>
+                    <div class="display-6 text-primary" id="integrated_passband" style="margin-right: 1%;"> - %nm,
+                    </div>
+                    <div style="margin-right: 1%;">Peak:</div>
+                    <div class="display-6 text-primary" id="peak_spectrum"> - %</div>
+                </div>
+            </div>
+            <div class="row d-flex align-items-center justify-content-center">
+                <div class="col-12">
+                    <div id="heatmap" style="margin-bottom: 5em;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 col-12">
+            <div style="position: relative; margin-bottom: 5em;">
+                <div id="DatavsWavelengthPlot"></div>
+                <button id="resetPlot" class="btn btn-primary" style="position: absolute; top: 40px; right: 0;">Reset
+                    Plot</button>
+            </div>
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs" id="controlTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link active" id="tra-tab" data-toggle="tab" href="#traControls" role="tab"
+                        aria-controls="traControls" aria-selected="true">T/R/A</a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" id="local-tab" data-toggle="tab" href="#localControls" role="tab"
+                        aria-controls="localControls" aria-selected="false">Fields</a>
+                </li>
+            </ul>
+
+            <!-- Increase the distance between the previous and next element -->
+            <div style="margin-bottom: 1em;"></div>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="controlTabsContent">
+                <!-- T/R/A Tab -->
+                <div class="tab-pane fade show active" id="traControls" role="tabpanel" aria-labelledby="tra-tab">
+                    <div class="row d-flex align-items-center justify-content-center">
+                        <div class="form-group mx-3">
+                            <label for="mode" style="font-weight:bold;">Mode:</label>
+                            <select id="mode" class="form-control">
+                                <option value="r" {% if default_values.mode=="r" %}selected{% endif %}>Reflection
+                                </option>
+                                <option value="t" {% if default_values.mode=="t" %}selected{% endif %}>Transmission
+                                </option>
+                                <option value="a" {% if default_values.mode=="a" %}selected{% endif %}>Absorption
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group mx-3">
+                            <label for="polarization" style="font-weight:bold;">Polarization:</label>
+                            <div class="row">
+                                <div class="col">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <label for="polarization">s:</label>
+                                        </div>
+                                        <div class="col">
+                                            <input type="number" id="polarization" class="form-control" min="0" max="1"
+                                                step="0.01" value="{{ default_values.polarization }}"
+                                                oninput="updatePolarization('polarization')">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <label for="p-polarization">p:</label>
+                                        </div>
+                                        <div class="col">
+                                            <input type="number" id="p-polarization" class="form-control" min="0"
+                                                max="1" step="0.01" oninput="updatePolarization('p-polarization')">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mx-3">
+                            <label for="azimuthalAngle" style="font-weight:bold;">Azimuthal Angle (°):</label>
+                            <input type="number" id="azimuthalAngle" class="form-control" min="0" max="89.9" step="any"
+                                value="{{ default_values.azimuthalAngle }}">
+                        </div>
+                    </div>
+
+                    <div class="row d-flex align-items-center justify-content-center">
+                        <div class="form-group mx-3">
+                            <label for="startAngle" style="font-weight:bold;">Starting Angle (°):</label>
+                            <input type="number" id="startAngle" class="form-control" min="0" max="89.9" step="any"
+                                value="{{ default_values.startAngle }}">
+                        </div>
+
+                        <div class="form-group mx-3">
+                            <label for="endAngle" style="font-weight:bold;">End Angle (°):</label>
+                            <input type="number" id="endAngle" class="form-control" min="0" max="89.9" step="any"
+                                value="{{ default_values.endAngle }}">
+                        </div>
+
+                        <div class="form-group mx-3">
+                            <label for="stepAngle" style="font-weight:bold;">Angle step (°):</label>
+                            <input type="number" id="stepAngle" class="form-control" min="0" max="89.9" step="any"
+                                value="{{ default_values.stepAngle }}">
+                        </div>
+                    </div>
+
+                    <div class="row d-flex align-items-center justify-content-center">
+                        <div class="form-group mx-3">
+                            <label for="startWavelength" style="font-weight:bold;">Starting Wavelength (nm):</label>
+                            <input type="number" id="startWavelength" class="form-control" min="10" max="10000"
+                                step="any" value="{{ default_values.startWavelength }}">
+                        </div>
+
+                        <div class="form-group mx-3">
+                            <label for="endWavelength" style="font-weight:bold;">End Wavelength (nm):</label>
+                            <input type="number" id="endWavelength" class="form-control" min="10" max="10000" step="any"
+                                value="{{ default_values.endWavelength }}">
+                        </div>
+
+                        <div class="form-group mx-3">
+                            <label for="stepWavelength" style="font-weight:bold;">Wavelength Step (nm):</label>
+                            <input type="number" id="stepWavelength" class="form-control" min="0" max="10000" step="any"
+                                value="{{ default_values.stepWavelength }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Local Tab -->
+                <div class="tab-pane fade" id="localControls" role="tabpanel" aria-labelledby="local-tab">
+                    <div class="row d-flex align-items-center justify-content-center">
+                        <div class="form-group mx-3">
+                            <label for="localMode" style="font-weight:bold;">Mode:</label>
+                            <select id="localMode" class="form-control">
+                                <option value="r" {% if default_values.mode=="r" %}selected{% endif %}>Reflection
+                                </option>
+                                <option value="t" {% if default_values.mode=="t" %}selected{% endif %}>Transmission
+                                </option>
+                                <option value="a" {% if default_values.mode=="a" %}selected{% endif %}>Absorption
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group mx-3">
+                            <label for="localPolarization" style="font-weight:bold;">Polarization:</label>
+                            <div class="row">
+                                <div class="col">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <label for="localPolarization">s:</label>
+                                        </div>
+                                        <div class="col">
+                                            <input type="number" id="localPolarization" class="form-control" min="0"
+                                                max="1" step="0.01" value="{{ default_values.polarization }}"
+                                                oninput="updateLocalPolarization('localPolarization')">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <label for="local-p-polarization">p:</label>
+                                        </div>
+                                        <div class="col">
+                                            <input type="number" id="local-p-polarization" class="form-control" min="0"
+                                                max="1" step="0.01"
+                                                oninput="updateLocalPolarization('local-p-polarization')">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mx-3">
+                            <label for="localAzimuthalAngle" style="font-weight:bold;">Azimuthal Angle (°):</label>
+                            <input type="number" id="localAzimuthalAngle" class="form-control" min="0" max="89.9"
+                                step="any" value="{{ default_values.azimuthalAngle }}">
+                        </div>
+                    </div>
+
+                    <div class="row d-flex align-items-center justify-content-center">
+                        <div class="form-group mx-3">
+                            <label for="localAngle" style="font-weight:bold;">Angle (°):</label>
+                            <input type="number" id="localAngle" class="form-control" min="0" max="89.9" step="any"
+                                value="{{ default_values.startAngle }}">
+                        </div>
+
+                        <div class="form-group mx-3">
+                            <label for="stackResolution" style="font-weight:bold;">Stack Resolution (nm):</label>
+                            <input type="number" id="stackResolution" class="form-control" min="1" max="1000" step="1"
+                                value="100">
+                        </div>
+                    </div>
+
+                    <div class="row d-flex align-items-center justify-content-center">
+                        <div class="form-group mx-3">
+                            <label for="localStartWavelength" style="font-weight:bold;">Starting Wavelength
+                                (nm):</label>
+                            <input type="number" id="localStartWavelength" class="form-control" min="10" max="10000"
+                                step="any" value="{{ default_values.startWavelength }}">
+                        </div>
+
+                        <div class="form-group mx-3">
+                            <label for="localEndWavelength" style="font-weight:bold;">End Wavelength (nm):</label>
+                            <input type="number" id="localEndWavelength" class="form-control" min="10" max="10000"
+                                step="any" value="{{ default_values.endWavelength }}">
+                        </div>
+
+                        <div class="form-group mx-3">
+                            <label for="localStepWavelength" style="font-weight:bold;">Wavelength Step (nm):</label>
+                            <input type="number" id="localStepWavelength" class="form-control" min="0" max="10000"
+                                step="any" value="{{ default_values.stepWavelength }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row d-flex align-items-center justify-content-center" style="margin-bottom: 1em">
+                <button id="calculateButton" class="btn btn-primary mr-3">Calculate</button>
+                <button id="downloadModalButton" type="button" class="btn btn-primary ml-3" data-toggle="modal"
+                    data-target="#downloadModalSimulate" {% if not default_values.dataPresent %}disabled{% endif %}>
+                    Download
+                </button>
+            </div>
+            <!-- The Modal -->
+            <div class="modal" id="downloadModalSimulate">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <!-- Modal Header -->
+                        <div class="modal-header">
+                            <h4 class="modal-title">Download Options</h4>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <!-- Modal body -->
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="fileType">File Type:</label>
+                                <select class="form-control" id="fileType">
+                                    <option>simulation</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="fileEnding">File Ending:</label>
+                                <select class="form-control" id="fileEnding">
+                                    <option>.csv</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Modal footer -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-success" id="downloadButton">Download</button>
+                            <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Define fontsize of plots
+    const font_size = 18;
+    // Define a colormap to always plot the same angle target with the same color 
+    var colorIndex = 0;
+    var colors = [
+        "#2a3d7e",
+        "e26d50",
+        "#8AB187",
+        "#8cc7e1",
+        "#DEBC43",
+        "#0c0a2e",
+        "#FF6F61",
+        "#2A9D8F",
+        "#E9C46A",
+        "#264653"
+    ];
+    function plotHeatmap(fig_json, layout) {
+        var modeDropdown = document.getElementById("mode");
+        var modeTitle = modeDropdown.options[modeDropdown.selectedIndex].text;
+
+        var data = {
+            x: fig_json.x,
+            y: fig_json.y,
+            z: fig_json.z,
+            colorscale: 'Viridis',
+            type: 'heatmap',
+            colorbar: {
+                title: {
+                    text: modeTitle,  // Add a label for the colorbar
+                    side: 'right',
+                },
+                titlefont: {
+                    size: font_size,
+                },
+                tickfont: {
+                    size: font_size  // Increase the font size of the colorbar tick labels
+                }
+            }
+        }
+        Plotly.newPlot("heatmap", [data], layout);
+        var heatmap = document.getElementById('heatmap');
+
+        // Make the plot interactive: if the user clicks on the plot, plot another plot
+        heatmap.on('plotly_click', function (data) {
+            var x = data.points[0].x;
+            var y = data.points[0].y;
+
+            // Additionally embellish data with polarization and a/r/t
+            // information retrieved from the according fields
+            var mode = document.getElementById("mode").value;
+            var polarization = document.getElementById("polarization").value;
+            var azimuthalAngle = document.getElementById("azimuthalAngle").value;
+            var username = retrieveUsername();
+            // console.log('You clicked on point (' + x + ', ' + y + ')');
+
+            // Trigger the plotting of another plot here
+            // Replace socket.emit with an AJAX request
+            fetch('/plot_xy_ajax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ x: x, mode: mode, polarization: polarization, username: username, azimuthalAngle: azimuthalAngle }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Plot XY:', data);
+                    // Handle the response data to plot the new plot
+                    plotXY(data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+        });
+    }
+
+    // Create a dummy heatmap with all zeros to already be able to show a dummy
+    // graph from the beginning (without any calculation)
+    var dummyData = {
+        z: Array(100).fill().map(() => Array(100).fill(0)),
+        type: 'heatmap',
+        colorscale: 'Viridis',
+        colorbar: {
+            title: {
+                text: 'Intensity',  // Add a label for the colorbar
+                side: 'right'
+            },
+        }
+    };
+
+    // Create a layout with autosize set to true, aspectmode set to cube, and x-axis and y-axis labels
+    var layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
+        plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
+        autosize: false,
+        width: 900,
+        height: 800,
+        margin: { l: 100, r: 50, b: 80, t: 100, pad: 4 },
+        xaxis: {
+            title: "Angle (°)",
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
+        },
+        yaxis: {
+            title: {
+                text: "Wavelength (nm)",
+                standoff: 30,
+            },
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
+        },
+    };
+
+        // Create a layout with autosize set to true, aspectmode set to cube, and x-axis and y-axis labels
+    var layout_fields = {
+        paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
+        plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
+        autosize: false,
+        width: 900,
+        height: 800,
+        margin: { l: 100, r: 50, b: 80, t: 100, pad: 4 },
+        xaxis: {
+            title: "Distance from Substrate (nm)",
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
+        },
+        yaxis: {
+            title: {
+                text: "Wavelength (nm)",
+                standoff: 30,
+            },
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
+        },
+    };
+
+    // Plot the dummy heatmap when the page loads
+    // Plotly.newPlot('heatmap', [dummyData], layout, config);
+    window.onload = function () {
+        var dataPresent = {{ default_values.dataPresent | tojson
+    }}
+
+    console.log("Data present: ", dataPresent);
+    if (dataPresent) {
+        username = retrieveUsername();
+        // Define the URL for the Flask endpoint
+        const url = '/plot_data';
+
+        // Prepare the request options for the fetch call
+        const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username })
+        };
+
+        // Make the AJAX request to the Flask endpoint
+        fetch(url, requestOptions)
+            .then(response => response.json()) // Parse the JSON response
+            .then(data => {
+                // Use the received data to plot the heatmap
+                plotHeatmap(data, layout);
+                // Retrieve the additional data (two floats) from the response
+                const integrated_spectrum = data.integrated_spectrum.toFixed(2);
+                const integrated_passband = data.integrated_passband.toFixed(2);
+                const peak_spectrum = data.peak_spectrum.toFixed(2);
+
+                // Update the divs with the new numbers
+                document.getElementById('integrated_spectrum').innerText = integrated_spectrum + " % nm °, ";
+                document.getElementById('integrated_passband').innerText = integrated_passband + " % nm °, ";
+                document.getElementById('peak_spectrum').innerText = peak_spectrum + " %";
+                // If you need to use the commented-out Plotly code:
+                // var plotData = {
+                //     x: data.x,
+                //     y: data.y,
+                //     z: data.z,
+                //     colorscale: 'Viridis',
+                //     type: 'heatmap',
+                // };
+                // Plotly.newPlot("heatmap", [plotData], data.layout, data.config);
+            })
+            .catch(error => {
+                console.error('Error fetching plot data:', error);
+            });
+    }
+    else {
+        Plotly.newPlot('heatmap', [dummyData], layout);
+    }
+
+    // Update the polarization value on window load based on the initial value of the s polarization
+    const sInput = document.getElementById('polarization');
+    const pInput = document.getElementById('p-polarization');
+    pInput.value = (1 - parseFloat(sInput.value)).toFixed(2);
+    };
+
+    document.getElementById("calculateButton").addEventListener("click", function () {
+        // Show the spinner
+        document.getElementById('loading').style.display = 'block';
+
+        // Check which tab is active
+        const traTabActive = document.getElementById('tra-tab').classList.contains('active');
+        const username = retrieveUsername();
+
+        if (traTabActive) {
+            // TRA tab is active - use original logic
+            const mode = document.getElementById("mode").value;
+            const polarization = document.getElementById("polarization").value;
+            const azimuthalAngle = document.getElementById("azimuthalAngle").value;
+            const startAngle = document.getElementById("startAngle").value;
+            const endAngle = document.getElementById("endAngle").value;
+            const stepAngle = document.getElementById("stepAngle").value;
+            const startWavelength = document.getElementById("startWavelength").value;
+            const endWavelength = document.getElementById("endWavelength").value;
+            const stepWavelength = document.getElementById("stepWavelength").value;
+
+            fetch('/calculate_and_plot_ajax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    mode: mode,
+                    polarization: polarization,
+                    azimuthalAngle: azimuthalAngle,
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    stepAngle: stepAngle,
+                    startWavelength: startWavelength,
+                    endWavelength: endWavelength,
+                    stepWavelength: stepWavelength,
+                    username: username
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    handleCalculationResponse(data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    // Hide the spinner
+                    document.getElementById('loading').style.display = 'none';
+                });
+        } else {
+            // Fields tab is active
+            const mode = document.getElementById("localMode").value;
+            const polarization = document.getElementById("localPolarization").value;
+            const azimuthalAngle = document.getElementById("localAzimuthalAngle").value;
+            const angle = document.getElementById("localAngle").value;
+            const stackResolution = document.getElementById("stackResolution").value;
+            const startWavelength = document.getElementById("localStartWavelength").value;
+            const endWavelength = document.getElementById("localEndWavelength").value;
+            const stepWavelength = document.getElementById("localStepWavelength").value;
+
+            fetch('/calculate_fields_and_plot_ajax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    mode: mode,
+                    polarization: polarization,
+                    azimuthalAngle: azimuthalAngle,
+                    angle: angle,
+                    stackResolution: stackResolution,
+                    startWavelength: startWavelength,
+                    endWavelength: endWavelength,
+                    stepWavelength: stepWavelength,
+                    username: username
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    handleCalculationResponseField(data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    // Hide the spinner
+                    document.getElementById('loading').style.display = 'none';
+                });
+        }
+    });
+
+    // Extract the common response handling logic to avoid duplication
+    function handleCalculationResponse(data) {
+        console.log('Calculation Complete:', data);
+        // Hide the spinner
+        document.getElementById('loading').style.display = 'none';
+        // Update the plot with the new data
+        plotHeatmap(data, layout);
+        // Enable the download button
+        document.getElementById("downloadModalButton").disabled = false;
+
+        // Retrieve the additional data (two floats) from the response
+        const integrated_spectrum = data.integrated_spectrum.toFixed(2);
+        const integrated_passband = data.integrated_passband.toFixed(2);
+        const peak_spectrum = data.peak_spectrum.toFixed(2);
+
+        // Update the divs with the new numbers
+        document.getElementById('integrated_spectrum').innerText = integrated_spectrum + " % nm °, ";
+        document.getElementById('integrated_passband').innerText = integrated_passband + " % nm °, ";
+        document.getElementById('peak_spectrum').innerText = peak_spectrum + " %";
+    };
+
+        // Extract the common response handling logic to avoid duplication
+    function handleCalculationResponseField(data) {
+        console.log('Calculation Complete:', data);
+        // Hide the spinner
+        document.getElementById('loading').style.display = 'none';
+        // Update the plot with the new data
+        plotHeatmap(data, layout_fields);
+        // Enable the download button
+        document.getElementById("downloadModalButton").disabled = false;
+
+    };
+
+
+    // socket.on("update_plot", function (fig_json) {
+    // plotHeatmap(fig_json, layout, config);
+    // Hide the spinner
+    // document.getElementById('loading').style.display = 'none';
+    // 
+    // });
+
+
+    var trace1 = {
+        x: [],  // x data
+        y: [],  // y data
+        mode: 'lines',
+        type: 'scatter',
+    };
+
+    var data = [trace1];
+
+    var layout_xy = {
+        paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
+        plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
+        xaxis: {
+            title: 'Wavelength (nm)',
+            showgrid: true,
+            zeroline: false,
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
+
+        },
+        yaxis: {
+            title: 'Intensity (a.u.)',
+            showline: true,
+            type: 'linear',
+            titlefont: {
+                size: font_size  // Increase the font size of the y-axis title
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the y-axis tick labels
+            },
+        },
+    };
+    var config_xy = {
+        modeBarButtonsToAdd: [{
+            name: 'Log Scale',
+            title: 'log',
+            click: function (gd) {
+                var update = { 'yaxis.type': 'log' };
+                Plotly.relayout(gd, update);
+            }
+        }, {
+            name: 'Linear Scale',
+            title: 'lin',
+            click: function (gd) {
+                var update = { 'yaxis.type': 'linear' };
+                Plotly.relayout(gd, update);
+            }
+        }]
+    };
+
+    Plotly.newPlot('DatavsWavelengthPlot', data, layout_xy, config_xy);
+
+    var plottedAngles = {};
+
+    function plotXY(data) {
+        var modeDropdown = document.getElementById("mode");
+        var modeTitle = modeDropdown.options[modeDropdown.selectedIndex].text;
+
+        // Check if this angle has already been plotted
+        if (plottedAngles[data.name]) {
+            return;
+        }
+        var colorIndex = Object.keys(plottedAngles).length % colors.length;
+        var color = colors[colorIndex];
+
+        var newTrace = {
+            x: data.x,  // new x data
+            y: data.y,  // new y data
+            mode: 'lines',
+            type: 'scatter',
+            name: data.name,
+            line: {
+                color: color,
+                width: 3
+            },
+
+        };
+
+        Plotly.addTraces('DatavsWavelengthPlot', newTrace);
+
+        // Mark this angle as plotted
+        plottedAngles[data.name] = true;
+    };
+
+    document.getElementById('resetPlot').addEventListener('click', function () {
+        Plotly.newPlot('DatavsWavelengthPlot', [], layout_xy);
+        plottedAngles = {};
+    });
+
+    document.getElementById("downloadButton").addEventListener("click", function (e) {
+        e.preventDefault();
+        var fileType = document.getElementById("fileType").value;
+        var fileEnding = document.getElementById("fileEnding").value;
+
+        if (fileType === "simulation") {
+            window.location.href = '/download_data?fileEnding=' + fileEnding;
+        }
+    });
+    function updatePolarization(inputId) {
+        const sInput = document.getElementById('polarization');
+        const pInput = document.getElementById('p-polarization');
+
+        if (inputId === 'polarization') {
+            pInput.value = (1 - parseFloat(sInput.value)).toFixed(2);
+        } else {
+            sInput.value = (1 - parseFloat(pInput.value)).toFixed(2);
+        }
+    }
+</script>
+{% endblock %}

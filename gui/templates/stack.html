@@ -1,0 +1,2370 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container-custom">
+    <section class="text-center my-5">
+        <h4>Upload/Select Filter Design</h4>
+        <p>Upload a .json or .ofp file containing your filter design.</p>
+        <div>
+            <form id="uploadForm" method="post" enctype="multipart/form-data"
+                class="d-flex flex-column align-items-center">
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" id="customFile" name="file">
+                    <label class="custom-file-label" for="customFile">{{ default_values.file_label }}</label>
+                </div>
+                <div class="row">
+                    <button type="submit" class="btn btn-primary mt-3" value="upload" id="upload_button">Upload</button>
+            </form>
+            <button type="submit" class="btn btn-secondary mt-3" value="rename" id="start_new_design_button"
+                style="margin-left: 1em;">Start New Design</button>
+            <button type="button" class="btn btn-info mt-3" value="rename" id="load_project_button" data-toggle="modal"
+                data-target="#loadProjectModal" style="margin-left: 1em;">Projects</button>
+        </div>
+
+        <!-- Start New Design Modal -->
+        <div class="modal fade" id="newDesignModal" tabindex="-1" role="dialog" aria-labelledby="newDesignModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="newDesignModalLabel">Start New Design</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="form-group">
+                                <label for="filterName">Filter Name</label>
+                                <input type="text" class="form-control" id="filterName" placeholder="Enter filter name">
+                            </div>
+                            <div class="form-group">
+                                <label for="templateSelect">Select Template</label>
+                                <select class="form-control select2" id="templateSelect">
+                                    {% for template in default_values.available_templates %}
+                                    <option value="{{ template }}">{{ template }}</option>
+                                    {% endfor %}
+                                    <!-- Options will be populated from Flask -->
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="saveNewDesign">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Load Project Modal -->
+        <div class="modal fade" id="loadProjectModal" tabindex="-1" role="dialog"
+            aria-labelledby="loadProjectModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="loadProjectModalLabel">Load Project</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="form-group">
+                                <label for="projectSelect">Select Project</label>
+                                <select class="form-control select2" id="previousProjectSelect">
+                                    {% for project in default_values.previous_projects %}
+                                    <option value="{{ project }}">{{ project }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </form>
+                        <div class="row justify-content-center">
+                            <button type="button" class="btn btn-danger mr-2" id="deleteProjectButton">Delete
+                            </button>
+                            <button type="button" class="btn btn-info" id="duplicateProjectButton">Duplicate
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+
+                        <button type="button" class="btn btn-secondary mr-2" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="selectProjectButton">Select</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Duplicate Project Modal -->
+        <div class="modal fade" id="duplicateProjectModal" tabindex="-1" role="dialog"
+            aria-labelledby="loadProjectModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="loadProjectModalLabel">Duplicate Filter</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="form-group">
+                                <label for="filterNametoDuplicate" style="font-weight: bold;">Filter to
+                                    Duplicate</label>
+                                <p id="filterNametoDuplicate"></p>
+                            </div>
+                            <div class="form-group">
+                                <label for="duplicateFilterName" style="font-weight: bold;">Duplicate Filter
+                                    Name</label>
+                                <input type="text" class="form-control" id="duplicateFilterName"
+                                    placeholder="Enter new filter name">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="confirmDuplicateFilter">Duplicate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        </div>
+        <div class="modal" tabindex="-1" role="dialog" id="materialLoadModal">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Error</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="modalParagraph"> Please choose replacement materials </p>
+                        <table class="table" id="modalTable">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Material</th>
+                                    <th scope="col">Replace with</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="acceptMaterialChoice">Accept</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="row justify-content-center shadowed-box">
+        <div class="col-lg-2 col-12">
+            <div class="row d-flex justify-content-center">
+                <h4 style="margin-bottom: 1em;"> Versioning</h4>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <form action="{{ url_for('stack_bp.select_version') }}" method="post" class="ml-3"
+                    style="margin-top:2em;" id="versionForm">
+                    <div class="form-group">
+                        <!-- <label for="versionSelect">Select Filter Version</label> -->
+                        <select class="form-control" id="versionSelect" name="version">
+                            {% for version in default_values.versions %}
+                            <option value="{{ version }}">{{ version }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <button type="submit" class="btn btn-primary" style="margin: 0.5em;" name="action" value="select">Select
+                    Version</button>
+                <button type="submit" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal"
+                    id="deleteFilterVersionButton" style="margin: 0.5em;">Delete
+                    Version</button>
+                </form>
+
+            </div>
+            <div class="vertical-line"></div>
+        </div>
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to delete this material?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteButton">Accept</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 col-12 d-flex justify-content-center align-items-center mb-4">
+            <div class="container"
+                style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div class="arrow-container"
+                    style="position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <div class="arrow-line" style="width: 2px; height: 50px; background-color: black;"></div>
+                    <div class="arrow"
+                        style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 20px solid black; margin-bottom: 10px;">
+                    </div>
+                </div>
+
+                {% if default_values.num_boxes and default_values.colors is defined %}
+                {% for i in range(default_values.num_boxes)|reverse %}
+                <div class="box"
+                    style="background-color: {{ default_values.colors[i % default_values.colors|length] }}; height: {{ default_values.heights[i % default_values.heights|length] }}px; width: {{ '100%' if default_values.incoherent_boxes[i % default_values.heights|length] else '80%' }};">
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-lg-2 col-12">
+            <div id="legend">
+                {% if default_values.num_legend_items and default_values.legend_colors is defined %}
+                {% for i in range(default_values.num_legend_items) %}
+                <div class="legend-item row d-flex align-items-center justify-content-start my-2">
+                    <div class="box"
+                        style="background-color: {{ default_values.legend_colors[i] }}; height: 20px; margin-right: 10px; width: 5em;">
+                    </div>
+                    <span>{{ default_values.unique_materials[i] }}</span>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="vertical-line"></div>
+        </div>
+        <div class="col-lg-2 col-12">
+            <div class="row d-flex justify-content-center">
+                <h4 style="margin-bottom: 1em;"> Design Summary </h4>
+            </div>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5 text-end"><b>Total no. layers:</b></div>
+                <div class="col-7 text-start"><span id="layerCount"></span></div>
+            </div>
+            <hr>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5 text-end"><b>Materials in use:</b></div>
+                <div class="col-7 text-start"><span id="materialsInUse"></span></div>
+            </div>
+            <!-- Add a horizontal line to display the total thickness underneath-->
+            <hr>
+            <div class="row d-flex justify-content-center">
+                <div class="col-5 text-end"><b>Total thickness:</b></div>
+                <div class="col-7 text-start"><span id="totalThickness"></span> nm</div>
+            </div>
+        </div>
+    </section>
+
+    <h2>Filter Definition</h2>
+    <p>Check and change the definition of the filter stack from the .json file. </p>
+
+    <form class="form-horizontal">
+        <div class="table-responsive">
+            <table class="table" , id="jsonTable">
+                <tr>
+                    <th>Attribute</th>
+                    <th>Value/Minimum</th>
+                    <th>Maximum</th>
+                    <th>Step</th>
+                </tr>
+                <tr>
+                    <td><label for="calculation_type">Calculation Type:</label></td>
+                    <td>
+                        <select id="calculation_type" name="calculation_type" class="form-control">
+                            <option value="t" {% if default_values.calculation_type=='t' %}selected{% endif %}>
+                                Transmission</option>
+                            <option value="r" {% if default_values.calculation_type=='r' %}selected{% endif %}>
+                                Reflection</option>
+                            <option value="a" {% if default_values.calculation_type=='a' %}selected{% endif %}>
+                                Absorption</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="polarization">Polarization:</label>
+                    </td>
+                    <td>
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-row align-items-center">
+                                    <div class="col-auto">
+                                        <label for="polarization">s:</label>
+                                    </div>
+                                    <div class="col">
+                                        <input type="number" id="polarization" class="form-control" min="0" max="1"
+                                            step="0.01" value="{{ default_values.polarization }}"
+                                            oninput="updatePolarization('polarization')">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-row align-items-center">
+                                    <div class="col-auto">
+                                        <label for="p-polarization">p:</label>
+                                    </div>
+                                    <div class="col">
+                                        <input type="number" id="p-polarization" class="form-control" min="0" max="1"
+                                            step="0.01" oninput="updatePolarization('p-polarization')">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="calculation_wavelength_min">Calculation Wavelength:</label></td>
+                    <td><input type="number" min="10" max="10000" step="any" required id="calculation_wavelength_min"
+                            name="calculation_wavelength_min" class="form-control"
+                            value="{{ default_values.wavelengthMin }}"></td>
+                    <td><input type="number" min="10" max="10000" step="any" required id="calculation_wavelength_max"
+                            name="calculation_wavelength_max" class="form-control"
+                            value="{{ default_values.wavelengthMax }}"></td>
+                    <td><input type="number" min="0" max="1000" step="any" required id="calculation_wavelength_step"
+                            name="calculation_wavelength_step" class="form-control"
+                            value="{{ default_values.wavelengthStep }}"></td>
+                </tr>
+                <tr>
+                    <td><label for="polar_angle_min">Polar Angle:</label></td>
+                    <td><input type="number" min="0" max="89.9" step="any" required id="polar_angle_min"
+                            name="polar_angle_min" class="form-control" value="{{ default_values.polarAngleMin }}"></td>
+                    <td><input type="number" min="0" max="89.9" step="any" required id="polar_angle_max"
+                            name="polar_angle_max" class="form-control" value="{{ default_values.polarAngleMax }}"></td>
+                    <td><input type="number" min="0" max="89.9" step="any" required id="polar_angle_step"
+                            name="polar_angle_step" class="form-control" value="{{ default_values.polarAngleStep }}">
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="azimuthal_angle_min">Azimuthal Angle:</label></td>
+                    <td><input type="number" min="0" max="89.9" step="any" required id="azimuthal_angle_min"
+                            name="azimuthal_angle_min" class="form-control" value="{{ default_values.azimAngleMin }}">
+                    </td>
+                    <td><input type="number" min="0" max="89.9" step="any" required id="azimuthal_angle_max"
+                            name="azimuthal_angle_max" class="form-control" value="{{ default_values.azimAngleMax }}">
+                    </td>
+                    <td><input type="number" min="0" max="89.9" step="any" required id="azimuthal_angle_step"
+                            name="azimuthal_angle_step" class="form-control" value="{{ default_values.azimAngleStep }}">
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="incident_medium">Incident Medium:</label></td>
+                    <td>
+                        <select id="incident_medium" name="incident_medium" class="form-control select2">
+                            {% for material in default_values.available_materials %}
+                            {% if material == default_values.incident_medium %}
+                            <option value="{{ material }}" selected>{{ material }}</option>
+                            {% else %}
+                            <option value="{{ material }}">{{ material }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="exit_medium">Exit Medium:</label></td>
+                    <td>
+                        <select id="exit_medium" name="exit_medium" class="form-control select2">
+                            {% for material in default_values.available_materials %}
+                            {% if material == default_values.exit_medium %}
+                            <option value="{{ material }}" selected>{{ material }}</option>
+                            {% else %}
+                            <option value="{{ material }}">{{ material }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+
+                        <div class="d-flex justify-content-between">
+                            <div>
+
+                                <button class="add_layer_to_top btn btn-primary" type="button"
+                                    style="margin-bottom: 1em;">Add Layer to Top</button>
+                                <button class="add_layer_to_bottom btn btn-info" type="button"
+                                    style="margin-bottom: 1em;">Add Layer to Bottom</button>
+                                <button class="add_incoherent_layer btn btn-secondary" type="button"
+                                    style="margin-bottom: 1em;">Add Incoherent Layer</button>
+                            </div>
+                            <div class="ml-auto">
+                                <button id="shift_wavelength" type="button" class="btn btn-primary"
+                                    style="margin-bottom: 1em;">Shift Wavelength</button>
+                                <button id="simplify_stack" type="button" class="btn btn-secondary"
+                                    style="margin-bottom: 1em;">Simplify</button>
+                                <button id="flip_stack" type="button" class="btn btn-info"
+                                    style="margin-bottom: 1em;">Flip
+                                    Stack</button>
+                                <button id="exchange_material" type="button" class="btn btn-dark"
+                                    style="margin-bottom: 1em;">Exchange Material</button>
+                                <!-- <button id="copy_flip_stack" type="button" class="btn btn-primary" -->
+                                <!-- style="margin-bottom: 1em;">Copy-Flip -->
+                                <!-- Stack</button> -->
+                            </div>
+                        </div>
+
+                        <table id="layers" class="table">
+                            <thead>
+                                <tr>
+                                    <th>Layer</th>
+                                    <th>Material</th>
+                                    <th>Thickness</th>
+                                    <th>Thickness Opt
+                                        <button id="toggleThicknessOptCheckboxes" type="button"
+                                            class="btn btn-primary btn-sm" style="margin-left: 1em; z-index: 1;">
+                                            <i class="fas fa-check-square"></i>
+                                        </button>
+                                    </th>
+                                    <th>Thickness Bounds</th>
+                                    <th>Position Opt
+                                        <button id="togglePositionOptCheckboxes" type="button"
+                                            class="btn btn-primary btn-sm" style="margin-left: 1em; z-index: 1;">
+                                            <i class="fas fa-check-square"></i>
+                                        </button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(default_values.structure_materials|length)|reverse %}
+                                {% if default_values.incoherent[i] %}
+                                <tr class="draggable" style="background-color: #D3D3D3;">
+                                    <td>{{ i+1 }}</td>
+                                    <td>
+                                        <select class="form-control select2" autocomplete="off">
+                                            <!-- Add an option for the selected material -->
+                                            <option value="{{ default_values.structure_materials[i] }}" selected>{{
+                                                default_values.structure_materials[i] }}</option>
+
+                                            {% for material in default_values.available_materials %}
+                                            <!-- Only add an option for the material if it is not the selected material -->
+                                            {% if material != default_values.structure_materials[i] %}
+                                            <option value="{{ material }}">{{ material }}</option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td><input type="text" class="form-control"
+                                            pattern="^\d+(\.\d+)?$|^\[\d+(\.\d+)?(,\s*\d+(\.\d+)?)*\]$"
+                                            title="Only [ ] , . or numbers are allowed."
+                                            value="{{ default_values.structure_thicknesses[i] }}">
+                                    </td>
+
+                                    <td>
+                                        <div class="custom-control custom-checkbox" style="display: none;">
+                                            <input type="checkbox" class="custom-control-input"
+                                                id="checkbox_thickness_opt_{{ i }}">
+                                            <label class="custom-control-label"
+                                                for="checkbox_thickness_opt_{{ i }}"></label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="input-group" style="display: none;">
+                                            <input type="number" class="form-control" value="0">
+                                            <input type="number" class="form-control" value="0">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input"
+                                                name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}"
+                                                {% if default_values.layer_switch_allowed[i] %}checked{% endif %}>
+                                            <label class="custom-control-label"
+                                                for="checkbox_layer_switch_{{ i }}">Contain</label>
+                                        </div>
+                                    </td>
+                                    <td> </td>
+                                    <td>
+                                        <button class="btn btn-danger delete-row">Delete</button>
+                                        <input type="hidden" class="incoherent" value="true">
+                                    </td>
+                                </tr>
+                                {%else%}
+                                <tr class="draggable">
+                                    <td>{{ i+1 }}</td>
+                                    <td>
+                                        <select class="form-control select2" autocomplete="off">
+                                            <!-- Add an option for the selected material -->
+                                            <option value="{{ default_values.structure_materials[i] }}" selected>{{
+                                                default_values.structure_materials[i] }}</option>
+
+                                            {% for material in default_values.available_materials %}
+                                            <!-- Only add an option for the material if it is not the selected material -->
+                                            {% if material != default_values.structure_materials[i] %}
+                                            <option value="{{ material }}">{{ material }}</option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control" pattern="^[0-9+\/*.,[\] \-]+$"
+                                            title="Only [ ] , . - + / * or numbers are allowed."
+                                            value="{{ default_values.structure_thicknesses[i] }}"
+                                            onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.value = parseFloat(math.evaluate(this.value)).toFixed(2);}">
+                                    </td>
+                                    <td>
+                                        <div class=" custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input"
+                                                id="checkbox_thickness_opt_{{ i }}" {% if
+                                                default_values.thickness_opt_allowed[i] %}checked{% endif %}>
+                                            <label class="custom-control-label"
+                                                for="checkbox_thickness_opt_{{ i }}"></label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="input-group">
+                                            <input type="number" min="0" max="10000" step="any" class="form-control"
+                                                placeholder="Min" value="{{ default_values.bounds[i][0] }}">
+                                            <input type="number" min="0" max="10000" step="any" class="form-control"
+                                                placeholder="Max" value="{{ default_values.bounds[i][1] }}">
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input"
+                                                name="checkbox_layer_switch_{{ i }}" id="checkbox_layer_switch_{{ i }}"
+                                                {% if default_values.layer_switch_allowed[i] %}checked{% endif %}>
+                                            <label class="custom-control-label"
+                                                for="checkbox_layer_switch_{{ i }}"></label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-success duplicate-row">x2</button>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger delete-row">Delete</button>
+                                        <input type="hidden" class="incoherent" value="false">
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button class="add_layer_to_top btn btn-primary" type="button"
+                                    style="margin-bottom: 1em;">Add Layer to Top</button>
+                                <button class="add_layer_to_bottom btn btn-info" type="button"
+                                    style="margin-bottom: 1em;">Add Layer to Bottom</button>
+                                <button class="add_incoherent_layer btn btn-secondary" type="button"
+                                    style="margin-bottom: 1em;">Add Incoherent Layer</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="10">
+                        <table id="target" class="table">
+                            <tr>
+                                <th></th>
+                                <th>Type</th>
+                                <th title="s polarization from [0,1]">s-Pol.</th>
+                                <th title="Polar angle range">Polar Angle</th>
+                                <th title="Azimuthal angle range">Azimuthal Angle</th>
+                                <th title="Wavelength range">Wavelength</th>
+                                <th title="Condition">Cond.</th>
+                                <th>Value</th>
+                                <th title="Set tolerance for the target">Tolerance</th>
+                                <th
+                                    title="Target arithmetic, e.g. define multiple targets and allow optimizing for their division (e.g. 1/2). Turn off a target by setting it to red or enter its own number to turn it on again.">
+                                    Arith.</th>
+                            </tr>
+                            {% for i in range(default_values.targets_value|length) %}
+                            <tr class="draggable">
+                                <td>{{ i+1 }}</td>
+
+                                <td>
+                                    <select class="form-control" style="width: 4em;">
+                                        <option value="t" {% if default_values.targets_type[i]=='t' %}selected{% endif
+                                            %}>t
+                                        </option>
+                                        <option value="r" {% if default_values.targets_type[i]=='r' %}selected{% endif
+                                            %}>r
+                                        </option>
+                                        <option value="a" {% if default_values.targets_type[i]=='a' %}selected{% endif
+                                            %}>a
+                                        </option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <div class="input-group" style="width: 4em;">
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01"
+                                            value="{{ default_values.targets_polarization[i]}}">
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="input-group" style="width: 12em;">
+                                        <input type="number" min="0" max="89.9" step="any" class="form-control"
+                                            placeholder="Min"
+                                            value="{{ default_values.targets_polar_angle[i][0] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else default_values.targets_polar_angle[i] }}">
+                                        <input type="number" min="0" max="89.9" step="any" class="form-control"
+                                            placeholder="Max"
+                                            value="{{ default_values.targets_polar_angle[i][1] if default_values.targets_polar_angle[i] is sequence and default_values.targets_polar_angle[i]|length > 1 else '' }}">
+                                        <input type="number" min="0" max="89.9" step="any" class="form-control"
+                                            placeholder="Step" value="{{ default_values.polar_angle_steps[i] }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group" style="width: 12em;">
+                                        <input type="number" min="0" max="89.9" step="any" class="form-control"
+                                            placeholder="Min"
+                                            value="{{ default_values.targets_azimuthal_angle[i][0] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else default_values.targets_azimuthal_angle[i] }}">
+                                        <input type="number" min="0" max="89.9" step="any" class="form-control"
+                                            placeholder="Max"
+                                            value="{{ default_values.targets_azimuthal_angle[i][1] if default_values.targets_azimuthal_angle[i] is sequence and default_values.targets_azimuthal_angle[i]|length > 1 else '' }}">
+                                        <input type="number" min="0" max="89.9" step="any" class="form-control"
+                                            placeholder="Step" value="{{ default_values.azimuthal_angle_steps[i] }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group" style="width: 15em;">
+                                        <input type="number" min="10" max="10000" step="any" class="form-control"
+                                            placeholder="Min"
+                                            value="{{ default_values.targets_wavelengths[i][0] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else default_values.targets_wavelengths[i] }}">
+                                        <input type="number" min="10" max="10000" step="any" class="form-control"
+                                            placeholder="Max"
+                                            value="{{ default_values.targets_wavelengths[i][1] if default_values.targets_wavelengths[i] is sequence and default_values.targets_wavelengths[i]|length > 1 else '' }}">
+                                        <input type="number" min="0" max="10000" step="any" class="form-control"
+                                            placeholder="Step" value="{{ default_values.wavelength_steps[i] }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <select class="form-control" style="width: 4em;">
+                                        <option value="<" {% if default_values.targets_condition[i]=='<' %}selected{%
+                                            endif %}>
+                                            < </option>
+                                        <option value=">" {% if default_values.targets_condition[i]=='>' %}selected{%
+                                            endif %}>></option>
+                                        <option value="=" {% if default_values.targets_condition[i]=='=' %}selected{%
+                                            endif %}>=</option>
+                                    </select>
+                                </td>
+                                <td><input type="number" min="0" step="any" class="form-control"
+                                        value="{{ default_values.targets_value[i] }}"></td>
+                                <td><input type="number" min="0" step="any" class="form-control"
+                                        value="{{ default_values.targets_tolerance[i] }}"></td>
+                                <td>
+                                    <input type="text" class="form-control switchable"
+                                        value="{{ default_values.targets_arithmetic[i] }}">
+                                </td>
+
+
+                                <td>
+                                    <button class="btn btn-danger delete-row">Delete</button>
+                                </td>
+
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <button id="add_target" type="button" class="btn btn-primary">Add Target</button>
+                        <!-- <button id="add_target" type="button" class="btn btn-secondary"><i -->
+                        <!-- class="fas fa-wand-magic-sparkles"></i> -->
+                        <!-- </button> -->
+                    </td>
+                </tr>
+
+
+            </table>
+            <!-- Container for the Plotly graph -->
+            <div class="container">
+                <div class="shadowed-box">
+                    <div id="target_graph" style="margin-top: -20px;"></div>
+                </div>
+            </div>
+
+            <section class="text-center my-5">
+                <input type="submit" value="Save" class="btn btn-primary" style="margin-right: 1em; margin-bottom: 5em;"
+                    id="saveButton">
+                <!-- Button to Open the Modal -->
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#downloadModal"
+                    style="margin-bottom: 5em; margin-left: 1em; margin-right: 1em;">
+                    Download
+                </button>
+            </section>
+            <div class="modal" id="downloadModal">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <!-- Modal Header -->
+                        <div class="modal-header">
+                            <h4 class="modal-title">Download Options</h4>
+                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <!-- Modal body -->
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="fileType">File Type:</label>
+                                <select class="form-control" id="fileType">
+                                    <option>Initial</option>
+                                    <option>Optimized</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="fileEnding">File Ending:</label>
+                                <select class="form-control" id="fileEnding">
+                                    <option>.json</option>
+                                    <option>.ofp</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Modal footer -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-success" id="downloadButton">Download</button>
+                            <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+    <div class="modal" tabindex="-1" role="dialog" id="errorModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Error</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ default_values.error_message }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="shiftWavelengthModal" tabindex="-1" role="dialog"
+        aria-labelledby="shiftWavelengthModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="shiftWavelengthModalLabel">Shift Wavelength</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="shiftWavelengthForm">
+                        <div class="form-group">
+                            <label for="currentReferenceWavelength">Current Reference
+                                Wavelength</label>
+                            <input type="number" min="0" class="form-control" id="currentReferenceWavelength" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="wavelengthToShiftTo">Wavelength to Shift To</label>
+                            <input type="number" class="form-control" id="wavelengthToShiftTo" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="shiftWavelengthButton">Shift</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="exchangeMaterialModal" tabindex="-1" role="dialog"
+        aria-labelledby="shiftMaterialModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exchangeMaterialModalLabel">Shift Wavelength</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="shiftWavelengthForm">
+                        <div class="form-group">
+                            <label for="currentMaterial">Material to change</label>
+                            <!-- <input type="number" min="0" class="form-control" id="currentMaterial" required> -->
+                            <select class="form-control select2" id="currentMaterial">
+                                <!-- Add an option for the selected material -->
+                                {% for material in default_values.available_materials %}
+                                {% if material != default_values.structure_materials[i] %}
+                                <option value="{{ material }}">{{ material }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="newMaterial">New material</label>
+                            <select class="form-control select2" id="newMaterial">
+                                <!-- Add an option for the selected material -->
+                                {% for material in default_values.available_materials %}
+                                {% if material != default_values.structure_materials[i] %}
+                                <option value="{{ material }}">{{ material }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="exchangeMaterialButton">Exchange</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+    // Define fontsize of plots
+    const font_size = 18;
+
+    $('#uploadForm').on('submit', function (e) {
+        e.preventDefault();
+
+        var formData = new FormData(this);
+        $.ajax({
+            url: '/upload_file',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                if (response.error) {
+                    // show the modal with the error message
+                    var tableBody = $('#modalTableBody');
+                    tableBody.empty();
+                    if (response.mismatched_materials && response.mismatched_materials.length > 0) {
+                        $.each(response.mismatched_materials, function (i, material) {
+                            var row = $('<tr>');
+                            row.append('<td>' + material + '</td>');
+                            var select = $('<select class="form-control select2"></select>');
+                            $.each(response.available_materials, function (i, available_material) {
+                                select.append('<option>' + available_material + '</option>');
+                            });
+
+                            row.append($('<td>').append(select));
+                            tableBody.append(row);
+                        });
+
+                        $('.select2').select2();
+
+                        // Initialize Select2 on the new element
+                        $(tableBody).find('select').select2({
+                            theme: 'bootstrap',
+                            width: 'resolve',
+                            tags: true,
+                            createTag: function (params) {
+                                var term = $.trim(params.term);
+
+                                if (term === '') {
+                                    return null;
+                                }
+
+                                return {
+                                    id: term,
+                                    text: term,
+                                    newOption: true
+                                }
+                            },
+                            templateResult: function (data) {
+                                var $result = $("<span></span>");
+
+                                $result.text(data.text);
+
+                                if (data.newOption) {
+                                    $result.append(" <em>(add new)</em>");
+                                }
+
+                                return $result;
+                            }
+                        });
+                    } else {
+                        // Clear the table body
+                        tableBody.empty();
+
+                        // Change the contents of the paragraph in the modal
+                        $('#modalParagraph').text(response.error);
+
+                        // Optionally, you can hide the table if needed
+                        $('#modalTable').hide();
+                    }
+
+
+                    $('#materialLoadModal').modal('show');
+
+                } else if (response.redirect) {
+                    // redirect to the stack page
+                    window.location.href = response.redirect;
+                } else {
+                    console.log(3)
+                    // update the page with the filter stack data
+                }
+            }
+        });
+    });
+
+    // If the user input the new materials to replace the ones not existing in
+    // the database run upload file again replacing these
+    $(document).on('click', '#acceptMaterialChoice', function () {
+        var replacements = [];
+        $('#materialLoadModal .select2').each(function () {
+            replacements.push($(this).val());
+        });
+
+        var formData = new FormData($('#uploadForm')[0]);
+        formData.append('replacements', JSON.stringify(replacements));
+
+        $.ajax({
+            url: '/upload_file',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                if (response.redirect) {
+                    // redirect to the stack page
+                    window.location.href = response.redirect;
+                } else {
+                    // update the page with the filter stack data
+                }
+            }
+        });
+    });
+
+    document.querySelector('.custom-file-input').addEventListener('change', function (e) {
+        var fileName = document.getElementById("customFile").files[0].name;
+        var nextSibling = e.target.nextElementSibling
+        nextSibling.innerText = fileName
+    })
+
+    // Scripts on the stack tables for adding layers and optimization parameters
+    // Function to make table rows draggable
+    function makeRowsDraggable() {
+        $("#layers tbody").sortable({
+            items: ".draggable",
+            cursor: 'move',
+            opacity: 0.6,
+            stop: function () {
+                // Update row numbers after drag and drop
+                var totalRows = $(this).find("tr").length;
+                $(this).find("tr").each(function (index) {
+                    var rowNumber = totalRows - index;
+                    $(this).data('row-number', rowNumber);
+                    $(this).find("td:first").text(rowNumber);
+                });
+            }
+        });
+        $("#target tbody").sortable({
+            items: ".draggable",
+            cursor: 'move',
+            opacity: 0.6,
+            stop: function () {
+                // Update row numbers after drag and drop
+                $(this).find("tr").each(function (index) {
+                    var rowNumber = index;
+                    $(this).data('row-number', rowNumber);
+                    $(this).find("td:first").text(rowNumber);
+                });
+            }
+        });
+    }
+
+    // Initial call to make existing rows draggable
+    makeRowsDraggable();
+
+    // Delete row on button click
+    $("#layers").on("click", ".delete-row", function () {
+        var tbody = $(this).closest("tbody");
+        $(this).closest("tr").remove();
+
+        // Update row numbers after deletion
+        var totalRows = tbody.find("tr").length;
+        tbody.find("tr").each(function (index) {
+            var rowNumber = totalRows - index;
+            $(this).data('row-number', rowNumber);
+            $(this).find("td:first").text(rowNumber);
+        });
+    });
+    $("#target").on("click", ".delete-row", function () {
+        var tbody = $(this).closest("tbody");
+        $(this).closest("tr").remove();
+
+        // Update row numbers after deletion
+        tbody.find("tr").each(function (index) {
+            var rowNumber = index;
+            $(this).data('row-number', rowNumber);
+            $(this).find("td:first").text(rowNumber);
+        });
+
+    });
+
+    Array.from(document.getElementsByClassName('add_layer_to_top')).forEach(function (element) {
+        element.addEventListener('click', function () {
+            addRow('layers', 'coherent', null, true);
+        });
+    });
+
+    Array.from(document.getElementsByClassName('add_layer_to_bottom')).forEach(function (element) {
+        element.addEventListener('click', function () {
+            addRow('layers', 'coherent', null, false);
+        });
+    });
+
+    Array.from(document.getElementsByClassName('add_incoherent_layer')).forEach(function (element) {
+        element.addEventListener('click', function () {
+            addRow('layers', 'incoherent');
+        });
+    });
+
+    document.getElementById('add_target').addEventListener('click', function () {
+        addRow('target');
+    });
+
+    // Get number of checkboxes to obtain number of layers (minus the
+    // general core checkbox)
+    let checkboxCounter = (document.querySelectorAll('input[type="checkbox"]').length - 1) / 2;
+
+    function addRow(tableId, type = 'coherent', sourceRow = null, top = true) {
+        var table = document.getElementById(tableId);
+        var row;
+        if (tableId == "target") {
+            var row = table.insertRow(-1);
+            row.dataset.rowNumber = table.rows.length - 1;
+        } else {
+            if (top) {
+                var row = table.insertRow(1);
+                row.dataset.rowNumber = table.rows.length - 1;
+            }
+            else {
+                var row = table.insertRow(-1);
+                row.dataset.rowNumber = 1;
+                // Update row numbers for all other rows
+                var totalRows = table.tBodies[0].rows.length;
+                Array.from(table.tBodies[0].rows).forEach(function (rowElement, index) {
+                    if (rowElement !== row) {
+                        var rowNumber = totalRows - index;
+                        rowElement.dataset.rowNumber = rowNumber;
+                        rowElement.cells[0].textContent = rowNumber;
+                    }
+                });
+            }
+        }
+        row.className = 'draggable';
+        var cell1 = row.insertCell(0);
+        cell1.textContent = row.dataset.rowNumber;
+
+        if (tableId === 'layers' && type === 'coherent') {
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            var cell5 = row.insertCell(4);
+            var cell6 = row.insertCell(5);
+            var cell7 = row.insertCell(6);
+            var cell8 = row.insertCell(7);
+
+            cell2.innerHTML = `
+                    <select class="form-control select2">
+                        {% for material in default_values.available_materials %}
+                        {% if material == default_values.exit_medium %}
+                        <option value="{{ material }}" selected>{{ material }}</option>
+                        {% else %}
+                        <option value="{{ material }}">{{ material }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>`;
+
+
+            cell3.innerHTML = ` <input type="text" "pattern="^[\d+\-*/.,\[\] ]+$" title="Only [ ] , . - + / * or numbers are allowed." onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.value = parseFloat(math.evaluate(this.value)).toFixed(2); }" class="form-control">
+`;
+
+            cell4.innerHTML = `
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" checked class="custom-control-input" id="checkbox_thickness_opt_${checkboxCounter}">
+                    <label class="custom-control-label" for="checkbox_thickness_opt_${checkboxCounter}"></label>
+                </div> `;
+            checkboxCounter++;
+            cell5.innerHTML = `
+                <div class="input-group">
+                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Min" value = 0.0>
+                    <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Max" value = 500.0>
+                </div>
+                `;
+            cell6.innerHTML = `
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="checkbox_layer_switch_${checkboxCounter}">
+                    <label class="custom-control-label" for="checkbox_layer_switch_${checkboxCounter}"></label>
+                </div> `;
+            cell7.innerHTML = '<button class="btn btn-success duplicate-row">x2</button>';
+            cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button><input type="hidden" class="incoherent" value="false">';
+            // If sourceRow is provided, populate the new row with the values from sourceRow
+            if (sourceRow) {
+                var sourceCells = sourceRow.cells;
+                var sourceSelect2Values = $(sourceCells[1]).find('select').val();
+                $(cell2).find('select').select2().val(sourceSelect2Values).trigger('change');
+                $(cell3).find('input').val($(sourceCells[2]).find('input').val());
+                $(cell4).find('input').prop('checked', $(sourceCells[3]).find('input').prop('checked'));
+                $(cell5).find('input').each(function (index) {
+                    $(this).val($(sourceCells[4]).find('input').eq(index).val());
+                });
+                $(cell6).find('input').prop('checked', $(sourceCells[5]).find('input').prop('checked'));
+            }
+            // Initialize Select2 on the new element
+            $(cell2).find('select').select2({
+                theme: 'bootstrap',
+                width: 'resolve',
+                tags: true,
+                createTag: function (params) {
+                    var term = $.trim(params.term);
+
+                    if (term === '') {
+                        return null;
+                    }
+
+                    return {
+                        id: term,
+                        text: term,
+                        newOption: true
+                    }
+                },
+                templateResult: function (data) {
+                    var $result = $("<span></span>");
+
+                    $result.text(data.text);
+
+                    if (data.newOption) {
+                        $result.append(" <em>(add new)</em>");
+                    }
+
+                    return $result;
+                }
+            });
+            checkboxCounter++;
+        } else if (tableId === 'layers' && type === "incoherent") {
+            // Use a different color for the incoherent layer
+            row.style.backgroundColor = "#D3D3D3";
+
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            var cell5 = row.insertCell(4);
+            var cell6 = row.insertCell(5);
+            var cell7 = row.insertCell(6);
+            var cell8 = row.insertCell(7);
+            cell2.innerHTML = `
+                    <select class="form-control select2">
+                        {% for material in default_values.available_materials %}
+                        {% if material == default_values.exit_medium %}
+                        <option value="{{ material }}" selected>{{ material }}</option>
+                        {% else %}
+                        <option value="{{ material }}">{{ material }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>`;
+
+            // Initialize Select2 on the new element
+            $(cell2).find('select').select2({
+                theme: 'bootstrap',
+                width: 'resolve',
+                tags: true,
+                createTag: function (params) {
+                    var term = $.trim(params.term);
+
+                    if (term === '') {
+                        return null;
+                    }
+
+                    return {
+                        id: term,
+                        text: term,
+                        newOption: true
+                    }
+                },
+                templateResult: function (data) {
+                    var $result = $("<span></span>");
+
+                    $result.text(data.text);
+
+                    if (data.newOption) {
+                        $result.append(" <em>(add new)</em>");
+                    }
+
+                    return $result;
+                }
+            });
+
+            cell3.innerHTML = '<input type="text" class="form-control">';
+            cell4.innerHTML = `
+                <div class="custom-control custom-checkbox" style="display: none;">
+                    <input type="checkbox" class="custom-control-input" id="checkbox_thickness_opt_${checkboxCounter}">
+                    <label class="custom-control-label" for="checkbox_thickness_opt_${checkboxCounter}"></label>
+                </div> `;
+            checkboxCounter++;
+            cell5.innerHTML = `
+                <div class="input-group" style="display: none;">
+                    <input type="number" class="form-control" value = 0>
+                    <input type="number" class="form-control" value = 0>
+                </div>
+                `;
+            cell6.innerHTML = `
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" id="checkbox_layer_switch_${checkboxCounter}">
+                    <label class="custom-control-label" for="checkbox_layer_switch_${checkboxCounter}">Contain</label>
+                </div> `;
+            checkboxCounter++;
+            cell8.innerHTML = '<button class="btn btn-danger delete-row">Delete</button><input type="hidden" class="incoherent" value="true">';
+        } else if (tableId === 'target') {
+            var cells = [];
+            for (var i = 1; i <= 10; i++) {
+                cells[i] = row.insertCell(i);
+            }
+            cells[1].innerHTML = `
+                    <select class="form-control">
+                        <option value="t">t</option>
+                        <option value="r">r</option>
+                        <option value="a">a</option>
+                    </select>
+                    `;
+            cells[2].innerHTML = `
+                        <div class="input-group">
+                            <input type="number" class="form-control" min="0" max="1" step="0.01"
+                            value="{{ default_values.targets_polarization[i]}}">
+                        </div>
+                    `;
+            cells[3].innerHTML = `
+                    <div class="input-group" style="width: 12em;">
+                        <input type="number" min="0" max="89.9" step="any" class="form-control" placeholder="Min">
+                        <input type="number" min="0" max="89.9" step="any" class="form-control" placeholder="Max">
+                        <input type="number" min="0" max="89.9" step="any" class="form-control" placeholder="Step">
+                    </div>
+                    `;
+            cells[4].innerHTML = `
+                    <div class="input-group" style="width: 12em;">
+                        <input type="number" min="0" max="89.9" step="any" class="form-control" placeholder="Min">
+                        <input type="number" min="0" max="89.9" step="any" class="form-control" placeholder="Max">
+                        <input type="number" min="0" max="89.9" step="any" class="form-control" placeholder="Step">
+                    </div>
+                    `;
+            cells[5].innerHTML = `
+                    <div class="input-group" style="width: 15em;">
+                        <input type="number" min="10" max="10000" step="any" class="form-control" placeholder="Min">
+                        <input type="number" min="10" max="10000" step="any" class="form-control" placeholder="Max">
+                        <input type="number" min="0" max="10000" step="any" class="form-control" placeholder="Step">
+                    </div>
+                    `;
+            cells[6].innerHTML = `
+                    <select class="form-control">
+                        <option value="<"><</option>
+                        <option value=">">></option>
+                        <option value="=">=</option>
+                    </select>
+                    `;
+            cells[7].innerHTML = '<input type="number" min="0" step="any" class="form-control">';
+            cells[8].innerHTML = '<input type="number" min="0" step="any" class="form-control">';
+            cells[9].innerHTML = '<input type="text" class="form-control switchable" value="">'
+            cells[10].innerHTML = '<button class="btn btn-danger delete-row">Delete</button>';
+        }
+
+
+        // Activate the switchable function of the arithmetic button
+        updateSwitchableElements();
+
+        // Refresh sortable functionality after adding new row
+        // MakeRowsDraggable();
+
+    }
+
+    $(document).on('click', '.duplicate-row', function (event) {
+        // Check if the event was triggered by a keyboard event
+        if (event.originalEvent instanceof KeyboardEvent) {
+            return;
+        }
+
+        event.preventDefault();
+        var sourceRow = $(this).closest('tr')[0];  // Find the row
+        addRow('layers', 'coherent', sourceRow);  // Add a new row with the values from sourceRow
+    });
+    $(document).on('keydown', 'input', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    });
+    // Send data back to python
+    function getCellData(cell) {
+        var data = {};
+        var inputs = cell.querySelectorAll('input, select');
+        if (inputs.length > 0) {
+            data.values = Array.from(inputs).map(input => {
+                if (input.type === 'checkbox') {
+                    return input.checked;  // returns true if checked, false if not checked
+                } else {
+                    return input.value;
+                }
+            });
+        }
+
+        var nestedTables = cell.querySelectorAll('table');
+        if (nestedTables.length > 0) {
+            data.tables = Array.from(nestedTables).map(table => getTableData(table));
+        }
+
+        return data;
+    }
+
+    function getTableData(table) {
+        var data = [];
+
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            var rowData = {};
+            for (var j = 0, cell; cell = row.cells[j]; j++) {
+                rowData[j] = getCellData(cell);
+            }
+            // Add the incoherent value as an additional column
+            if (row.querySelector('.incoherent')) {
+                rowData[row.cells.length] = row.querySelector('.incoherent').value === 'true';
+            }
+            data.push(rowData);
+        }
+
+        return data;
+    }
+
+    function saveData(button) {
+        var table = document.getElementById('jsonTable');
+        var data = getTableData(table);
+
+        var xhr = new XMLHttpRequest();
+        // Include a timestamp in the URL to prevent caching
+        xhr.open('POST', '/save_json?button=' + button + '&t=' + new Date().getTime(), true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function () {
+            if (this.status == 400) {
+                var response = JSON.parse(this.responseText);
+                if (response.error) {
+                    $('#errorModal').modal('show');
+                    $('.modal-body').text(response.error);
+                }
+            }
+            else if (this.status == 302) {
+                location.reload(true);
+            }
+        };
+        xhr.send(JSON.stringify(data));
+    }
+    function validateInput() {
+        var errorMessages = []; // array to store error messages in
+        // Wavelengths 
+        var min_wavelength = document.getElementById("calculation_wavelength_min");
+        var max_wavelength = document.getElementById("calculation_wavelength_max");
+        var wavelength_step = document.getElementById("calculation_wavelength_step");
+
+        // Check if user input is valid
+        if (min_wavelength.value === "" || max_wavelength.value === "" || wavelength_step.value === "") {
+            errorMessages.push("All fields must be filled");
+            min_wavelength.style.borderColor = "red";  // Mark the input field in red
+            min_wavelength.title = "This field cannot be empty";  // Show info box
+        } else if (parseFloat(min_wavelength.value) > parseFloat(max_wavelength.value)) {
+            errorMessages.push("Minimum wavelength must be smaller than maximum wavelength");
+            min_wavelength.style.borderColor = "red";  // Mark the input field in red
+            min_wavelength.title = "Must be smaller or equal the maximum wavelength";  // Show info box
+        } else if (parseFloat(wavelength_step.value) > (parseFloat(max_wavelength.value) - parseFloat(min_wavelength.value))) {
+            errorMessages.push("Wavelength step must be smaller or equal the difference between maximum and minimum wavelength");
+            wavelength_step.style.borderColor = "red";  // Mark the input field in red
+            wavelength_step.title = "Must be smaller than the difference between maximum and minimum wavelength";  // Show info box
+        } else {
+            min_wavelength.style.borderColor = "";  // Reset border color if input is valid
+            min_wavelength.title = "";  // Reset info box
+            max_wavelength.style.borderColor = "";  // Reset border color if input is valid
+            max_wavelength.title = "";  // Reset info box
+            wavelength_step.style.borderColor = "";  // Reset border color if input is valid
+            wavelength_step.title = "";  // Reset info box
+        }
+
+        // Polar angles
+        var min_polar_angle = document.getElementById("polar_angle_min");
+        var max_polar_angle = document.getElementById("polar_angle_max");
+        var polar_angle_step = document.getElementById("polar_angle_step");
+
+        // Check if user input is valid
+        if (min_polar_angle.value === "" || max_polar_angle.value === "" || polar_angle_step.value === "") {
+            errorMessages.push("All fields must be filled");
+            min_polar_angle.style.borderColor = "red";  // Mark the input field in red
+            min_polar_angle.title = "This field cannot be empty";  // Show info box
+        } else if (parseFloat(min_polar_angle.value) > parseFloat(max_polar_angle.value)) {
+            errorMessages.push("Minimum polar angle must be smaller or equals the maximum polar angle");
+            min_polar_angle.style.borderColor = "red";  // Mark the input field in red
+            min_polar_angle.title = "Must be smaller than maximum polar angle";  // Show info box
+        } else if (parseFloat(polar_angle_step.value) > (parseFloat(max_polar_angle.value) - parseFloat(min_polar_angle.value))) {
+            errorMessages.push("Polar angle step must be smaller than the difference between maximum and minimum polar angle");
+            polar_angle_step.style.borderColor = "red";  // Mark the input field in red
+            polar_angle_step.title = "Must be smaller or equal the the difference between maximum and minimum polar angle";  // Show info box
+        } else {
+            min_polar_angle.style.borderColor = "";  // Reset border color if input is valid
+            min_polar_angle.title = "";  // Reset info box
+            max_polar_angle.style.borderColor = "";  // Reset border color if input is valid
+            max_polar_angle.title = "";  // Reset info box
+            polar_angle_step.style.borderColor = "";  // Reset border color if input is valid
+            polar_angle_step.title = "";  // Reset info box
+        }
+
+        // Azimuthal angles
+        var min_azimuthal_angle = document.getElementById("azimuthal_angle_min");
+        var max_azimuthal_angle = document.getElementById("azimuthal_angle_max");
+        var azimuthal_angle_step = document.getElementById("azimuthal_angle_step");
+
+        // Check if user input is valid
+        if (min_azimuthal_angle.value === "" || max_azimuthal_angle.value === "" || azimuthal_angle_step.value === "") {
+            errorMessages.push("All fields must be filled");
+            min_azimuthal_angle.style.borderColor = "red";  // Mark the input field in red
+            min_azimuthal_angle.title = "This field cannot be empty";  // Show info box
+        } else if (parseFloat(min_azimuthal_angle.value) > parseFloat(max_azimuthal_angle.value)) {
+            errorMessages.push("Minimum azimuthal angle must be smaller or equals the maximum azimuthal angle");
+            min_azimuthal_angle.style.borderColor = "red";  // Mark the input field in red
+            min_azimuthal_angle.title = "Must be smaller than maximum azimuthal angle";  // Show info box
+            // } else if (parseFloat(azimuthal_angle_step.value) > (parseFloat(max_azimuthal_angle.value) - parseFloat(min_azimuthal_angle.value))) {
+            // errorMessages.push("Azimuthal angle step must be smaller than the difference between maximum and minimum azimuthal angle");
+            // azimuthal_angle_step.style.borderColor = "red";  // Mark the input field in red
+            // azimuthal_angle_step.title = "Must be smaller or equal the difference between maximum and minimum azimuthal angle";  // Show info box
+        } else {
+            min_azimuthal_angle.style.borderColor = "";  // Reset border color if input is valid
+            min_azimuthal_angle.title = "";  // Reset info box
+            max_azimuthal_angle.style.borderColor = "";  // Reset border color if input is valid
+            max_azimuthal_angle.title = "";  // Reset info box
+            azimuthal_angle_step.style.borderColor = "";  // Reset border color if input is valid
+            azimuthal_angle_step.title = "";  // Reset info box
+        }
+
+        // Polarization
+        var polarization = document.getElementById("polarization");
+        if (polarization.value === "") {
+            errorMessages.push("Polarization must be filled");
+            polarization.style.borderColor = "red";  // Mark the input field in red
+            polarization.title = "This field cannot be empty";  // Show info box
+        } else {
+            polarization.style.borderColor = "";  // Reset border color if input is valid
+            polarization.title = "";  // Reset info box
+        }
+
+        var table = document.getElementById("layers");
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            //iterate through rows
+            //rows would be accessed using the "row" variable assigned in the for loop
+            var layerNumber;
+            var valueInColumn2;
+            var lowerBound, upperBound;
+
+            for (var j = 0, col; col = row.cells[j]; j++) {
+                //iterate through columns
+                //columns would be accessed using the "col" variable assigned in the for loop
+                var input = col.getElementsByTagName('input')[0]; // get the input element
+
+                if (j === 0) {
+                    layerNumber = col.textContent;
+
+                }
+                else if (j === 1) { // second column
+                    var selectElement = col.getElementsByTagName('select')[0]; // get the select element
+                    var selectedText = selectElement.options[selectElement.selectedIndex].text; // get the selected text
+                    var underscoreCount = (selectedText.match(/_/g) || []).length; // count the underscores
+                } else if (j === 2) { // third column
+                    valueInColumn2 = parseFloat(input.value);
+                    if (underscoreCount === 0 || underscoreCount === 1) {
+                        // input should be a number
+                        if (!/^\d+(\.\d+)?$/.test(input.value)) {
+                            errorMessages.push('Invalid input. Only numbers are allowed.');
+                        }
+                    } else if (underscoreCount >= 2) {
+                        // input should be of the form [number1, number2, ...]
+                        var expectedCount = underscoreCount;
+                        var match = input.value.match(/^\[(\d+(\.\d+)?(,\s*\d+(\.\d+)?)*)\]$/);
+                        if (!match || (match[1].split(/,\s*/).length !== expectedCount)) {
+                            errorMessages.push('Number of materials does not match thicknesses for layer ' + layerNumber + '. Expected ' + expectedCount + ' numbers in brackets.');
+                        }
+                    }
+                } else if (j === 4) {
+                    var inputs = col.getElementsByTagName('input'); // get all input elements
+                    if (inputs.length >= 2) { // make sure there are at least two input elements
+                        lowerBound = parseFloat(inputs[0].value);
+                        upperBound = parseFloat(inputs[1].value);
+                        if (lowerBound > upperBound) {
+                            errorMessages.push('Invalid thickness bound input for layer ' + layerNumber + '. The lower thickness bound should be smaller or equal to the higher thickness bound.');
+                        }
+                    }
+                }
+
+
+            }
+            // Get the input element in cell 8
+            var cell8InputValue = row.cells[7].getElementsByClassName('incoherent')[0].value;
+            var incoherentBoolean = JSON.parse(cell8InputValue.toLowerCase());
+
+            // Check that the value in column 2 is within the bounds given in column 4, unless the input element in cell 8 has the class "incoherent"
+            if (!incoherentBoolean && (valueInColumn2 < lowerBound || valueInColumn2 > upperBound)) {
+                errorMessages.push('Invalid thickness input for layer ' + layerNumber + '. The value should be within the bounds [' + lowerBound + ', ' + upperBound + '].');
+            }
+        }
+        var table = document.getElementById("target");
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            //iterate through rows
+            //rows would be accessed using the "row" variable assigned in the for loop
+
+            for (var j = 0, col; col = row.cells[j]; j++) {
+                //iterate through columns
+                //columns would be accessed using the "col" variable assigned in the for loop
+
+                if (j === 3 || j === 4 || j === 5) {
+                    var inputs = col.getElementsByTagName('input'); // get all input elements
+                    if (inputs.length >= 2) { // make sure there are at least two input elements
+                        var value1 = parseFloat(inputs[0].value);
+                        var value2 = parseFloat(inputs[1].value);
+                        if (value1 > value2) {
+                            errorMessages.push('Invalid input in column ' + (j + 1) + ' of row ' + i + '. The first input should be smaller or equal to the second input.');
+                        }
+                        if (inputs.length >= 3) { // make sure there are at least three input elements
+                            var value3 = parseFloat(inputs[2].value);
+                            if (value3 > (value2 - value1)) {
+                                errorMessages.push('Invalid input in column ' + (j + 1) + ' of row ' + i + '. The third input should be smaller or equal to the difference between the first two inputs.');
+                            }
+                        }
+                    }
+                } else if (j === 8) {
+                    var value = parseFloat(col.textContent);
+                    var input = parseFloat(row.cells[7].getElementsByTagName('input')[0].value);
+                    if (value > input) {
+                        errorMessages.push('Invalid input in target row ' + i + '. The value in column 9 should be smaller than the input in column 8.');
+                    }
+                } else if (j === 9) {
+                    // The numbers in this column cannot be larger than the total number of rows in the target table
+                    var value;
+                    // If the cell contains an input element, get its value
+                    value = col.getElementsByTagName('input')[0].value;
+                    var operatorsRegex = /[+\-*/]/;
+
+                    // Split the input value by the operators
+                    var splitValues = value.split(operatorsRegex);
+
+                    // Now parse all splitValues as ints
+                    splitValues = splitValues.map(function (value) {
+                        return parseInt(value);
+                    });
+
+                    // Iterate over each element in the splitValues array
+                    splitValues.forEach(function (intValue) {
+                        // If any element of the splitValues array is larger than the number of rows in the target table, add an error message
+                        if (intValue > table.rows.length - 1) {
+                            errorMessages.push('Invalid input in target row ' + i + '. No arithmetic numbers larger than the number of available targets are allowed.');
+                        }
+                    });
+
+                }
+            }
+        }
+        if (errorMessages.length > 0) {
+            errorMessages.unshift("There are issues with your filter definition:\n")
+            alert(errorMessages.join('\n• ')); // join error messages with bullet points and show the alert
+            return false;
+        }
+
+        // If all checks pass, return true
+        return true;
+    }
+    document.getElementById("saveButton").addEventListener("click", function (e) {
+        e.preventDefault();
+        // Only save data if user input is valid
+        if (validateInput()) {
+            saveData('save');
+        }
+    });
+    document.getElementById("downloadButton").addEventListener("click", function (e) {
+        e.preventDefault();
+        var fileType = document.getElementById("fileType").value;
+        var fileEnding = document.getElementById("fileEnding").value;
+
+        window.location.href = '/download?fileType=' + fileType + '&fileEnding=' + fileEnding;
+    });
+    $(document).ready(function () {
+        $('.select2').select2({
+            theme: 'bootstrap',
+            width: 'resolve',
+            tags: true,
+            createTag: function (params) {
+                var term = $.trim(params.term);
+
+                if (term === '') {
+                    return null;
+                }
+
+                return {
+                    id: term,
+                    text: term,
+                    newOption: true
+                }
+            },
+            templateResult: function (data) {
+                var $result = $("<span></span>");
+
+                $result.text(data.text);
+
+                if (data.newOption) {
+                    $result.append(" <em>(add new)</em>");
+                }
+
+                return $result;
+            }
+        });
+    });
+    $(document).ready(function () {
+        $(document).ready(function () {
+            // Calculate the number of layers
+            var layerCount = 0;
+            var totalThickness = 0;
+            var materialThickness = {}; // Object to store thickness by material
+
+            $("#layers tbody tr").each(function () {
+                var layerType = $(this).find('td').eq(1).find('select').val();
+                var layerNumber = parseInt(layerType.split('_')[0]);
+
+                var thicknessField = $(this).find('td').eq(2).find('input').val();
+                if (!isNaN(layerNumber)) {
+                    layerCount += layerNumber * (layerType.split('_').length - 1);
+                    var thicknessValues = thicknessField.replace('[', '').replace(']', '').split(',').map(Number);
+                    var thickness = thicknessValues.reduce((a, b) => a + b, 0);
+                    totalThickness += parseFloat(thickness) * layerNumber;
+
+                    // Extract the material from the layer type by splitting at all underscores. Iterate over all materials (the first element is a number and can be omitted)
+                    var materials = layerType.split('_').slice(1);
+                    materials.forEach(function (material, index) {
+                        // Update material thickness
+                        if (!materialThickness[material]) {
+                            materialThickness[material] = 0;
+                        }
+                        materialThickness[material] += parseFloat(thicknessValues[index]) * layerNumber;
+                    });
+
+                } else {
+                    var material = layerType;
+                    layerCount += 1;  // Count as 1 layer if there's no leading number
+                    // Only count as thickness if layer is not incoherent
+                    if ($(this).find('td').eq(7).find('input').val() === 'false') {
+                        totalThickness += parseFloat(thicknessField);
+
+                        // Update material thickness
+                        if (!materialThickness[material]) {
+                            materialThickness[material] = 0;
+                        }
+                        materialThickness[material] += parseFloat(thicknessField);
+                    }
+                }
+            });
+
+            // Display the statistics
+            $("#layerCount").text(layerCount);
+            $("#totalThickness").text(totalThickness.toFixed(0));
+
+            // Display thickness by material
+            var materialThicknessHtml = '';
+            for (var material in materialThickness) {
+                materialThicknessHtml += '<p>' + material + ': ' + materialThickness[material].toFixed(0) + ' nm </p>';
+            }
+            $("#materialsInUse").html(materialThicknessHtml);
+        });
+    });
+    document.getElementById('toggleThicknessOptCheckboxes').addEventListener('click', function () {
+        toggleCheckboxesInColumn(3);
+    });
+
+    document.getElementById('togglePositionOptCheckboxes').addEventListener('click', function () {
+        toggleCheckboxesInColumn(5);
+    });
+
+    function toggleCheckboxesInColumn(columnIndex) {
+        var table = document.getElementById('layers');
+        var checkboxes = [];
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            var checkbox = row.cells[columnIndex].getElementsByTagName('input')[0];
+            if (checkbox && checkbox.type === 'checkbox' && checkbox.parentNode.style.display !== 'none') {
+                checkboxes.push(checkbox);
+            }
+        }
+
+        var checkedCount = checkboxes.filter(function (checkbox) {
+            return checkbox.checked;
+        }).length;
+
+        var newCheckedState = checkedCount <= checkboxes.length / 2;
+        checkboxes.forEach(function (checkbox) {
+            checkbox.checked = newCheckedState;
+        });
+    }
+    // Open the modal when the "Start New Design" button is clicked
+    document.getElementById('start_new_design_button').addEventListener('click', function () {
+        $('#newDesignModal').modal('show');
+    });
+
+    document.getElementById('saveNewDesign').addEventListener('click', function () {
+        var filterName = document.getElementById('filterName').value;
+        var template = document.getElementById('templateSelect').value;
+
+        $.ajax({
+            url: '/start_new_design',
+            type: 'POST',
+            data: { filter_name: filterName, template: template },
+            complete: function (jqXHR, textStatus) {
+                // If the status code is 302, reload the page
+                if (jqXHR.status === 200) {
+                    location.reload();
+                }
+            },
+            error: function (error) {
+                // Handle error
+            }
+        });
+
+        $('#newDesignModal').modal('hide');
+    });
+
+    document.getElementById('selectProjectButton').addEventListener('click', function () {
+        var filterVersion = document.getElementById('previousProjectSelect').value;
+
+        $.ajax({
+            url: '/load_design',
+            type: 'POST',
+            data: { filter_version: filterVersion },
+            complete: function (jqXHR, textStatus) {
+                // If the status code is 302, reload the page
+                if (jqXHR.status === 200) {
+                    location.reload();
+                }
+            },
+            error: function (error) {
+                // Handle error
+            }
+        });
+
+        $('#loadProjectModal').modal('hide');
+    });
+
+    document.getElementById('deleteProjectButton').addEventListener('click', function () {
+        var filterVersion = document.getElementById('previousProjectSelect').value;
+
+        $.ajax({
+            url: '/delete_project',
+            type: 'POST',
+            data: { filter_version: filterVersion },
+            complete: function (jqXHR, textStatus) {
+                // If the status code is 302, reload the page
+                if (jqXHR.status === 200) {
+                    location.reload();
+                }
+            },
+            error: function (error) {
+                // Handle error
+            }
+        });
+    });
+
+    document.getElementById('duplicateProjectButton').addEventListener('click', function () {
+        var filterVersion = document.getElementById('previousProjectSelect').value;
+
+        // Let a user choose a name for the new project by changing the already open modal
+        $('#loadProjectModal').modal('hide');
+        $('#duplicateProjectModal').modal('show');
+        $("#filterNametoDuplicate").text(filterVersion);
+
+        // Now wait until the user clicks the "Duplicate" button
+    });
+    document.getElementById('confirmDuplicateFilter').addEventListener('click', function () {
+        var filterVersion = document.getElementById('filterNametoDuplicate').textContent;
+        var newFilterName = document.getElementById('duplicateFilterName').value;
+
+        // if newFilterName show an alert and do not call duplicate_project 
+        if (newFilterName === "") {
+            alert("Please enter a name for the new filter");
+            return;
+        }
+
+        $.ajax({
+            url: '/duplicate_project',
+            type: 'POST',
+            data: { filter_version: filterVersion, new_filter_name: newFilterName },
+            complete: function (jqXHR, textStatus) {
+                // If the status code is 302, reload the page
+                if (jqXHR.status === 200) {
+                    location.reload();
+                }
+            },
+            error: function (error) {
+                // Handle error
+            }
+        });
+    });
+    document.getElementById('flip_stack').addEventListener('click', function () {
+        var table = document.getElementById('layers');
+        var tbody = table.tBodies[0];
+        var rows = Array.from(tbody.rows);
+        var incoherentIndex = rows.findIndex(row => row.querySelector('.incoherent').value === 'true');
+
+        if (incoherentIndex === -1) {
+            G
+            console.log('No incoherent layer found');
+            return;
+        }
+
+        // Reverse the entire rows array
+        rows.reverse();
+
+        // Remove tbody from table
+        table.removeChild(tbody);
+
+        // Clear tbody
+        while (tbody.firstChild) {
+            tbody.removeChild(tbody.firstChild);
+        }
+
+        // Add rows to tbody in new order
+        for (var i = 0; i < rows.length; i++) {
+            tbody.appendChild(rows[i]);
+        }
+
+        // Add tbody back to table
+        table.appendChild(tbody);
+
+        // Update row numbers after the flip
+        var totalRows = tbody.rows.length;
+        Array.from(tbody.rows).forEach(function (row, index) {
+            var rowNumber = totalRows - index;
+            row.dataset.rowNumber = rowNumber;
+            row.cells[0].textContent = rowNumber;
+        });
+    });
+
+    // document.getElementById('copy_flip_stack').addEventListener('click', function () {
+    //     var table = document.getElementById('layers');
+    //     var tbody = table.tBodies[0];
+    //     var cloneTbody = document.createElement('tbody');
+
+    //     // Get all rows as an array
+    //     var rows = Array.from(tbody.rows);
+
+    //     // Reverse the rows in the original tbody and clone them, excluding the incoherent layer
+    //     rows.reverse().forEach(function (row) {
+    //         var incoherentElement = row.querySelector('.incoherent');
+    //         if (!incoherentElement || incoherentElement.value !== 'true') {
+    //             cloneTbody.appendChild(row.cloneNode(true));
+    //         }
+    //     });
+
+    //     // Add cloneTbody to table
+    //     table.appendChild(cloneTbody);
+
+    //     // Update row numbers after the flip
+    //     var tbody = table.tBodies[0];
+    //     var totalRows = tbody.rows.length;
+    //     Array.from(tbody.rows).forEach(function (row, index) {
+    //         var rowNumber = totalRows - index;
+    //         row.dataset.rowNumber = rowNumber;
+    //         row.cells[0].textContent = rowNumber;
+    //     });
+    // });
+
+
+    document.getElementById('simplify_stack').addEventListener('click', function () {
+        var table = document.getElementById('layers');
+        var tbody = table.tBodies[0];
+
+        // Get all rows as an array
+        var rows = Array.from(tbody.rows);
+        var rowsToRemove = [];
+
+        for (var i = 0; i < rows.length - 1; i++) {
+            var currentRow = rows[i];
+            var nextRow = rows[i + 1];
+
+            // While the next row exists and has the same value in the second column, merge the rows
+            while (nextRow && currentRow.cells[1].children[0].value === nextRow.cells[1].children[0].value) {
+                // Parse the values in the third column of both rows as floats
+                var currentValue = parseFloat(currentRow.cells[2].children[0].value);
+                var nextValue = parseFloat(nextRow.cells[2].children[0].value);
+
+                // Check if the values are numbers
+                if (!isNaN(currentValue) && !isNaN(nextValue)) {
+                    // Sum the values
+                    var sum = currentValue + nextValue;
+
+                    // Round the sum to two decimal places
+                    var roundedSum = sum.toFixed(2);
+
+                    // Set this rounded sum as the new value of the third column of the current row
+                    currentRow.cells[2].children[0].value = roundedSum;
+
+                    // Calculate the new value for the second input in column 5
+                    var newValueColumn5 = Math.ceil((roundedSum * 2) / 100) * 100;
+
+                    // Set this new value, rounded to one decimal place
+                    currentRow.cells[4].children[0].children[1].value = newValueColumn5.toFixed(1);
+
+                    // Add the 'highlight' class to the current row
+                    currentRow.classList.add('highlight');
+
+                    // Remove the 'highlight' class after 2 seconds
+                    (function (row) {
+                        setTimeout(function () {
+                            row.classList.remove('highlight');
+                        }, 2000);
+                    })(currentRow);
+
+                    // Add the next row to the array of rows to remove
+                    rowsToRemove.push(nextRow);
+                }
+
+                // Move on to the next row
+                i++;
+                nextRow = rows[i + 1];
+            }
+        }
+
+        // Remove the rows that need to be removed
+        rowsToRemove.forEach(function (row) {
+            tbody.removeChild(row);
+        });
+        // Update row numbers after the simplification
+        var tbody = table.tBodies[0];
+        var totalRows = tbody.rows.length;
+        Array.from(tbody.rows).forEach(function (row, index) {
+            var rowNumber = totalRows - index;
+            row.dataset.rowNumber = rowNumber;
+            row.cells[0].textContent = rowNumber;
+        });
+    });
+
+    function updateSwitchableElements() {
+        document.querySelectorAll('.switchable').forEach(function (input, index) {
+            // Initialize state
+            var value = input.value.trim();
+
+            if (value === '') {
+                input.type = 'button';
+                input.className = 'btn btn-danger';
+                input.value = '';
+                input.dataset.state = 'button-danger';
+            } else if (!isNaN(value)) {
+                input.type = 'button';
+                input.className = 'btn btn-success';
+                input.value = value;
+                input.dataset.state = 'button-success';
+            } else {
+                input.dataset.state = 'text';
+            }
+
+            input.addEventListener('click', function () {
+                var value = input.value.trim();
+                var row = input.closest('tr'); // Find the closest row
+                var rowNumber = row.cells[0].textContent;
+
+                // Update state and appearance based on current state
+                if (input.dataset.state === 'text') {
+                    if (value === '') {
+                        input.type = 'button';
+                        input.className = 'btn btn-danger';
+                        input.value = '';
+                        input.dataset.state = 'button-danger';
+                    } else if (!isNaN(value)) {
+                        input.type = 'button';
+                        input.className = 'btn btn-success';
+                        input.value = value;
+                        input.dataset.state = 'button-success';
+                    }
+                } else if (input.dataset.state === 'button-danger') {
+                    input.type = 'button';
+                    input.className = 'btn btn-success';
+                    input.value = rowNumber; // row number is index + 1
+                    input.dataset.state = 'button-success';
+                } else if (input.dataset.state === 'button-success') {
+                    input.type = 'text';
+                    input.className = 'form-control';
+                    input.value = '';
+                    input.dataset.state = 'text';
+                }
+            });
+        });
+    };
+    updateSwitchableElements();
+
+    // Create a dummy graph
+    var trace = {
+        x: [],
+        y: [],
+        mode: 'lines',
+        type: 'scatter',
+        line: {
+            color: 'rgb(0, 0, 0)',
+            width: 2
+        }
+    };
+
+    var layout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
+        plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
+        autosize: true,
+        xaxis: {
+            title: 'Wavelength (nm)',
+            // showgrid: true,
+            zeroline: true,
+            titlefont: {
+                size: font_size,
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the colorbar tick labels
+            }
+        },
+        yaxis: {
+            title: 'Intensity (%)',
+            type: 'lin',
+            showline: true,
+            titlefont: {
+                size: font_size,
+            },
+            tickfont: {
+                size: font_size  // Increase the font size of the colorbar tick labels
+            }
+        },
+        hovermode: 'closest',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // Add event listeners to the input fields
+        var table = document.getElementById("target");
+        if (table) {
+            for (var i = 1, row; row = table.rows[i]; i++) {
+                for (var j = 0, col; col = row.cells[j]; j++) {
+                    var inputs = col.getElementsByTagName('input');
+                    for (var k = 0; k < inputs.length; k++) {
+                        inputs[k].addEventListener('keydown', function (event) {
+                            if (event.key === 'Enter') {
+                                update_target_graph();
+                            }
+                        });
+                    }
+                }
+            }
+        } else {
+            console.error("Table with ID 'target' not found.");
+        }
+
+        update_target_graph();
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+        update_target_graph();
+    });
+
+
+    var data = [trace];
+    Plotly.newPlot('target_graph', data, layout, { responsive: true, });
+    function update_target_graph() {
+        // Get the current visibility state of each legend group
+        var graphDiv = document.getElementById('target_graph');
+        var visibilityMap = {};
+        if (graphDiv.data) {
+            graphDiv.data.forEach(trace => {
+                if (trace.legendgroup) {
+                    visibilityMap[trace.legendgroup] = trace.visible;
+                }
+            });
+        }
+        // Clear the graph
+        var graphDiv = document.getElementById('target_graph');
+        var numTraces = graphDiv.data.length;
+        Plotly.deleteTraces('target_graph', Array.from(Array(numTraces).keys()));
+
+
+        // Define a colormap to always plot the same angle target with the same color 
+        var colorMap = {};
+        var colorIndex = 0;
+        var colors = [
+            "#2a3d7e",
+            "e26d50",
+            "#8AB187",
+            "#8cc7e1",
+            "#DEBC43",
+            "#0c0a2e",
+            "#FF6F61",
+            "#2A9D8F",
+            "#E9C46A",
+            "#264653"
+        ];
+
+        var table = document.getElementById("target");
+        if (!table) {
+            console.error("Table with ID 'target' not found.");
+            return;
+        }
+
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            var polar_angle_min, polar_angle_max, wavelength_min, wavelength_max, target_condition, target_value;
+
+            for (var j = 0, col; col = row.cells[j]; j++) {
+                if (j === 3) {
+                    var inputs = col.getElementsByTagName('input');
+                    if (inputs.length >= 2) {
+                        polar_angle_min = parseFloat(inputs[0].value);
+                        polar_angle_max = parseFloat(inputs[1].value);
+                    }
+                } else if (j === 5) {
+                    var inputs = col.getElementsByTagName('input');
+                    if (inputs.length >= 2) {
+                        wavelength_min = parseFloat(inputs[0].value);
+                        wavelength_max = parseFloat(inputs[1].value);
+                    }
+                } else if (j === 6) {
+                    var input = col.querySelector('input');
+                    if (input) {
+                        target_condition = parseFloat(input.value);
+                    } else {
+                        target_condition = parseFloat(col.textContent);
+                    }
+                } else if (j === 7) {
+                    var input = col.querySelector('input');
+                    if (input) {
+                        target_value = parseFloat(input.value);
+                    } else {
+                        target_value = parseFloat(col.textContent);
+                    }
+                }
+            }
+            if (!(polar_angle_min in colorMap)) {
+                colorMap[polar_angle_min] = colors[colorIndex % colors.length];
+                colorIndex++;
+            }
+            if (wavelength_min !== undefined && wavelength_max !== undefined && target_value !== undefined) {
+                Plotly.addTraces('target_graph', {
+                    x: [wavelength_min, wavelength_max],
+                    y: [target_value, target_value],
+                    mode: 'lines',
+                    type: 'scatter',
+                    name: "target " + i + ", " + polar_angle_min + "°",
+                    line: { width: 6, color: colorMap[polar_angle_min] },
+                    opacity: 0.5,
+                    legendgroup: "angle_" + polar_angle_min, // Group traces by angle
+                });
+            } else if (wavelength_min !== undefined && target_value !== undefined) {
+                Plotly.addTraces('target_graph', {
+                    x: [wavelength_min],
+                    y: [target_value],
+                    mode: 'markers',
+                    type: 'scatter',
+                    name: "target " + i + ", " + polar_angle_min + "°",
+                    marker: {
+                        size: 10,
+                        color: colorMap[polar_angle_min] // Set the color for the marker
+                    },
+                    opacity: 0.5,
+                    legendgroup: "angle_" + polar_angle_min, // Group traces by angle
+
+                });
+            }
+            else {
+                console.error("Missing data for row " + i);
+            }
+            if (!isNaN(polar_angle_max)) {
+                if (!(polar_angle_max in colorMap)) {
+                    colorMap[polar_angle_max] = colors[colorIndex % colors.length];
+                    colorIndex++;
+                }
+
+                if (wavelength_min !== undefined && wavelength_max !== undefined && target_value !== undefined) {
+                    Plotly.addTraces('target_graph', {
+                        x: [wavelength_min, wavelength_max],
+                        y: [target_value, target_value],
+                        mode: 'lines',
+                        type: 'scatter',
+                        name: "target " + i + ", " + polar_angle_max + "°",
+                        line: { width: 6, color: colorMap[polar_angle_max] },
+                        opacity: 0.5,
+                        legendgroup: "angle_" + polar_angle_max, // Group traces by angle
+                    });
+                } else if (wavelength_min !== undefined && target_value !== undefined) {
+                    Plotly.addTraces('target_graph', {
+                        x: [wavelength_min],
+                        y: [target_value],
+                        mode: 'markers',
+                        type: 'scatter',
+                        name: "target " + i + ", " + polar_angle_max + "°",
+                        marker: {
+                            size: 10,
+                            color: colorMap[polar_angle_max] // Set the color for the marker
+                        },
+                        opacity: 0.5,
+                        legendgroup: "angle_" + polar_angle_max, // Group traces by angle
+                    });
+                }
+                else {
+                    console.error("Missing data for row " + i);
+                }
+            }
+
+        }
+        // Restore the visibility state of each legend group
+        graphDiv.data.forEach((trace, index) => {
+            if (trace.legendgroup && visibilityMap[trace.legendgroup] !== undefined) {
+                Plotly.restyle('target_graph', { visible: visibilityMap[trace.legendgroup] }, [index]);
+            }
+        });
+    }
+    function updatePolarization(inputId) {
+        const sInput = document.getElementById('polarization');
+        const pInput = document.getElementById('p-polarization');
+
+        if (inputId === 'polarization') {
+            pInput.value = (1 - parseFloat(sInput.value)).toFixed(2);
+        } else {
+            sInput.value = (1 - parseFloat(pInput.value)).toFixed(2);
+        }
+    }
+    window.onload = function () {
+        const sInput = document.getElementById('polarization');
+        const pInput = document.getElementById('p-polarization');
+        pInput.value = (1 - parseFloat(sInput.value)).toFixed(2);
+    }
+
+    document.getElementById('deleteFilterVersionButton').addEventListener('click', function (event) {
+        event.preventDefault(); // Prevent the default form submission
+    });
+    document.getElementById('confirmDeleteButton').addEventListener('click', function () {
+        // Set the action value to delete
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'delete';
+        document.getElementById('versionForm').appendChild(actionInput);
+
+        // Submit the form
+        document.getElementById('versionForm').submit();
+    });
+
+    document.getElementById('shift_wavelength').addEventListener('click', function () {
+        $('#shiftWavelengthModal').modal('show');
+    });
+
+    document.getElementById('exchange_material').addEventListener('click', function () {
+        $('#exchangeMaterialModal').modal('show');
+    });
+
+    document.getElementById('shiftWavelengthButton').addEventListener('click', function () {
+        const currentReferenceWavelength = document.getElementById('currentReferenceWavelength').value;
+        const wavelengthToShiftTo = document.getElementById('wavelengthToShiftTo').value;
+
+        // Check that both values are numbers
+        if (isNaN(parseFloat(currentReferenceWavelength)) || isNaN(parseFloat(wavelengthToShiftTo))) {
+            alert('Please enter valid numbers');
+            return;
+        }
+
+        // Modify all thickness values of the layers based on the shift by
+        // multiplying with the ratio of the new wavelength to the old
+        // wavelength
+        const table = document.getElementById('layers');
+        for (let i = 1; i < table.rows.length; i++) {
+            const row = table.rows[i];
+            // Only modify if the layer is not incoherent
+            if (row.cells[7].getElementsByTagName('input')[0].value.toLowerCase() === 'false') {
+                // If the layer is a multilayer construct with [number1, number2] as thickness, multiply both numbers and update the input field
+                if (row.cells[1].getElementsByTagName('select')[0].value.includes('_')) {
+                    const thicknessInput = row.cells[2].getElementsByTagName('input')[0];
+                    const thicknessValue = thicknessInput.value;
+                    const newThicknessValue = thicknessValue.replace(/(\d+(\.\d+)?)/g, function (match) {
+                        return (parseFloat(match) * (parseFloat(wavelengthToShiftTo) / parseFloat(currentReferenceWavelength))).toFixed(2);
+                    });
+                    thicknessInput.value = newThicknessValue;
+                } else {
+                    const thicknessInput = row.cells[2].getElementsByTagName('input')[0];
+                    const thicknessValue = parseFloat(thicknessInput.value);
+                    const newThicknessValue = thicknessValue * (parseFloat(wavelengthToShiftTo) / parseFloat(currentReferenceWavelength));
+                    thicknessInput.value = newThicknessValue.toFixed(2);
+                }
+            };
+        }
+
+        // Also update the wavelength values in the target table
+        const targetTable = document.getElementById('target');
+        for (let i = 1; i < targetTable.rows.length; i++) {
+            const row = targetTable.rows[i];
+            const wavelengthInputs = row.cells[5].getElementsByTagName('input');
+            for (let j = 0; j < wavelengthInputs.length - 1; j++) {
+                const wavelengthInput = wavelengthInputs[j];
+                const wavelengthValue = parseFloat(wavelengthInput.value);
+                const newWavelengthValue = wavelengthValue * (parseFloat(wavelengthToShiftTo) / parseFloat(currentReferenceWavelength));
+                wavelengthInput.value = newWavelengthValue.toFixed(0);
+            }
+        }
+
+        // Update the target graph
+        update_target_graph();
+
+
+        // Close the modal
+        $('#shiftWavelengthModal').modal('hide');
+    });
+
+    document.getElementById('exchangeMaterialButton').addEventListener('click', function () {
+        const currentMaterial = document.getElementById('currentMaterial').value;
+        const newMaterial = document.getElementById('newMaterial').value;
+
+        const table = document.getElementById('layers');
+        for (let i = 1; i < table.rows.length; i++) {
+            const row = table.rows[i];
+            // Search through all selected materials in the layer table and
+            // select the new material instead of the current material
+            const materialSelect = row.cells[1].getElementsByTagName('select')[0];
+            const selectedMaterial = materialSelect.value;
+            if (selectedMaterial === currentMaterial) {
+                materialSelect.value = newMaterial;
+                // Trigger change event to update the display
+                const event = new Event('change');
+                materialSelect.dispatchEvent(event);
+            }
+
+            // Additionally, if the multilayer notation of the form
+            // 2_material1_material2 is used and one of the material1 or
+            // material2 is the current material, replace it with the new
+            // material
+            if (selectedMaterial.includes('_')) {
+                const materials = selectedMaterial.split('_').slice(1);
+                const newMaterials = materials.map(material => material === currentMaterial ? newMaterial : material);
+                const newValue = materials.length + '_' + newMaterials.join('_');
+
+                // Add the new option to the select2 list
+                if (!$(materialSelect).find(`option[value="${newValue}"]`).length) {
+                    const newOption = new Option(newValue, newValue, false, false);
+                    $(materialSelect).append(newOption).trigger('change');
+                }
+
+                // Select the new option
+                $(materialSelect).val(newValue).trigger('change');
+            }
+        }
+
+        // Update the target graph
+        update_target_graph();
+
+
+        // Close the modal
+        $('#exchangeMaterialModal').modal('hide');
+    });
+
+
+</script>
+{% endblock %}

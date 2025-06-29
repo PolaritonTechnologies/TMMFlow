@@ -1,0 +1,38 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/${relativeFileDirname}",
+            "python": "${workspaceFolder}/venv/bin/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Python Debugger: Flask",
+            "type": "python",
+            "request": "launch",
+            "module": "flask",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python",
+            "env": {
+                "FLASK_APP": "gui",
+                "FLASK_ENV": "development",
+                "FLASK_DEBUG": "1",
+                "PYTHONPATH": "${workspaceFolder}/src",
+            },
+            "args": [
+                "run",
+                "--debug",
+                "--no-reload"
+            ],
+            "jinja": true,
+            "autoStartBrowser": true
+        }
+    ]
+}

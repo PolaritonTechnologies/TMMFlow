@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <title>TMMFlow</title>
+    <!-- This here is for asynchronous plotting -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Include Bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Add jQuery UI CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-theme/0.1.0-beta.10/select2-bootstrap.min.css"
+        rel="stylesheet" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- jQuery CDN -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Add jQuery, jQuery UI and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.2/math.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/general.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colorscheme.css') }}">
+
+    {% block header %}
+    <!-- Content overridden by child templates goes here -->
+    {% endblock %}
+</head>
+
+<body>
+    <!-- <header>
+        <h1>TMMFlow</h1>
+    </header> -->
+    <nav class="navbar navbar-expand-lg">
+        <a class="navbar-brand" href="/">
+            <img src="{{ url_for('static', filename='favicon.ico') }}" alt="TMMFlow" style="width: 50%;">
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item {{ 'active' if request.endpoint == 'stack_bp.stack' else '' }}">
+                    <a class="nav-link" href="{{ url_for('stack_bp.stack') }}">Stack</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'simulate_bp.simulate' else '' }}">
+                    <a class="nav-link" href="{{ url_for('simulate_bp.simulate') }}">Simulate</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'optimize_bp.optimize' else '' }}">
+                    <a class="nav-link" href="{{ url_for('optimize_bp.optimize') }}">Optimize</a>
+                </li>
+                <li class="nav-item {{ 'active' if request.endpoint == 'materials_bp.materials' else '' }}">
+                    <a class="nav-link" href="{{ url_for('materials_bp.materials') }}">Materials</a>
+                </li>
+            </ul>
+
+            <div class="ml-auto">
+
+                <ul class="navbar-nav">
+                    <li class="nav-item {{ 'active' if request.endpoint == 'settings_bp.settings' else '' }}">
+                        <a class="nav-link" href="{{ url_for('settings_bp.settings') }}">Settings</a>
+                    </li>
+                    <li>
+                        <span class="navbar-text">
+                            {% if current_user.is_authenticated %}
+                            Logged in as {{ current_user.username }} - <a href="{{ url_for('auth.logout') }}"
+                                style="text-decoration: underline dashed; color: var(--danger); text-underline-offset: 3px;">Logout</a>
+                            {% else %}
+                            Not logged in.
+                            {% endif %}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    {% block content %}
+    <!-- Content overridden by child templates goes here -->
+    {% endblock %}
+
+</body>
+
+</html>
+<footer>
+    <p>© 2025 TMMFlow, v1.6.3</p>
+</footer>
+<!-- Feeds context to the socket -->
+<script>
+    function sendUsername() {
+        const navbarText = document.querySelector('.navbar-text').textContent;
+        const usernamePrefix = "Logged in as: ";
+        const usernameSuffix = " - Logout";
+        let username = navbarText.includes(usernamePrefix) ? navbarText.split(usernamePrefix)[1].split(usernameSuffix)[0] : null;
+
+        if (!username) {
+            console.error('No username found or user not logged in.');
+            return;
+        }
+
+        const url = "/handle_send_username";
+
+        const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username })
+        };
+
+        fetch(url, requestOptions)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                // Check if the response headers contain 'application/json' before parsing
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return response.json(); // Parse it as JSON
+                } else {
+                    throw new Error('Response not JSON');
+                }
+            })
+            .then(data => console.log('Success:', data))
+            .catch(error => console.error('Error:', error));
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const buttons = document.querySelectorAll('button'); // Selects all button elements
+        buttons.forEach(button => {
+            button.addEventListener('click', sendUsername);
+        });
+    });
+    function retrieveUsername() {
+        const navbarText = document.querySelector('.navbar-text').textContent;
+        const usernamePrefix = "Logged in as: ";
+        const usernameSuffix = " - Logout";
+        let username = navbarText.includes(usernamePrefix) ? navbarText.split(usernamePrefix)[1].split(usernameSuffix)[0] : null;
+        return username;
+    }
+</script>
+{% block scripts %}
+<!-- Scripts overridden by child templates go here -->
+{% endblock %}

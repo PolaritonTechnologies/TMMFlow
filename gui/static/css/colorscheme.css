@@ -1,0 +1,41 @@
+:root {
+    --primary: #2a3d7e;
+    --secondary: #8cc7e1;
+    --success: #8AB187;
+    --info: #0c0a2e;
+    --warning: #DEBC43;
+    --danger: #e26d50;
+    --light: #fdfdfe;
+    --dark: #cdd0cd;
+}
+
+.custom-colors {
+    --color-1: #2a3d7e;
+    --color-2: #e26d50;
+    --color-3: #8AB187;
+    --color-4: #8cc7e1;
+    --color-5: #DEBC43;
+    --color-6: #0c0a2e;
+    --color-7: #FF6F61;  /* New */
+    --color-8: #2A9D8F;  /* New */
+    --color-9: #E9C46A;  /* New */
+    --color-10: #264653;
+}
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-secondary {
+    background-color: var(--secondary);
+    border-color: var(--secondary);
+}
+.btn-danger {
+    background-color: var(--danger);
+    border-color: var(--danger);
+}
+
+.btn-success {
+    background-color: var(--success);
+    border-color: var(--success);
+}

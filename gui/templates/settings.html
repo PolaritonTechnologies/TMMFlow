@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container-custom">
+    <div class="row">
+        <div class="col-4 col-lg-2 pl-0 ml-0">
+            <div class="list-group" id="settingsMenu">
+                <a href="#" class="list-group-item list-group-item-action active"
+                    data-target="#simulationSettings">Simulation</a>
+                <a href="#" class="list-group-item list-group-item-action" data-target="#userSettings">User</a>
+                <a href="#" class="list-group-item list-group-item-action" data-target="#teamSettings">Team</a>
+                <a href="#" class="list-group-item list-group-item-action" data-target="#contact">Contact
+                </a>
+            </div>
+        </div>
+        <div class="col-8 col-lg-10">
+            <div id="simulationSettings" class="settings-content">
+                <h2>Simulation Settings</h2>
+                <br>
+                <form class="form-horizontal">
+                    <p>Soon to be populated. Stay tuned!</p>
+
+                    <!-- <button type="submit" class="btn btn-primary" id="saveSimulationSettings">Save</button> -->
+                </form>
+            </div>
+            <div id="userSettings" class="settings-content" style="display: none;">
+                <h2>User Settings</h2>
+                <br>
+                <!-- Add information for the user to tell them what group they are part of -->
+                <form class="form-horizontal">
+                    <!-- <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" id="email" placeholder="Enter email">
+                    </div> -->
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="username" class="form-control" id="username" value={{default_values.username}}
+                            disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <input type="e-mail" class="form-control" id="email" value={{default_values.email}} disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Change Password</label>
+                        <input type="password" class="form-control" id="passwordChanged" placeholder="New Password"
+                            style="margin-bottom: 10px;">
+                        <input type="password" class="form-control" id="passwordRepeated" placeholder="Repeat Password">
+                    </div>
+                    <!-- Add a button to save the user settings -->
+                    <button type="submit" class="btn btn-primary" id="changePasswordButton">Change Password</button>
+                </form>
+            </div>
+            <div id="teamSettings" class="settings-content" style="display: none;">
+                <h2>Team Settings</h2>
+                <br>
+                <!-- Add information for the user to tell them what group they are part of -->
+                <p>You are part of the <strong>{{default_values.team}}</strong> team. Please contact us, if
+                    this is incorrect. </p>
+
+            </div>
+            <div id="contact" class="settings-content" style="display: none;">
+                <h2>Contact</h2>
+                <br>
+                <p>Please contact us if you have any feature requests, bug reports or the like via
+                    <a href="mailto:contact-hcnb@uni-koeln.de">contact-hcnb@uni-koeln.de</a>.
+                </p>
+                <br>
+                <p>This is a placeholder for a future contact form</p>
+
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var menuItems = document.querySelectorAll('#settingsMenu .list-group-item');
+        var settingsContents = document.querySelectorAll('.settings-content');
+
+        menuItems.forEach(function (item) {
+            item.addEventListener('click', function (event) {
+                event.preventDefault();
+                var target = this.getAttribute('data-target');
+
+                // Remove active class from all menu items
+                menuItems.forEach(function (menuItem) {
+                    menuItem.classList.remove('active');
+                });
+
+                // Hide all settings contents
+                settingsContents.forEach(function (content) {
+                    content.style.display = 'none';
+                });
+
+                // Show the selected settings content
+                document.querySelector(target).style.display = 'block';
+
+                // Add active class to the clicked menu item
+                this.classList.add('active');
+            });
+        });
+    });
+
+    $(document).ready(function () {
+        $('#changePasswordButton').click(function () {
+            event.preventDefault(); // Prevent the default form submission
+
+            var passwordChanged = $('#passwordChanged').val();
+            var passwordRepeated = $('#passwordRepeated').val();
+
+            $.ajax({
+                type: 'POST',
+                url: '/change_password',
+                data: JSON.stringify({
+                    passwordChanged: passwordChanged,
+                    passwordRepeated: passwordRepeated
+                }),
+                contentType: 'application/json',
+                success: function (response) {
+                    if (response.status === 'success') {
+                        alert('Password changed successfully.');
+                    } else {
+                        alert('Passwords do not match.');
+                    }
+                },
+                error: function () {
+                    alert('An error occurred.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

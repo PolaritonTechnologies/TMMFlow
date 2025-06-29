@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container-custom">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <!-- Overlay -->
+            <div id="loading"
+                style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999;">
+                <!-- Centered Spinner -->
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Part 1 -->
+            <div class="col-lg-6 col-12 mb-1">
+                <div class="row mb-3">
+                    <!-- <div id="loadingOpt" class="spinner-border text-primary" role="status" -->
+                    <!-- style="position: absolute; display: none;"> -->
+                    <!-- <span class="sr-only"></span> -->
+                    <!-- </div> -->
+                    <div class="col-10 offset-1">
+                        <h4>Selected Optimization Methods</h4>
+                        <div id="selectedMethods" class="list-group mb-3"></div>
+                        <label for="optimizationMethod">Optimization Method </label>
+                        <span class="info-icon" data-toggle="tooltip"
+                            title="- Nelder-Mead: Direct search method that is a drop-in replacement for gradient descent. Works well with purely thickness optimization-related problems.
+- Dual Annealing: Best for global optimizations with a non-optimized starting point. Very good in finding creative solutions but might require tens of thousands of steps.
+- Basin Hopping: Performs a Nelder-Mead direct search until it converges. Subsequently jumps to a nearby solution and repeats. Very good at finding semi-local improvements to an already optimized solution.
+- Particle Swarm: Second best global optimization method. More deterministic than dual annealing but requires more fine-tuning of its parameters.">
+                            <i class="fas fa-info-circle"></i>
+                        </span>
+                        <div class="form-group row">
+                            <div class="col-10">
+                                <select class="form-control" id="optimizationMethod" name="optimizationMethod">
+                                    <!-- <option value="LM">Levenberg-Marquardt (Gradient Descent)</option> -->
+                                    <!-- <option value="TNC">Truncated Newton (Gradient Descent)</option> -->
+                                    <!-- <option value="NCG">Newton CG (Gradient Descent)</option> -->
+                                    <option value="Nelder-Mead">Nelder-Mead (Direct Search)</option>
+                                    <option value="dual_annealing">Dual annealing</option>
+                                    <option value="basinhopping">Basin Hopping</option>
+                                    <!-- <option value="differential_evolution">Differential Evolution</option> -->
+                                    <option value="particle_swarm">Particle Swarm</option>
+                                </select>
+                            </div>
+                            <div class="col-2">
+                                <button type="button"
+                                    class="btn btn-success rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 1em; height: 1em; padding: 1em;" id="addOptButton">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- </form> -->
+                    </div>
+                </div>
+                <!-- Modal -->
+                <div class="modal fade" id="particleSwarmModal" tabindex="-1" role="dialog"
+                    aria-labelledby="particleSwarmModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="particleSwarmModalLabel">Particle Swarm Parameters</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="particleSwarmForm">
+                                    <div class="form-group">
+                                        <label for="c1">Cognitive Parameter (c1)</label>
+                                        <input type="number" class="form-control" id="c1" step="any" value=1.5 required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="c2">Social Parameter (c2)</label>
+                                        <input type="number" class="form-control" id="c2" step="any" value=1.5 required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="w">Inertia (w)</label>
+                                        <input type="number" class="form-control" id="w" step="any" value=0.6 required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="no_particles">Number of Particles</label>
+                                        <input type="number" class="form-control" id="no_particles" step="1" value=30
+                                            required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="no_iteration">Number of Iterations</label>
+                                        <input type="number" class="form-control" id="no_iteration" step="1" value=10000
+                                            required>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" id="saveParticleSwarmParams">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-5 offset-1">
+                        <form method="post" class="w-100">
+                            <button type="submit" class="btn btn-primary w-100" id="startOptimization" {{ 'disabled' if
+                                optimization_running }}>Start Optimization</button>
+                        </form>
+                    </div>
+                    <div class="col-5">
+                        <form method="post" class="w-100">
+                            <button type="submit" class="btn btn-danger w-100" id="stopOptimization" {{ 'disabled' if
+                                not optimization_running }}>Stop Optimization</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 2 -->
+            <div class="col-lg-6 col-12 mb-1">
+                <section class="row justify-content-center">
+                    <div class="col-lg-6 col-md-6 d-flex justify-content-center align-items-center mb-4">
+                        <div class="container" id="filter_representation"
+                            style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            {% if num_boxes and colors is defined %}
+                            {% for i in range(num_boxes)|reverse %}
+                            <div class="box"
+                                style="background-color: {{ colors[i % colors|length] }}; height: {{ heights[i % heights|length] }}px; width: {{ '100%' if incoherent[i % heights|length] else '80%' }};">
+                            </div>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-md-6">
+                        <div id="legend">
+                            {% if num_legend_items and legend_colors is defined %}
+                            {% for i in range(num_legend_items) %}
+                            <div class="legend-item row d-flex align-items-center justify-content-start my-2">
+                                <div class="box"
+                                    style="background-color: {{ legend_colors[i] }}; height: 20px; margin-right: 10px; width: 5em;">
+                                </div>
+                                <span>{{ unique_materials[i] }}</span>
+                            </div>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+    <div class="row shadowed-box">
+        <div class="col-12 position-relative">
+            <div id="merit_graph"></div>
+            <div class="d-flex justify-content-end position-absolute" style="top: 2em; right: 0;">
+                <div id="optStatus" class="text-center mr-2 danger-color"></div>
+                <div id="iterations" class="text-right mr-2"></div>
+                <div id="merit" class="text-right"></div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts%}
+<script>
+    // Define fontsize of plots
+    const font_size = 18;
+    // Define a colormap to always plot the same angle target with the same color 
+    var colors = [
+        "#2a3d7e",
+        "e26d50",
+        "#8AB187",
+        "#8cc7e1",
+        "#DEBC43",
+        "#0c0a2e",
+        "#FF6F61",
+        "#2A9D8F",
+        "#E9C46A",
+        "#264653"
+    ];
+
+    // Initialize the graph with two traces
+    function initializeMeritGraph() {
+        var trace1 = {
+            x: [],  // Initially empty
+            y: [],  // Initially empty
+            mode: 'markers', // Display as a dot
+            marker: {
+                size: 10,    // Size of the dot
+                color: colors[0] // Color of the dot
+            },
+        };
+
+        var trace2 = {
+            x: [],  // Initially empty
+            y: [],  // Initially empty
+            mode: 'lines',       // Display as a line
+            line: {
+                color: colors[1]    // Color of the line
+            },
+        };
+
+        var layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',  // Set the paper background to transparent
+            plot_bgcolor: 'rgba(0,0,0,0)',    // Set the plot background to transparent
+            autosize: true,
+            xaxis: {
+                title: 'Iteration',
+                showgrid: true,
+                zeroline: true,
+                titlefont: {
+                    size: font_size,
+                },
+                tickfont: {
+                    size: font_size  // Increase the font size of the colorbar tick labels
+                }
+            },
+            yaxis: {
+                title: {
+                    text: 'Merit',
+                    standoff: 50,
+                },
+                type: 'log',
+                showline: true,
+                titlefont: {
+                    size: font_size,
+                },
+                tickfont: {
+                    size: font_size  // Increase the font size of the colorbar tick labels
+                }
+            },
+            hovermode: 'closest',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            showlegend: false,
+        };
+
+        var data = [trace1, trace2];
+
+        Plotly.newPlot('merit_graph', data, layout, { responsive: true, });
+    }
+
+    // Call the initialize function to set up the graph
+    initializeMeritGraph();
+    var updateIntervalId = null;
+
+    document.getElementById('startOptimization').addEventListener('click', function (e) {
+        e.preventDefault();
+        // Get list of selected methods
+        var selectedMethods = $('#selectedMethods').children();
+
+        // Check if any methods were selected
+        if (selectedMethods.length === 0) {
+            alert("Please select at least one optimization method.");
+            return;
+        }
+
+        // Show the spinner
+        document.getElementById('loading').style.display = 'block';
+
+        // Delete existing data from both traces
+        Plotly.restyle('merit_graph', { x: [[]], y: [[]] }, [0]);
+        Plotly.restyle('merit_graph', { x: [[]], y: [[]] }, [1]);
+        $('#optStatus').text("");
+
+        if (selectedMethods.length > 0) {
+            var optimizationMethod = selectedMethods.map(function () {
+                var text = $(this).text();
+                return text.replace(/^\d+|-$/g, '');
+            }).get();
+            // console.log(optimizationMethod);
+
+            var dataToSend = { optimizationMethod: optimizationMethod };
+
+            $.ajax({
+                type: "POST",
+                url: "/start_optimization",
+                contentType: "application/json",
+                data: JSON.stringify(dataToSend),
+                success: function (response) {
+                    // console.log(response.message);
+                    // Show the spinner
+                    document.getElementById("stopOptimization").disabled = false;
+
+                    update_merit_graph(response.step, response.merit);
+
+                    // Wait another four seconds until the loading spinner is hidden
+                    setTimeout(function () {
+                        document.getElementById('loading').style.display = 'none';
+                    }, 3500);
+
+
+                    // Start periodic updates
+                    if (updateIntervalId !== null) {
+                        // Clear existing interval if any
+                        clearInterval(updateIntervalId);
+                    }
+                    updateIntervalId = setInterval(function () {
+                        $.ajax({
+                            type: "GET",
+                            url: "/update_optimization", // Update this URL as needed
+                            success: function (updateResponse) {
+                                // Update the page with the response
+                                // This could involve updating a graph, table, or status text
+                                // console.log("Update received:", updateResponse);
+                                update_merit_graph(updateResponse.best_step, updateResponse.best_merit);
+                                updateFilterRepresentation(updateResponse.num_boxes, updateResponse.colors, updateResponse.heights, updateResponse.number_unique_materials, updateResponse.unique_materials, updateResponse.unique_colors, updateResponse.incoherent);
+
+                                // Update iterations and merit display
+                                $('#iterations').html('<strong>Iterations:</strong> ' + updateResponse.current_step);
+                                $('#merit').html('<strong>Latest Merit:</strong> ' + updateResponse.current_merit.toFixed(2));
+
+                                // Check for a specific response to stop updates
+                                if (updateResponse.finished) {
+                                    clearInterval(updateIntervalId); // Stop the periodic updates
+                                    console.log("Optimization completed. Stopping updates.");
+                                    // Display a message to the user
+                                    $('#optStatus').text("Optimization completed.");
+                                }
+                                $('#optStatus').text(updateResponse.message);
+
+                                // Example: $('#status').text(updateResponse.status);
+                            },
+                            error: function (xhr, status, error) {
+                                console.error("Error updating optimization:", error);
+                            }
+                        });
+                    }, 1000); // Update every 2000 milliseconds (2 seconds)
+                },
+                error: function (xhr, status, error) {
+                    // Catch error 400 and display a message to the user
+                    document.getElementById('loading').style.display = 'none';
+                    if (xhr.status === 400) {
+                        alert(xhr.responseText);
+                    } else {
+                        console.error("Error starting optimization:", error);
+                    }
+                }
+            });
+        } else {
+            console.log("No methods selected");
+        }
+    });
+
+    document.getElementById('stopOptimization').addEventListener('click', function (e) {
+        e.preventDefault(); // Prevent form submission and page reload
+
+        // Assuming job_id is stored in a variable named `jobId`
+        // const jobId = document.getElementById('jobIdElement').value; // Or however you're storing/accessing the job ID
+
+        fetch('/stop_optimization', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                $('#optStatus').text("Optimization stop requested by user.");
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+    });
+
+
+    function update_merit_graph(step, merit) {
+        var graphDiv = document.getElementById('merit_graph');
+        // Add subsequent points to the line trace
+        Plotly.extendTraces('merit_graph', {
+            x: [[step]], // Wrap in two arrays because Plotly.extendTraces expects an array of arrays
+            y: [[merit]] // Same as above
+        }, [1]); // [1] indicates we're updating the second trace
+
+        // Check if this is the first point being added
+        if (graphDiv.data[0].x.length === 0) {
+            // Add the first point to the dot trace
+            Plotly.extendTraces('merit_graph', {
+                x: [[step]], // Wrap in two arrays because Plotly.extendTraces expects an array of arrays
+                y: [[merit]] // Same as above
+            }, [0]); // [0] indicates we're updating the first trace
+        }
+    }
+
+    function updateFilterRepresentation(num_boxes, colors, heights, number_unique_materials, unique_materials, unique_colors, incoherent) {
+        // Get the container element
+        var container = document.querySelector('#filter_representation');
+
+        // Remove existing boxes
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
+        // Create new boxes
+        for (var i = num_boxes - 1; i >= 0; i--) {
+            var div = document.createElement('div');
+            div.className = 'box';
+            div.style.backgroundColor = colors[i];
+            div.style.height = heights[i] + 'px';
+            if (incoherent[i]) {
+                div.style.width = '100%';
+            } else {
+                div.style.width = '80%';
+            }
+            container.appendChild(div);
+        }
+
+    }
+
+</script>
+
+<script>
+    $('#addOptButton').click(function () {
+        var selectedMethod = $('#optimizationMethod').val();
+        if (selectedMethod === 'particle_swarm') {
+            $('#particleSwarmModal').modal('show');
+        } else {
+            addMethodToList(selectedMethod);
+        }
+    });
+
+    $('#saveParticleSwarmParams').click(function () {
+        var c1 = $('#c1').val();
+        var c2 = $('#c2').val();
+        var w = $('#w').val();
+        var no_particles = $('#no_particles').val();
+        var no_iteration = $('#no_iteration').val();
+        var params = `c1: ${c1}, c2: ${c2}, w: ${w}, particles: ${no_particles}, iterations: ${no_iteration}`;
+        addMethodToList('particle swarm', params);
+        $('#particleSwarmModal').modal('hide');
+    });
+
+    function addMethodToList(method, params = '') {
+        var methodElement = $('<div>').addClass('list-group-item d-flex').text(method);
+        if (params) {
+            methodElement.append($('<div>').addClass('ml-2').text(`(${params})`));
+        }
+        var numberElement = $('<div>').addClass('mr-2 number').text('');
+        var removeButton = $('<button>').addClass('btn btn-sm btn-danger ml-auto').text('-').click(function () {
+            $(this).parent().remove();
+            updateNumbers();
+        });
+        methodElement.prepend(numberElement);
+        methodElement.append(removeButton);
+        $('#selectedMethods').append(methodElement);
+        updateNumbers();
+    }
+
+
+    $('#selectedMethods').sortable({
+        stop: function () {
+            updateNumbers();
+        }
+    });
+
+    function updateNumbers() {
+        $('.number').each(function (index) {
+            $(this).text(index + 1);
+        });
+    }
+    $('#selectedMethods').sortable();
+</script>
+
+{% if job_status == "running" %}
+<script>
+    document.getElementById("stopOptimization").disabled = false;
+    function setupPeriodicUpdates() {
+        var updateIntervalId = setInterval(function () {
+            $.ajax({
+                type: "GET",
+                url: "/update_optimization", // Update this URL as needed
+                success: function (updateResponse) {
+                    // Update the page with the response
+                    update_merit_graph(updateResponse.best_step, updateResponse.best_merit);
+                    updateFilterRepresentation(updateResponse.num_boxes, updateResponse.colors, updateResponse.heights, updateResponse.number_unique_materials, updateResponse.unique_materials, updateResponse.unique_colors, updateResponse.incoherent);
+
+                    // Update iterations and merit display
+                    $('#iterations').html('<strong>Iterations:</strong> ' + updateResponse.current_step);
+                    $('#merit').html('<strong>Latest Merit:</strong> ' + updateResponse.current_merit.toFixed(2));
+
+                    // Check for a specific response to stop updates
+                    if (updateResponse.finished) {
+                        clearInterval(updateIntervalId); // Stop the periodic updates
+                        console.log("Optimization completed. Stopping updates.");
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error updating optimization:", error);
+                }
+            });
+        }, 1000); // Update every 2000 milliseconds (2 seconds)
+    }
+
+    setupPeriodicUpdates();
+</script>
+{% endif %}
+{% endblock %}

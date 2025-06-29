@@ -1,0 +1,241 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--light);
+}
+
+/* header {
+  background-color: var(--info);
+  color: white;
+  padding: 10px 0;
+  text-align: center;
+} */
+
+nav {
+  background-color: var(--light);
+  padding: 10px 0;
+  border-bottom: 0.5px solid #d8d8d8; /* Add this line to create a bottom border */
+}
+
+nav ul {
+  list-style-type: none;
+  padding: 0;
+  text-align: center;
+}
+
+nav ul li {
+  display: inline;
+  margin: 0 10px;
+}
+
+nav ul li a {
+  color: #333;
+  text-decoration: none;
+}
+
+main {
+  padding: 1em;
+  padding-bottom: 5em;
+}
+
+section {
+  margin-bottom: 20px;
+}
+
+.container-custom {
+  max-width: 80%; /* Adjust this to your liking */
+  margin: auto;
+}
+
+footer {
+  background-color: var(--primary);
+  color: white;
+  text-align: center;
+  padding: 0.5em;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+#legend {
+  /* display: flex; */
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Center items vertically */
+  align-items: flex-start; /* Align items to the start horizontally */
+  height: 100%; /* Ensure the legend takes the full height of its container */
+}
+
+.legend-item {
+  display: flex;
+}
+
+.box {
+  /* width: 100%; */
+  /* height: 1em; */
+  border: 1px solid black;
+  /* background-color: blue; */
+  padding: 0px;
+  margin: 0px;
+}
+.substrate_box {
+  width: 110%;
+  /* height: 1em; */
+  border: 1px solid black;
+  /* background-color: blue; */
+  padding: 0px;
+  margin: 0px;
+}
+
+button:disabled {
+  background-color: grey;
+}
+button {
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+/* Hide the up and down arrows from number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.select2-container {
+  width: 100% !important;
+}
+
+#selectedMethods {
+  max-height: 10em; /* Adjust this value as needed */
+  overflow-y: auto;
+}
+
+.list-group-item {
+  height: 3em; /* Adjust this value to your liking */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.list-group-item.active {
+  background-color: var(--primary); /* Change this to your desired color */
+  border-color: var(--primary); /* Optional: Change the border color to match */
+  color: var(--light); /* Optional: Change the text color */
+}
+
+input:invalid {
+  border: red solid 3px;
+}
+
+.highlight {
+  background-color: #17a2b8;
+}
+tr {
+  transition: background-color 2s ease;
+}
+
+.active .nav-link {
+  font-weight: bold;
+  color: var(--primary) !important;
+  border-bottom: 4px solid var(--danger);
+}
+
+.nav-tabs .nav-link.active {
+  font-weight: bold;
+  color: var(--primary) !important;
+  border-bottom: 4px solid var(--danger);
+}
+
+.nav-tabs .nav-link{
+  font-weight: bold;
+  color: black;
+}
+
+.vertical-line {
+  border-left: 1px solid lightgray; /* Match the style of the default <hr> line */
+  height: 100%; /* Ensure the line takes the full height of the column */
+  position: absolute; /* Position the line absolutely within the column */
+  left: 100%; /* Position the line at the right side of the column */
+  top: 0; /* Start the line from the top of the column */
+  transform: translateX(-50%); /* Adjust the position to align correctly */
+}
+.shadowed-box {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 1em;
+}
+
+/* Change the size of the icons in the Plotly menubar */
+#merit_graph .modebar-btn {
+  font-size: 16px; /* Adjust the font size as needed */
+  line-height: 35px; /* Center the icons vertically */
+}
+
+#DatavsWavelengthPlot .modebar-btn {
+  font-size: 16px; /* Adjust the font size as needed */
+  line-height: 35px; /* Center the icons vertically */
+}
+
+#heatmap {
+    width: 100%;
+    overflow: hidden;
+}
+
+#heatmap .modebar-btn {
+  font-size: 16px; /* Adjust the font size as needed */
+  line-height: 35px; /* Center the icons vertically */
+}
+#target_graph .modebar-btn {
+  font-size: 16px; /* Adjust the font size as needed */
+  line-height: 35px; 
+}
+#plotDiv .modebar-btn {
+  font-size: 16px; /* Adjust the font size as needed */
+  line-height: 35px; 
+}
+.modebar-btn:hover {
+  background-color: var(--primary); /* Change this to your desired hover background color */
+}
+
+/* Get rid off vertical lines in case of smaller screens*/
+@media (max-width: 991.98px) {
+    .vertical-line {
+        display: none;
+    }
+}
+
+.danger-color {
+    color: var(--danger);
+}
+.info-icon {
+    cursor: pointer;
+    margin-left: 0.5em;
+    font-size: 18px;
+    color: var(--danger);
+}
+
+.info-icon:hover + .info-text,
+.info-text:hover {
+    display: block;
+}
+
+.info-text {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    border: 1px solid var(--dark);
+    padding: 10px;
+    width: 300px;
+    z-index: 1000;
+    top: 30px;
+    left: 0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
