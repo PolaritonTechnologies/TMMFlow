@@ -113,8 +113,7 @@ users table
 
 | id  | user    | pw  | e-mail          | team                        | active |
 | --- | ------- | --- | --------------- | --------------------------- | ------ |
-| 1   | julian  | xx  | xx@uni-koeln.de | University of Cologne, HCNB | True   |
-| 2   | florian | xx  | xx@uni-koeln.de | University of Cologne, HCNB | True   |
+| 1  | florian | xx  | xx@koeln.de | University of Cologne, HCNB | True   |
 
 jobs table
 
@@ -131,7 +130,6 @@ materials table
 | id  | name   | creation_time             | username | team          | material_class | data   |
 | --- | ------ | ------------------------- | -------- | ------------- | -------------- | ------ |
 | 1   | Ag     | 2024-07-09 09:28:19.12327 | julian   | HCNB, Cologne | default        | {dict} |
-| 2   | AlPcCl | 2024-07-09 09:30:10.12327 | julian   | HCNB, Cologne | organic        | {dict} |
 
 ### GUI - Main Interaction
 
