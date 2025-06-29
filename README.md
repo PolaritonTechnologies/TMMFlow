@@ -1,4 +1,4 @@
-# TMM
+# TMMFlow
 
 Simulation and Optimisation webapp based on the Transfer Matrix Method
 
@@ -10,11 +10,11 @@ Simulation and Optimisation webapp based on the Transfer Matrix Method
 
 #### Filter Simulation
 
-<img width="927" alt="Simulation" src="https://github.com/user-attachments/assets/eb61cd12-eeaa-439a-b111-8f57028b97d4" />
+<img width="756" alt="Simulation" src="https://github.com/user-attachments/assets/eb61cd12-eeaa-439a-b111-8f57028b97d4" />
 
 ### Filter Optimisation
 
-<img width="776" alt="Optimisation" src="https://github.com/user-attachments/assets/33cefe9c-c3d8-4b9a-951e-6a40f82c3695" />
+<img width="756" alt="Optimisation" src="https://github.com/user-attachments/assets/33cefe9c-c3d8-4b9a-951e-6a40f82c3695" />
 
 ## Development Setup
 
